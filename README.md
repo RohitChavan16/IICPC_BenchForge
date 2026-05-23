@@ -1,17 +1,21 @@
 # IICPC Distributed Benchmarking Platform - BenchForge
 
-Production-grade distributed benchmarking and hosting platform
+Production-grade distributed benchmarking platform
 for stress testing trading infrastructure.
+
+## Features
+
+- Secure sandboxed code execution
+- Distributed load testing
+- Real-time telemetry
+- Live leaderboard
+- Horizontal scalability
 
 ## Architecture
 
-- API Gateway
-- Submission Service
-- Distributed Bot Fleet
-- Telemetry Engine
-- Real-Time Leaderboard
+[Architecture Diagram]
 
-## Stack
+## Tech Stack
 
 - Go
 - PostgreSQL
@@ -21,9 +25,29 @@ for stress testing trading infrastructure.
 - WebSockets
 - gRPC
 
-## Goals
+## Services
 
-- High throughput
-- Low latency
-- Horizontal scalability
-- Secure sandboxing
+- API Gateway
+- Submission Service
+- Benchmark Service
+- Telemetry Service
+- Leaderboard Service
+- Bot Workers
+
+## Setup
+
+Instructions here.
+
+## Scaling Strategy
+
+Explain distributed architecture.
+
+## Future Improvements
+
+- Kubernetes autoscaling
+- Kafka streaming
+- Prometheus metrics
+- Multi-region deployments
+
+
+ROHIT CHAVAN
