@@ -1,0 +1,25 @@
+services:
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./services/api-gateway/.env
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: iicpc
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:8
+    ports:
+      - "6379:6379"
