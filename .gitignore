@@ -1,0 +1,40 @@
+# Environment files
+.env
+.env.*
+
+# Node
+node_modules/
+
+# Build folders
+dist/
+build/
+
+# Go binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test binaries
+*.test
+
+# Go coverage
+coverage.out
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Docker
+docker-data/
+
+# Temporary
+tmp/
+temp/
