@@ -10,7 +10,7 @@ import (
 func NewPostgresPool() *pgxpool.Pool {
 
 	dbURL :=
-		"postgres://postgres:password@localhost:5432/iicpc"
+		"postgres://postgres:password@postgres:5432/iicpc"
 
 	pool, err := pgxpool.New(
 		context.Background(),

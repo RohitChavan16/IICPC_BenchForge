@@ -1,25 +1,71 @@
+version: "3.9"
+
 services:
+
   api-gateway:
     build:
       context: ./services/api-gateway
+    container_name: api-gateway
     ports:
       - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
     env_file:
       - ./services/api-gateway/.env
+
+  mock-exchange:
+    build:
+      context: ./services/mock-exchange
+    container_name: mock-exchange
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  telemetry-service:
+    build:
+      context: ./services/telemetry-service
+    container_name: telemetry-service
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
     depends_on:
-      - postgres
       - redis
+      - postgres
+    env_file:
+    - ./services/telemetry-service/.env
+
+  bot-worker:
+    build:
+      context: ./services/bot-worker
+    container_name: bot-worker
+    restart: unless-stopped
+    depends_on:
+      - mock-exchange
+      - redis
+    env_file:
+    - ./services/bot-worker/.env
 
   postgres:
     image: postgres:17
+    container_name: postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: iicpc
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:8
+    container_name: redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+
+volumes:
+  postgres_data:

@@ -13,12 +13,12 @@ func main() {
 	totalJobs := 1000
 	totalWorkers := 100
     rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "redis:6379",
 	})
 	jobs := make(chan int, totalJobs)
 	results := make(chan metrics.RequestMetric, totalJobs)
 
-	exchangeURL := "http://localhost:9000"
+	exchangeURL := "http://mock-exchange:9000"
 
 	for w := 1; w <= totalWorkers; w++ {
 		go workers.Worker(w, jobs, results, exchangeURL, rdb)

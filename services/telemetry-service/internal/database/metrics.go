@@ -20,7 +20,7 @@ func InsertMetric(
 ) error {
 
 	query := `
-	INSERT INTO telemetry_metrics
+	INSERT INTO public.telemetry_metrics
 	(request_id, bot_type, latency, success, created_at)
 	VALUES ($1, $2, $3, $4, $5)
 	`

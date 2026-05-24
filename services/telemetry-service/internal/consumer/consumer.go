@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"log"
 	"time"
-
+    "github.com/jackc/pgx/v5/pgxpool"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-
+     "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/aggregator"
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
@@ -22,12 +22,14 @@ type Metric struct {
 
 func StartConsumer(
 	rdb *redis.Client,
+	db *pgxpool.Pool,
 	agg *aggregator.Aggregator,
+	hub *ws.Hub,
 ) {
 
 	consumerID := uuid.NewString()
 
-	go startBroadcaster(agg)
+	go startBroadcaster(agg, hub)
 
 	for {
 
@@ -61,6 +63,7 @@ func StartConsumer(
 
 				processMessage(
 					rdb,
+					db,
 					agg,
 					message,
 				)
@@ -71,6 +74,7 @@ func StartConsumer(
 
 func processMessage(
 	rdb *redis.Client,
+	db *pgxpool.Pool,
 	agg *aggregator.Aggregator,
 	message redis.XMessage,
 	
@@ -97,7 +101,19 @@ func processMessage(
 		float64(metric.Latency),
 		metric.Success,
 	)
+    err = database.InsertMetric(
+	db,
+	database.Metric{
+		RequestID: metric.RequestID,
+		BotType:   metric.BotType,
+		Latency:   metric.Latency,
+		Success:   metric.Success,
+	},
+)
 
+if err != nil {
+	log.Println("DB insert failed:", err)
+}
 	err = rdb.XAck(
 		context.Background(),
 		StreamName,
@@ -112,6 +128,7 @@ func processMessage(
 
 func startBroadcaster(
 	agg *aggregator.Aggregator,
+	hub *ws.Hub,
 ) {
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -122,6 +139,6 @@ func startBroadcaster(
 
 		data, _ := json.Marshal(snapshot)
 
-		ws.Broadcast(data)
+		hub.Broadcast(data)
 	}
 }

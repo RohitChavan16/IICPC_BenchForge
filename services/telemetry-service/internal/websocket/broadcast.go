@@ -1,8 +1,32 @@
 package websocket
 
-func Broadcast(message []byte) {
+import (
+	"log"
 
-	for client := range clients {
-		client.WriteMessage(1, message)
+	"github.com/gorilla/websocket"
+)
+
+func (h *Hub) Broadcast(
+	message []byte,
+) {
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for client := range h.clients {
+
+		err := client.WriteMessage(
+			websocket.TextMessage,
+			message,
+		)
+
+		if err != nil {
+
+			log.Println(err)
+
+			client.Close()
+
+			delete(h.clients, client)
+		}
 	}
 }

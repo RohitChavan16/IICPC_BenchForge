@@ -10,6 +10,6 @@ var Ctx = context.Background()
 
 func NewRedisClient() *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "redis:6379",
 	})
 }

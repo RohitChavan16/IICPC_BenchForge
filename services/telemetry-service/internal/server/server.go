@@ -7,9 +7,14 @@ import (
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
 
-func StartServer() {
+func StartServer(
+	hub *ws.Hub,
+) {
 
-	http.HandleFunc("/ws", ws.HandleConnections)
+	http.HandleFunc(
+		"/ws",
+		hub.HandleConnections,
+	)
 
 	log.Println("Telemetry Service Running :8081")
 
