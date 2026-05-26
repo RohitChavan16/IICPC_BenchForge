@@ -1,53 +1,135 @@
-# IICPC Distributed Benchmarking Platform - BenchForge
+# IICPC BenchForge
 
-Production-grade distributed benchmarking platform
-for stress testing trading infrastructure.
+Distributed benchmarking and telemetry infrastructure platform built for high-concurrency performance testing, real-time observability, and scalable systems experimentation.
 
-## Features
+---
 
-- Secure sandboxed code execution
-- Distributed load testing
-- Real-time telemetry
-- Live leaderboard
-- Horizontal scalability
+# Overview
 
-## Architecture
+IICPC BenchForge is a production-oriented distributed benchmarking platform designed to simulate concurrent traffic, measure system performance, and process real-time telemetry using event-driven architecture.
 
-[Architecture Diagram]
+The platform is built using Go microservices, Redis Streams, PostgreSQL, Docker, and WebSockets.
 
-## Tech Stack
+---
 
+# Core Features
+
+- Concurrent benchmark workers
+- Distributed load generation
+- Redis Streams telemetry pipeline
+- Real-time telemetry aggregation
+- PostgreSQL metrics persistence
+- WebSocket live streaming
+- Structured JSON logging
+- Graceful shutdown handling
+- Dockerized microservices architecture
+
+---
+
+# Architecture
+
+```text
+Bot Workers
+    ↓
+Mock Exchange
+    ↓
+Redis Streams
+    ↓
+Telemetry Service
+    ├── Aggregator
+    ├── PostgreSQL
+    └── WebSocket Broadcast
+```
+
+---
+
+# Tech Stack
+
+## Backend
 - Go
+- Gin
+- Redis Streams
 - PostgreSQL
-- Redis
-- Docker
-- Kubernetes
 - WebSockets
-- gRPC
 
-## Services
+## Infrastructure
+- Docker
+- Docker Compose
 
-- API Gateway
-- Submission Service
-- Benchmark Service
-- Telemetry Service
-- Leaderboard Service
-- Bot Workers
+## Observability
+- Structured JSON Logging
+- Real-time telemetry aggregation
 
-## Setup
+---
 
-Instructions here.
+# Services
 
-## Scaling Strategy
+| Service | Description |
+|---|---|
+| api-gateway | Entry point for APIs |
+| bot-worker | Concurrent benchmarking engine |
+| telemetry-service | Metrics aggregation and streaming |
+| mock-exchange | Simulated trading exchange |
+| redis | Event streaming infrastructure |
+| postgres | Persistent telemetry storage |
 
-Explain distributed architecture.
+---
 
-## Future Improvements
+# Getting Started
 
-- Kubernetes autoscaling
-- Kafka streaming
+## Clone Repository
+
+```bash
+git clone <repo-url>
+cd IICPC_BenchForge
+```
+
+
+# Environment Configuration
+
+Each service maintains its own environment configuration.
+
+Example:
+
+```text
+services/api-gateway/.env
+services/telemetry-service/.env
+services/bot-worker/.env
+```
+
+Use `.env.example` files as reference templates.
+
+
+## Start Infrastructure
+
+```bash
+docker compose up --build
+```
+
+---
+
+# Current Capabilities
+
+- High-concurrency request simulation
+- TPS measurement
+- Real-time telemetry ingestion
+- Event-driven architecture
+- Distributed service orchestration
+
+---
+
+# Roadmap
+
+- Request tracing
 - Prometheus metrics
-- Multi-region deployments
+- Grafana dashboards
+- Benchmark orchestration API
+- Kubernetes deployment
+- Distributed worker scaling
+- Advanced observability
 
+---
 
-ROHIT CHAVAN
+# License
+
+MIT

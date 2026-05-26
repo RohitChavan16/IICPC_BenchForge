@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
      "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/aggregator"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/logger"
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
 
@@ -21,6 +22,7 @@ type Metric struct {
 }
 
 func StartConsumer(
+	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
 	agg *aggregator.Aggregator,
@@ -29,12 +31,21 @@ func StartConsumer(
 
 	consumerID := uuid.NewString()
 
-	go startBroadcaster(agg, hub)
+	go startBroadcaster(ctx, agg, hub)
 
 	for {
+        select {
 
+	case <-ctx.Done():
+
+		logger.Log.Info("Stopping telemetry consumer")
+
+		return
+
+	default:
+	}
 		streams, err := rdb.XReadGroup(
-			context.Background(),
+	        ctx,
 			&redis.XReadGroupArgs{
 				Group:    GroupName,
 				Consumer: consumerID,
@@ -62,6 +73,7 @@ func StartConsumer(
 			for _, message := range stream.Messages {
 
 				processMessage(
+					ctx,
 					rdb,
 					db,
 					agg,
@@ -73,6 +85,7 @@ func StartConsumer(
 }
 
 func processMessage(
+	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
 	agg *aggregator.Aggregator,
@@ -112,28 +125,49 @@ func processMessage(
 )
 
 if err != nil {
-	log.Println("DB insert failed:", err)
+	logger.Log.Error(
+	"DB insert failed",
+	"error",
+	err,
+)
 }
 	err = rdb.XAck(
-		context.Background(),
+		ctx,
 		StreamName,
 		GroupName,
 		message.ID,
 	).Err()
 
 	if err != nil {
-		log.Println("ACK failed:", err)
+		logger.Log.Error(
+	"Redis ACK failed",
+	"error",
+	err,
+)
 	}
 }
 
 func startBroadcaster(
+	ctx context.Context,
 	agg *aggregator.Aggregator,
 	hub *ws.Hub,
 ) {
 
 	ticker := time.NewTicker(1 * time.Second)
 
-	for range ticker.C {
+	for {
+
+	select {
+
+	case <-ctx.Done():
+
+		logger.Log.Info("Stopping broadcaster")
+
+		ticker.Stop()
+
+		return
+
+	case <-ticker.C:
 
 		snapshot := agg.Snapshot()
 
@@ -141,4 +175,5 @@ func startBroadcaster(
 
 		hub.Broadcast(data)
 	}
+}
 }
