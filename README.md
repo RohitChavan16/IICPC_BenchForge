@@ -56,9 +56,24 @@ Telemetry Service
 - Docker
 - Docker Compose
 
-## Observability
+# Observability Stack
+
+The platform implements a production-grade observability pipeline.
+
+## Stack
+
+- Prometheus
+- Grafana
 - Structured JSON Logging
-- Real-time telemetry aggregation
+- Request Tracing
+- Real-Time Metrics
+
+## Dashboards
+
+- TPS monitoring
+- latency tracking
+- active requests
+- throughput analytics
 
 ---
 

@@ -174,3 +174,39 @@ The telemetry service implements centralized structured JSON logging using Go sl
   "service":"telemetry-service",
   "msg":"Starting telemetry service"
 }
+
+
+
+# Monitoring Architecture
+
+The platform implements a cloud-native observability pipeline using Prometheus and Grafana.
+
+## Flow
+
+```text
+Mock Exchange
+    ↓
+Prometheus Metrics Endpoint (/metrics)
+    ↓
+Prometheus Scraping
+    ↓
+Time-Series Metrics Storage
+    ↓
+Grafana Dashboards
+```
+
+## Monitoring Features
+
+- request throughput monitoring
+- latency tracking
+- active request monitoring
+- real-time TPS visualization
+- Prometheus instrumentation
+- Grafana dashboards
+
+## Technologies
+
+- Prometheus
+- Grafana
+- PromQL
+- Go Prometheus Client
