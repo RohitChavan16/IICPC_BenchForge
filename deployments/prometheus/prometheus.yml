@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+
+  - job_name: "mock-exchange"
+
+    static_configs:
+      - targets:
+          - "mock-exchange:9000"
