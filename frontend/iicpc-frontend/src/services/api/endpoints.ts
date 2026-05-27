@@ -1,0 +1,16 @@
+export const endpoints = {
+  health: '/health',
+  authLogin: '/auth/login',
+  authRegister: '/auth/register',
+  authProfile: '/auth/me',
+  benchmarkSessions: '/benchmarks',
+  benchmarkDetail: (id: string) => `/benchmarks/${id}`,
+  telemetrySummary: '/telemetry/summary',
+  telemetryHistory: '/telemetry/history',
+  workers: '/workers',
+  infrastructure: '/infrastructure',
+  redis: '/infrastructure/redis',
+  postgres: '/infrastructure/postgres',
+  logs: '/logs',
+  notifications: '/notifications',
+}
