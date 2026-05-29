@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSharedWebsocketClient, type WebSocketStatus } from '@/services/websocket/websocketClient'
-import type { MetricSnapshot } from '@/types/api'
+import type { MetricSnapshot, WorkerMetricMap } from '@/types/api'
 
 export function useWebsocket() {
   const defaultUrl = typeof window !== 'undefined'
@@ -13,6 +13,7 @@ export function useWebsocket() {
   const [status, setStatus] = useState<WebSocketStatus>(() => client.getStatus())
   const [latest, setLatest] = useState<MetricSnapshot | null>(() => client.getLatestSnapshot())
   const [history, setHistory] = useState<MetricSnapshot[]>(() => client.getHistory())
+  const [workers, setWorkers] = useState<WorkerMetricMap>(() => client.getLatestWorkers())
 
   useEffect(() => {
     const statusHandler = (nextStatus: WebSocketStatus) => setStatus(nextStatus)
@@ -20,13 +21,18 @@ export function useWebsocket() {
       setLatest(payload)
       setHistory(client.getHistory())
     }
+    const workerHandler = (payload: WorkerMetricMap) => {
+      setWorkers(payload)
+    }
 
     client.addStatusHandler(statusHandler)
     client.addHandler(messageHandler)
+    client.addWorkerHandler(workerHandler)
     client.connect()
 
     return () => {
       client.removeHandler(messageHandler)
+      client.removeWorkerHandler(workerHandler)
       client.removeStatusHandler(statusHandler)
     }
   }, [client])
@@ -35,6 +41,7 @@ export function useWebsocket() {
     status,
     latest,
     history,
+    workers,
     reconnect: () => client.reconnect(),
   }
 }

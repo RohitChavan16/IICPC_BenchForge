@@ -8,34 +8,43 @@ export interface MetricSnapshot {
   total: number
 }
 
+export type WorkerRuntimeStatus = 'Active' | 'Idle' | 'Offline'
+
+export interface WorkerStatus {
+  workerId: string
+  status: WorkerRuntimeStatus
+  lastSeen: string
+  tps: number
+  p50: number
+  p90: number
+  p99: number
+  failureRate: number
+  total: number
+}
+
+export interface WorkerMetricSnapshot extends MetricSnapshot {
+  workerId: string
+}
+
+export type WorkerMetricMap = Record<string, WorkerMetricSnapshot>
+
 export interface BenchmarkSession {
   id: string
   name: string
   status: 'Running' | 'Completed' | 'Failed' | 'Queued'
-  metrics: {
-    tps: number
-    p50: number
-    p90: number
-    p99: number
-    successRate: number
-  }
   workerCount: number
-  duration: string
   startedAt: string
+  finishedAt?: string
+  duration?: number
+  totalRequests: number
+  successCount: number
+  failureCount: number
+  p50: number
+  p90: number
+  p99: number
+  metadata?: Record<string, unknown> | null
+  createdAt: string
   updatedAt: string
-  description: string
-}
-
-export interface WorkerStatus {
-  id: string
-  label: string
-  status: 'Active' | 'Idle' | 'Degraded' | 'Offline'
-  concurrency: number
-  activeJobs: number
-  failures: number
-  cpu: number
-  memory: number
-  lastSeen: string
 }
 
 export interface InfrastructureMetric {

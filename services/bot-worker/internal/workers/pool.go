@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,6 +32,7 @@ func Worker(
 		metric := metrics.RequestMetric{
 			RequestID: uuid.NewString(),
 			BotType:   "retail",
+			WorkerID:  fmt.Sprintf("worker-%02d", id),
 			Latency:   latency,
 			Success:   err == nil,
 			Timestamp: time.Now(),

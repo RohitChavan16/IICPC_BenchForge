@@ -1,4 +1,4 @@
-import type { BenchmarkSession, InfrastructureMetric, LogEntry, MetricSnapshot, NotificationItem, PostgresMetric, RedisMetric, WorkerStatus, HealthStatus } from '@/types/api'
+import type { BenchmarkSession, InfrastructureMetric, LogEntry, MetricSnapshot, NotificationItem, PostgresMetric, RedisMetric, HealthStatus } from '@/types/api'
 
 const now = new Date()
 
@@ -49,42 +49,6 @@ export const mockBenchmarkSessions: BenchmarkSession[] = [
     startedAt: timestamp(210),
     updatedAt: timestamp(205),
     description: 'Persistence stress scenario with heavy telemetry writes to PostgreSQL and recovery validation.',
-  },
-]
-
-export const mockWorkerStatus: WorkerStatus[] = [
-  {
-    id: 'worker-01',
-    label: 'Alpha Pool',
-    status: 'Active',
-    concurrency: 64,
-    activeJobs: 28,
-    failures: 0,
-    cpu: 58,
-    memory: 68,
-    lastSeen: timestamp(0),
-  },
-  {
-    id: 'worker-02',
-    label: 'Beta Pool',
-    status: 'Degraded',
-    concurrency: 40,
-    activeJobs: 15,
-    failures: 2,
-    cpu: 74,
-    memory: 82,
-    lastSeen: timestamp(1),
-  },
-  {
-    id: 'worker-03',
-    label: 'Gamma Pool',
-    status: 'Idle',
-    concurrency: 0,
-    activeJobs: 0,
-    failures: 0,
-    cpu: 22,
-    memory: 32,
-    lastSeen: timestamp(3),
   },
 ]
 

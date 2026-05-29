@@ -1,8 +1,9 @@
-import type { MetricSnapshot } from '@/types/api'
+import type { MetricSnapshot, WorkerMetricMap } from '@/types/api'
 
 export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
 export type WebsocketMessageHandler<T> = (data: T) => void
 export type WebsocketStatusHandler = (status: WebSocketStatus) => void
+export type WebsocketWorkerHandler = (workers: WorkerMetricMap) => void
 
 interface WebsocketClientOptions {
   heartbeatInterval?: number
@@ -23,12 +24,19 @@ type RawMetricSnapshot = {
   id?: number | string
 }
 
+type RawTelemetryPayload = RawMetricSnapshot & {
+  global?: RawMetricSnapshot
+  workers?: Record<string, RawMetricSnapshot>
+}
+
 export class RingBuffer<T> {
   private buffer: Array<T | undefined>
   private head = 0
   private size = 0
+  private readonly capacity: number
 
-  constructor(private readonly capacity: number) {
+  constructor(capacity: number) {
+    this.capacity = capacity
     this.buffer = new Array(capacity)
   }
 
@@ -97,6 +105,23 @@ function normalizeMetricSnapshot(payload: unknown): MetricSnapshot | null {
   }
 }
 
+function normalizeWorkerMetrics(payload: unknown, timestamp: string): WorkerMetricMap {
+  if (!payload || typeof payload !== 'object') {
+    return {}
+  }
+
+  return Object.entries(payload as Record<string, RawMetricSnapshot>).reduce<WorkerMetricMap>((acc, [workerId, snapshot]) => {
+    const metric = normalizeMetricSnapshot({ ...snapshot, timestamp })
+    if (metric) {
+      acc[workerId] = {
+        ...metric,
+        workerId,
+      }
+    }
+    return acc
+  }, {})
+}
+
 let sharedWebsocketClient: WebsocketClient | null = null
 
 export function getSharedWebsocketClient(url: string, options: WebsocketClientOptions = {}) {
@@ -111,6 +136,7 @@ export class WebsocketClient {
   private url: string
   private connection: WebSocket | null = null
   private handlers = new Set<WebsocketMessageHandler<MetricSnapshot>>()
+  private workerHandlers = new Set<WebsocketWorkerHandler>()
   private statusHandlers = new Set<WebsocketStatusHandler>()
   private reconnectTimer: number | null = null
   private heartbeatTimer: number | null = null
@@ -122,6 +148,7 @@ export class WebsocketClient {
   private readonly options: Required<WebsocketClientOptions>
   private manualClose = false
   private latestSnapshot: MetricSnapshot | null = null
+  private latestWorkers: WorkerMetricMap = {}
   private history: RingBuffer<MetricSnapshot>
 
   constructor(url: string, options: WebsocketClientOptions = {}) {
@@ -148,12 +175,24 @@ export class WebsocketClient {
     return this.history.toArray()
   }
 
+  getLatestWorkers() {
+    return this.latestWorkers
+  }
+
   addHandler(handler: WebsocketMessageHandler<MetricSnapshot>) {
     this.handlers.add(handler)
   }
 
   removeHandler(handler: WebsocketMessageHandler<MetricSnapshot>) {
     this.handlers.delete(handler)
+  }
+
+  addWorkerHandler(handler: WebsocketWorkerHandler) {
+    this.workerHandlers.add(handler)
+  }
+
+  removeWorkerHandler(handler: WebsocketWorkerHandler) {
+    this.workerHandlers.delete(handler)
   }
 
   addStatusHandler(handler: WebsocketStatusHandler) {
@@ -192,7 +231,7 @@ export class WebsocketClient {
 
         if (rawPayload && typeof rawPayload === 'object') {
           if (rawPayload.type === 'pong') {
-            this.handlePong(rawPayload)
+            this.handlePong()
             return
           }
 
@@ -202,7 +241,15 @@ export class WebsocketClient {
           }
         }
 
-        const payload = normalizeMetricSnapshot(rawPayload)
+        const rawTelemetryPayload = rawPayload as RawTelemetryPayload
+        const timestamp = extractTimestamp(rawTelemetryPayload.global?.timestamp ?? rawTelemetryPayload.timestamp)
+        const workerPayload = normalizeWorkerMetrics(rawTelemetryPayload.workers, timestamp)
+        if (Object.keys(workerPayload).length > 0) {
+          this.latestWorkers = workerPayload
+          this.workerHandlers.forEach((handler) => handler(workerPayload))
+        }
+
+        const payload = normalizeMetricSnapshot(rawTelemetryPayload.global ? { ...rawTelemetryPayload.global, timestamp } : { ...rawTelemetryPayload, timestamp })
         if (payload) {
           this.lastMessageAt = Date.now()
           this.latestSnapshot = payload
@@ -341,7 +388,7 @@ export class WebsocketClient {
     this.connection.send(JSON.stringify(payload))
   }
 
-  private handlePong(payload: unknown) {
+  private handlePong() {
     this.pendingPong = false
     this.lastMessageAt = Date.now()
   }

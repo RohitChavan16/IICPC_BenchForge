@@ -1,91 +1,174 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fetchWorkerStatus } from '@/services/api/infraService'
+import { RefreshCw, Wifi } from 'lucide-react'
+import { fetchWorkers } from '@/services/api/workerService'
+import { useWebsocket } from '@/hooks/useWebsocket'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Cpu, Activity, AlertCircle } from 'lucide-react'
+import { WorkerCard } from '@/components/workers/WorkerCard'
+import { WorkerMetricsChart } from '@/components/workers/WorkerMetricsChart'
+import { WorkerStatusPanel } from '@/components/workers/WorkerStatusPanel'
+import type { WorkerMetricSnapshot, WorkerStatus } from '@/types/api'
+import { formatNumber } from '@/utils/formatters'
 
-const statusVariant = {
-  Active: 'success',
-  Idle: 'info',
-  Degraded: 'warning',
-  Offline: 'danger',
-} as const
+const HISTORY_LIMIT = 30
+
+function mergeWorkerData(initialWorkers: WorkerStatus[], liveWorkers: Record<string, WorkerMetricSnapshot>) {
+  const byId = new Map(initialWorkers.map((worker) => [worker.workerId, worker]))
+
+  Object.entries(liveWorkers).forEach(([workerId, snapshot]) => {
+    const existing = byId.get(workerId)
+    byId.set(workerId, {
+      workerId,
+      status: existing?.status ?? 'Active',
+      lastSeen: existing?.lastSeen ?? snapshot.timestamp,
+      tps: snapshot.tps,
+      p50: snapshot.p50,
+      p90: snapshot.p90,
+      p99: snapshot.p99,
+      failureRate: snapshot.failureRate,
+      total: snapshot.total,
+    })
+  })
+
+  return Array.from(byId.values()).sort((left, right) => left.workerId.localeCompare(right.workerId))
+}
 
 export function WorkerMonitoringPage() {
-  const { data: workers } = useQuery(['workerStatus'], fetchWorkerStatus)
+  const { status, workers: liveWorkers, reconnect } = useWebsocket()
+  const { data: initialWorkers = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['workers'],
+    queryFn: fetchWorkers,
+    refetchInterval: 15000,
+  })
+  const [histories, setHistories] = useState<Record<string, WorkerMetricSnapshot[]>>({})
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const samples = Object.values(liveWorkers)
+    if (samples.length === 0) {
+      return
+    }
+
+    setHistories((current) => {
+      const next = { ...current }
+      samples.forEach((sample) => {
+        const history = next[sample.workerId] ?? []
+        next[sample.workerId] = [...history, sample].slice(-HISTORY_LIMIT)
+      })
+      return next
+    })
+  }, [liveWorkers])
+
+  const workers = useMemo(() => mergeWorkerData(initialWorkers, liveWorkers), [initialWorkers, liveWorkers])
+  const selectedWorker = selectedWorkerId && workers.some((worker) => worker.workerId === selectedWorkerId)
+    ? selectedWorkerId
+    : workers[0]?.workerId ?? null
+
+  useEffect(() => {
+    if (!selectedWorkerId && selectedWorker) {
+      setSelectedWorkerId(selectedWorker)
+    }
+  }, [selectedWorker, selectedWorkerId])
+
+  const totals = useMemo(() => workers.reduce(
+    (acc, worker) => ({
+      tps: acc.tps + worker.tps,
+      total: acc.total + worker.total,
+      failures: acc.failures + worker.failureRate,
+    }),
+    { tps: 0, total: 0, failures: 0 },
+  ), [workers])
+
+  const connectionVariant = status === 'connected' ? 'success' : status === 'connecting' ? 'info' : status === 'error' ? 'danger' : 'warning'
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Worker observability</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">Worker monitoring</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Worker observability</p>
+          <h1 className="mt-2 text-3xl font-semibold text-white">Worker monitoring</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant={connectionVariant}>{status}</Badge>
+          <button
+            type="button"
+            onClick={() => {
+              void refetch()
+              reconnect()
+            }}
+            className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white transition hover:bg-white/5"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.5fr]">
-        <Card title="Worker pool health" description="Active workers, concurrency, and runtime resilience.">
-          <div className="grid gap-4">
-            {(workers ?? []).map((worker) => (
-              <div key={worker.id} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-base font-semibold text-white">{worker.label}</p>
-                    <p className="mt-1 text-sm text-slate-400">Last seen {worker.lastSeen.split('T')[0]}</p>
-                  </div>
-                  <Badge variant={statusVariant[worker.status]}>{worker.status}</Badge>
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                    <p className="text-sm text-slate-400">Concurrency</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{worker.concurrency}</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                    <p className="text-sm text-slate-400">Active jobs</p>
-                    <p className="mt-2 text-2xl font-semibold text-cyan-300">{worker.activeJobs}</p>
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                    <p className="text-sm text-slate-400">CPU</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{worker.cpu}%</p>
-                  </div>
-                  <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                    <p className="text-sm text-slate-400">Memory</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">{worker.memory}%</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <p className="text-sm text-slate-400">Workers</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{workers.length}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-slate-400">Pool TPS</p>
+          <p className="mt-3 text-3xl font-semibold text-cyan-300">{formatNumber(totals.tps)}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-slate-400">Total requests</p>
+          <p className="mt-3 text-3xl font-semibold text-emerald-300">{formatNumber(totals.total)}</p>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_0.45fr]">
+        <Card title="Worker pool health" description="Real worker state from GET /workers merged with live WebSocket metrics.">
+          {isLoading ? (
+            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">Loading workers from backend.</div>
+          ) : isError ? (
+            <div className="rounded-3xl border border-rose-400/20 bg-rose-950/20 p-5 text-rose-200">Unable to load GET /workers. Live worker samples will appear when the stream publishes them.</div>
+          ) : workers.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">No workers reported by the backend yet.</div>
+          ) : (
+            <div className="grid gap-4">
+              {workers.map((worker) => (
+                <button
+                  key={worker.workerId}
+                  type="button"
+                  onClick={() => setSelectedWorkerId(worker.workerId)}
+                  className={`text-left transition ${selectedWorker === worker.workerId ? 'rounded-3xl ring-2 ring-cyan-300/50' : 'rounded-3xl hover:ring-1 hover:ring-white/20'}`}
+                >
+                  <WorkerCard worker={worker} />
+                </button>
+              ))}
+            </div>
+          )}
         </Card>
 
         <div className="space-y-6">
-          <Card title="Worker metrics" description="Live worker capacity and alerts.">
-            <div className="space-y-4 text-sm text-slate-400">
-              <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <Activity size={18} className="text-cyan-300" />
+          <Card title="Status" description="Active, idle, and offline worker distribution.">
+            <WorkerStatusPanel workers={workers} />
+          </Card>
+          <Card title="Stream" description="Realtime worker payload availability.">
+            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+              <div className="flex items-center gap-3">
+                <Wifi size={18} className="text-cyan-300" />
                 <div>
-                  <p className="font-semibold text-white">Pool throughput</p>
-                  <p className="mt-1">Optimized worker concurrency is within operational bounds.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <Cpu size={18} className="text-violet-300" />
-                <div>
-                  <p className="font-semibold text-white">CPU utilization</p>
-                  <p className="mt-1">Workers are balanced across cores and memory pressure remains moderate.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <AlertCircle size={18} className="text-amber-300" />
-                <div>
-                  <p className="font-semibold text-white">Anomaly detection</p>
-                  <p className="mt-1">No critical alerts in the last 5 minutes. Watch for degraded pools.</p>
+                  <p className="font-semibold text-white">Worker samples</p>
+                  <p className="mt-1 text-sm text-slate-400">{Object.keys(liveWorkers).length} workers in latest WebSocket payload.</p>
                 </div>
               </div>
             </div>
           </Card>
         </div>
       </div>
+
+      <Card title="Worker metrics" description={selectedWorker ? `Live trends for ${selectedWorker}.` : 'Select a worker to inspect live trends.'}>
+        {selectedWorker ? (
+          <WorkerMetricsChart workerId={selectedWorker} data={histories[selectedWorker] ?? []} />
+        ) : (
+          <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">No worker selected.</div>
+        )}
+      </Card>
     </div>
   )
 }

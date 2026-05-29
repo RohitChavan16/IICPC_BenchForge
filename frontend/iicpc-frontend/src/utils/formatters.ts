@@ -6,6 +6,21 @@ export function formatPercent(value: number) {
   return `${value.toFixed(1)}%`
 }
 
+export function formatDuration(seconds: number) {
+  const positiveSeconds = Math.max(Math.floor(seconds), 0)
+  const hours = Math.floor(positiveSeconds / 3600)
+  const minutes = Math.floor((positiveSeconds % 3600) / 60)
+  const remainder = positiveSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${remainder}s`
+  }
+  return `${remainder}s`
+}
+
 export function formatRelativeDate(timestamp: string) {
   const diff = Math.max(new Date().getTime() - new Date(timestamp).getTime(), 0)
   const minutes = Math.floor(diff / 60000)

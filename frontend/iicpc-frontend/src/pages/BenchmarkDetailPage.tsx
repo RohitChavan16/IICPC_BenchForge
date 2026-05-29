@@ -6,24 +6,45 @@ import { fetchTelemetryHistory } from '@/services/api/telemetryService'
 import { Card } from '@/components/ui/Card'
 import { LiveLineChart } from '@/components/charts/LiveLineChart'
 import { Badge } from '@/components/ui/Badge'
-import { formatPercent } from '@/utils/formatters'
+import { formatDuration, formatPercent } from '@/utils/formatters'
 
 export function BenchmarkDetailPage() {
   const { benchmarkId } = useParams()
   const navigate = useNavigate()
-  const { data: benchmark } = useQuery(['benchmarkDetail', benchmarkId], () => fetchBenchmarkDetail(benchmarkId ?? ''), { enabled: Boolean(benchmarkId) })
+  const { data: benchmark, isLoading, isError } = useQuery(
+    ['benchmarkDetail', benchmarkId],
+    () => fetchBenchmarkDetail(benchmarkId ?? ''),
+    {
+      enabled: Boolean(benchmarkId),
+      retry: false,
+    },
+  )
   const { data: history } = useQuery(['telemetryHistory'], fetchTelemetryHistory)
+
+  const successRate = benchmark?.totalRequests
+    ? (benchmark.successCount / benchmark.totalRequests) * 100
+    : 0
+  const tps = benchmark?.duration ? benchmark.totalRequests / benchmark.duration : 0
+  const durationLabel = benchmark?.duration ? formatDuration(benchmark.duration) : 'In progress'
 
   const summary = useMemo(() => {
     if (!benchmark) return null
     return [
-      { label: 'TPS', value: benchmark.metrics.tps.toFixed(0) },
-      { label: 'p99 latency', value: `${benchmark.metrics.p99} ms` },
-      { label: 'Success', value: formatPercent(benchmark.metrics.successRate) },
+      { label: 'TPS', value: tps ? tps.toFixed(1) : '—' },
+      { label: 'p99 latency', value: `${benchmark.p99.toFixed(0)} ms` },
+      { label: 'Success', value: formatPercent(successRate) },
     ]
-  }, [benchmark])
+  }, [benchmark, successRate, tps])
 
-  if (!benchmark) {
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl py-20 text-center text-white">
+        <p className="text-xl">Loading benchmark details...</p>
+      </div>
+    )
+  }
+
+  if (isError || !benchmark) {
     return (
       <div className="mx-auto max-w-4xl py-16 text-center text-white">
         <p className="text-xl">Session not found.</p>
@@ -45,7 +66,9 @@ export function BenchmarkDetailPage() {
           <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Session detail</p>
           <h1 className="mt-2 text-3xl font-semibold text-white">{benchmark.name}</h1>
         </div>
-        <Badge variant={benchmark.status === 'Completed' ? 'success' : benchmark.status === 'Failed' ? 'danger' : benchmark.status === 'Running' ? 'info' : 'warning'}>
+        <Badge
+          variant={benchmark.status === 'Completed' ? 'success' : benchmark.status === 'Failed' ? 'danger' : benchmark.status === 'Running' ? 'info' : 'warning'}
+        >
           {benchmark.status}
         </Badge>
       </div>
@@ -56,7 +79,7 @@ export function BenchmarkDetailPage() {
             <LiveLineChart data={history ?? []} />
           </Card>
 
-          <Card title="Benchmark summary" description="Real-time metrics and worker behavior.">
+          <Card title="Benchmark summary" description="Real-time metrics and run performance.">
             <div className="grid gap-4 sm:grid-cols-3">
               {summary?.map((item) => (
                 <div key={item.label} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-white">
@@ -69,7 +92,7 @@ export function BenchmarkDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <Card title="Session metadata" description="Orchestration details and benchmark notes.">
+          <Card title="Session metadata" description="Orchestration details and run counts.">
             <div className="space-y-4 text-sm text-slate-300">
               <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
                 <p className="text-slate-400">Started</p>
@@ -77,22 +100,32 @@ export function BenchmarkDetailPage() {
               </div>
               <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
                 <p className="text-slate-400">Duration</p>
-                <p>{benchmark.duration}</p>
+                <p>{durationLabel}</p>
               </div>
               <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
                 <p className="text-slate-400">Worker pool</p>
                 <p>{benchmark.workerCount} workers</p>
               </div>
+              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+                <p className="text-slate-400">Total requests</p>
+                <p>{benchmark.totalRequests.toLocaleString()}</p>
+              </div>
+              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+                <p className="text-slate-400">Failure count</p>
+                <p>{benchmark.failureCount.toLocaleString()}</p>
+              </div>
             </div>
           </Card>
 
-          <Card title="Benchmark logs" description="Recent command and runtime events.">
-            <div className="space-y-3 text-sm text-slate-300">
-              <p>{benchmark.description}</p>
-              <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Control plane note</p>
-                <p className="mt-2 text-sm text-slate-300">The benchmark is configured for mixed traffic with Redis streams and PostgreSQL persistence.</p>
-              </div>
+          <Card title="Benchmark metadata" description="Stored run configuration and labels.">
+            <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 text-sm text-slate-300">
+              {benchmark.metadata && typeof benchmark.metadata === 'object' ? (
+                <pre className="whitespace-pre-wrap break-words text-xs text-slate-300">
+                  {JSON.stringify(benchmark.metadata, null, 2)}
+                </pre>
+              ) : (
+                <p>No metadata available for this session.</p>
+              )}
             </div>
           </Card>
         </div>

@@ -6,6 +6,7 @@ import { RegisterPage } from '@/pages/RegisterPage'
 import { DashboardHomePage } from '@/pages/DashboardHomePage'
 import { BenchmarkSessionsPage } from '@/pages/BenchmarkSessionsPage'
 import { BenchmarkDetailPage } from '@/pages/BenchmarkDetailPage'
+import { BenchmarkAnalyticsPage } from '@/pages/BenchmarkAnalyticsPage'
 import { LiveTelemetryPage } from '@/pages/LiveTelemetryPage'
 import { WorkerMonitoringPage } from '@/pages/WorkerMonitoringPage'
 import { InfrastructureMonitoringPage } from '@/pages/InfrastructureMonitoringPage'
@@ -45,6 +46,7 @@ export function AppRoutes() {
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardHomePage /></ProtectedRoute>} />
       <Route path="/benchmarks" element={<ProtectedRoute><BenchmarkSessionsPage /></ProtectedRoute>} />
+      <Route path="/benchmarks/analytics" element={<ProtectedRoute><BenchmarkAnalyticsPage /></ProtectedRoute>} />
       <Route path="/benchmarks/:benchmarkId" element={<ProtectedRoute><BenchmarkDetailPage /></ProtectedRoute>} />
       <Route path="/telemetry" element={<ProtectedRoute><LiveTelemetryPage /></ProtectedRoute>} />
       <Route path="/workers" element={<ProtectedRoute><WorkerMonitoringPage /></ProtectedRoute>} />

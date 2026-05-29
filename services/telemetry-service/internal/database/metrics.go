@@ -10,6 +10,7 @@ import (
 type Metric struct {
 	RequestID string
 	BotType   string
+	WorkerID  string
 	Latency   int64
 	Success   bool
 }
@@ -21,8 +22,8 @@ func InsertMetric(
 
 	query := `
 	INSERT INTO public.telemetry_metrics
-	(request_id, bot_type, latency, success, created_at)
-	VALUES ($1, $2, $3, $4, $5)
+	(request_id, bot_type, worker_id, latency, success, created_at)
+	VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := db.Exec(
@@ -30,6 +31,7 @@ func InsertMetric(
 		query,
 		metric.RequestID,
 		metric.BotType,
+		metric.WorkerID,
 		metric.Latency,
 		metric.Success,
 		time.Now(),

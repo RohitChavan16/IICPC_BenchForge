@@ -1,9 +1,10 @@
 package main
 
 import (
-	"context";
+	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -40,6 +41,11 @@ func main() {
 	// METRICS AGGREGATOR
 	agg := aggregator.NewAggregator()
 
+	// WORKER STATE (shared between consumer and server)
+	workerAggs := make(map[string]*aggregator.Aggregator)
+	workerLastSeen := make(map[string]time.Time)
+	var workerMu sync.Mutex
+
 	// CREATE REDIS CONSUMER GROUP
 	consumer.CreateConsumerGroup(rdb)
 
@@ -49,11 +55,14 @@ func main() {
 		rdb,
 		db,
 		agg,
+		workerAggs,
+		workerLastSeen,
+		&workerMu,
 		hub,
 	)
 
 	// START HTTP SERVER
-	go server.StartServer(hub)
+	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu)
 
 	// SIGNAL CHANNEL
 	sigChan := make(chan os.Signal, 1)
