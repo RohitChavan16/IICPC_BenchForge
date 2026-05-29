@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { WebsocketClient, type WebSocketStatus } from '@/services/websocket/websocketClient'
+import { getSharedWebsocketClient, type WebSocketStatus } from '@/services/websocket/websocketClient'
 import type { MetricSnapshot } from '@/types/api'
 
 export function useWebsocket() {
@@ -8,28 +8,26 @@ export function useWebsocket() {
     : 'ws://localhost:8081/ws'
 
   const url = import.meta.env.VITE_WS_BASE_URL ?? defaultUrl
-  const client = useMemo(() => new WebsocketClient(url, { reconnectDelay: 2500 }), [url])
-  const [status, setStatus] = useState<WebSocketStatus>('connecting')
-  const [latest, setLatest] = useState<MetricSnapshot | null>(null)
-  const [history, setHistory] = useState<MetricSnapshot[]>([])
+  const client = useMemo(() => getSharedWebsocketClient(url, { heartbeatInterval: 20000, historySize: 20 }), [url])
+
+  const [status, setStatus] = useState<WebSocketStatus>(() => client.getStatus())
+  const [latest, setLatest] = useState<MetricSnapshot | null>(() => client.getLatestSnapshot())
+  const [history, setHistory] = useState<MetricSnapshot[]>(() => client.getHistory())
 
   useEffect(() => {
-    const handler = (payload: MetricSnapshot) => {
+    const statusHandler = (nextStatus: WebSocketStatus) => setStatus(nextStatus)
+    const messageHandler = (payload: MetricSnapshot) => {
       setLatest(payload)
-      setHistory((current) => [...current.slice(-19), payload])
+      setHistory(client.getHistory())
     }
 
-    client.addHandler(handler)
+    client.addStatusHandler(statusHandler)
+    client.addHandler(messageHandler)
     client.connect()
 
-    const monitor = window.setInterval(() => {
-      setStatus(client.getStatus())
-    }, 500)
-
     return () => {
-      client.removeHandler(handler)
-      client.close()
-      window.clearInterval(monitor)
+      client.removeHandler(messageHandler)
+      client.removeStatusHandler(statusHandler)
     }
   }, [client])
 
@@ -37,9 +35,6 @@ export function useWebsocket() {
     status,
     latest,
     history,
-    reconnect: () => {
-      client.close()
-      client.connect()
-    },
+    reconnect: () => client.reconnect(),
   }
 }

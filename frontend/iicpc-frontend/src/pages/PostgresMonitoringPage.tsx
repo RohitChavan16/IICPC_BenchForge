@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 export function PostgresMonitoringPage() {
-  const { data: metrics } = useQuery(['postgresMetrics'], fetchPostgresMetrics)
+  const { data: metrics, isLoading, isError } = useQuery(['postgresMetrics'], fetchPostgresMetrics)
 
   return (
     <div className="space-y-8">
@@ -15,18 +15,24 @@ export function PostgresMonitoringPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="PostgreSQL metrics" description="Transactions, cache, and write performance.">
-          <div className="grid gap-4">
-            {(metrics ?? []).map((metric) => (
-              <div key={metric.name} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-slate-400">{metric.name}</p>
-                  <Badge variant="info">{metric.unit}</Badge>
+          {isLoading ? (
+            <div className="p-6 text-slate-400">Loading PostgreSQL metrics...</div>
+          ) : isError ? (
+            <div className="p-6 text-red-400">Failed to load PostgreSQL metrics from Prometheus.</div>
+          ) : (
+            <div className="grid gap-4">
+              {(metrics ?? []).map((metric) => (
+                <div key={metric.name} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-slate-400">{metric.name}</p>
+                    <Badge variant="info">{metric.unit}</Badge>
+                  </div>
+                  <p className="mt-4 text-3xl font-semibold text-white">{metric.value}</p>
+                  <p className="mt-2 text-sm text-slate-500">Trend {metric.delta}</p>
                 </div>
-                <p className="mt-4 text-3xl font-semibold text-white">{metric.value}</p>
-                <p className="mt-2 text-sm text-slate-500">Trend {metric.delta}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
         <Card title="Database stability" description="Monitoring and alert readiness.">
           <div className="space-y-3 text-slate-400">

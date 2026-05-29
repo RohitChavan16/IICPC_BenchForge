@@ -47,6 +47,18 @@ services:
     env_file:
     - ./services/bot-worker/.env
 
+  benchmark-service:
+    build:
+      context: ./services/benchmark-service
+    container_name: benchmark-service
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./services/benchmark-service/.env
+
   postgres:
     image: postgres:17
     container_name: postgres
