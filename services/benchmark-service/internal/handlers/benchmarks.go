@@ -127,6 +127,13 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	if req.Status == "COMPLETED" {
+		if err := repository.UpsertLeaderboardEntryFromBenchmark(h.db, id); err != nil {
+			log.Printf("leaderboard upsert error: %v", err)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(b)
 }

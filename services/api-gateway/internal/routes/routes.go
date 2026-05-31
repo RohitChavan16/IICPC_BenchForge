@@ -21,6 +21,12 @@ func proxyToTelemetry(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
+func proxyToLeaderboard(c *gin.Context) {
+	target, _ := url.Parse("http://leaderboard-service:8084")
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 func proxyToSubmission(c *gin.Context) {
 	target, _ := url.Parse("http://submission-service:8083")
 	proxy := httputil.NewSingleHostReverseProxy(target)
@@ -40,4 +46,8 @@ func SetupRoutes(router *gin.Engine) {
 
 	// Proxy telemetry worker monitoring to telemetry-service.
 	router.Any("/workers", func(c *gin.Context) { proxyToTelemetry(c) })
+
+	// Proxy leaderboard queries to leaderboard-service
+	router.Any("/leaderboard", func(c *gin.Context) { proxyToLeaderboard(c) })
+	router.Any("/leaderboard/*proxyPath", func(c *gin.Context) { proxyToLeaderboard(c) })
 }

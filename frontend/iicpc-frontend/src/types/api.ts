@@ -47,6 +47,25 @@ export interface BenchmarkSession {
   updatedAt: string
 }
 
+export interface LeaderboardEntry {
+  id: string
+  benchmarkId: string
+  teamName: string
+  submissionName: string
+  deploymentId: string
+  tps: number
+  successRate: number
+  p50: number
+  p90: number
+  p99: number
+  totalRequests: number
+  duration: number
+  finalScore: number
+  rank: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface InfrastructureMetric {
   label: string
   value: string

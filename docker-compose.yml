@@ -73,6 +73,18 @@ services:
     volumes:
       - submission_uploads:/data/submissions
 
+  leaderboard-service:
+    build:
+      context: ./services/leaderboard-service
+    container_name: leaderboard-service
+    ports:
+      - "8084:8084"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./services/leaderboard-service/.env
+
   container-runner:
     build:
       context: ./services/container-runner

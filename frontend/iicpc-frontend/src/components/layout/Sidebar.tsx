@@ -1,10 +1,11 @@
-import { LayoutDashboard, Radar, Activity, Cpu, Database, ServerCog, Bell, Sparkles, FileText, Settings, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Radar, Activity, Cpu, Database, ServerCog, Bell, Sparkles, Trophy, FileText, Settings, UserCircle } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 const links = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Benchmark Sessions', to: '/benchmarks', icon: Sparkles },
+  { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
   { label: 'Live Telemetry', to: '/telemetry', icon: Radar },
   { label: 'Worker Monitoring', to: '/workers', icon: Activity },
   { label: 'Infrastructure', to: '/infrastructure', icon: ServerCog },
