@@ -21,12 +21,22 @@ func proxyToTelemetry(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
+func proxyToSubmission(c *gin.Context) {
+	target, _ := url.Parse("http://submission-service:8083")
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 func SetupRoutes(router *gin.Engine) {
 	router.GET("/health", handlers.HealthCheck)
 
 	// Proxy benchmark-related API calls to benchmark-service
 	router.Any("/benchmarks", func(c *gin.Context) { proxyToBenchmark(c) })
 	router.Any("/benchmarks/*proxyPath", func(c *gin.Context) { proxyToBenchmark(c) })
+
+	// Proxy submission-related API calls to submission-service
+	router.Any("/submissions", func(c *gin.Context) { proxyToSubmission(c) })
+	router.Any("/submissions/*proxyPath", func(c *gin.Context) { proxyToSubmission(c) })
 
 	// Proxy telemetry worker monitoring to telemetry-service.
 	router.Any("/workers", func(c *gin.Context) { proxyToTelemetry(c) })

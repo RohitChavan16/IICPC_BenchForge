@@ -59,6 +59,47 @@ services:
     env_file:
       - ./services/benchmark-service/.env
 
+  submission-service:
+    build:
+      context: ./services/submission-service
+    container_name: submission-service
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./services/submission-service/.env
+    volumes:
+      - submission_uploads:/data/submissions
+
+  container-runner:
+    build:
+      context: ./services/container-runner
+    container_name: container-runner
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./services/container-runner/.env
+    volumes:
+      - submission_uploads:/data/submissions
+      - /var/run/docker.sock:/var/run/docker.sock # optional: allows docker build (host dind)
+
+  deployment-service:
+    build:
+      context: ./services/deployment-service
+    container_name: deployment-service
+    ports:
+      - "8091:8091"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    env_file:
+      - ./services/deployment-service/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   postgres:
     image: postgres:17
     container_name: postgres
@@ -161,3 +202,4 @@ services:
 
 volumes:
   postgres_data:
+  submission_uploads:

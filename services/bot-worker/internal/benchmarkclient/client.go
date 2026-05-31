@@ -33,6 +33,9 @@ func (c *Client) CreateBenchmark(ctx context.Context, req CreateBenchmarkRequest
 	if req.Name == "" {
 		return nil, errors.New("name is required")
 	}
+	if req.DeploymentID == "" {
+		return nil, errors.New("deploymentId is required")
+	}
 	if req.WorkerCount < 0 {
 		return nil, errors.New("workerCount must be >= 0")
 	}

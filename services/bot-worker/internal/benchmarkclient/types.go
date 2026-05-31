@@ -6,9 +6,10 @@ import (
 )
 
 type CreateBenchmarkRequest struct {
-	Name        string          `json:"name"`
-	WorkerCount int             `json:"workerCount"`
-	Metadata    json.RawMessage `json:"metadata,omitempty"`
+	Name         string          `json:"name"`
+	DeploymentID string          `json:"deploymentId,omitempty"`
+	WorkerCount  int             `json:"workerCount"`
+	Metadata     json.RawMessage `json:"metadata,omitempty"`
 }
 
 type UpdateStatusRequest struct {

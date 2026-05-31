@@ -45,11 +45,25 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
+	if req.DeploymentID == "" {
+		http.Error(w, "deploymentId is required", http.StatusBadRequest)
+		return
+	}
 	if req.WorkerCount < 0 {
 		http.Error(w, "workerCount must be >= 0", http.StatusBadRequest)
 		return
 	}
-	b, err := repository.CreateBenchmark(h.db, req.Name, req.WorkerCount, req.Metadata)
+	var exists bool
+	if err := h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM deployments WHERE id=$1 AND deployment_status='RUNNING')`, req.DeploymentID).Scan(&exists); err != nil {
+		log.Printf("validate deployment error: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "deployment not found or not running", http.StatusBadRequest)
+		return
+	}
+	b, err := repository.CreateBenchmark(h.db, req.Name, req.DeploymentID, req.WorkerCount, req.Metadata)
 	if err != nil {
 		log.Printf("create benchmark error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -92,6 +106,11 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 	}
 	if req.Status == "" {
 		http.Error(w, "status is required", http.StatusBadRequest)
+		return
+	}
+	validStatuses := map[string]bool{"CREATED": true, "RUNNING": true, "COMPLETED": true, "FAILED": true}
+	if !validStatuses[req.Status] {
+		http.Error(w, "invalid status", http.StatusBadRequest)
 		return
 	}
 	if req.TotalRequests < 0 || req.SuccessCount < 0 || req.FailureCount < 0 {

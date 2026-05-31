@@ -35,13 +35,17 @@ func main() {
 		"engine": "benchforge",
 	})
 
+	// optional: deployment id to bind this benchmark to a deployed container
+	deploymentID := os.Getenv("DEPLOYMENT_ID")
+
 	ctx := context.Background()
 	benchmarkID := ""
 
 	created, err := benchmarkClient.CreateBenchmark(ctx, benchmarkclient.CreateBenchmarkRequest{
-		Name:        benchmarkName,
-		WorkerCount: totalWorkers,
-		Metadata:    metadata,
+		Name:         benchmarkName,
+		DeploymentID: deploymentID,
+		WorkerCount:  totalWorkers,
+		Metadata:     metadata,
 	})
 	if err != nil {
 		log.Printf("BenchmarkCreatedFailed name=%s error=%v", benchmarkName, err)

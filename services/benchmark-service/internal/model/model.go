@@ -8,6 +8,7 @@ import (
 type Benchmark struct {
 	ID            string          `json:"id"`
 	Name          string          `json:"name"`
+	DeploymentID  string          `json:"deploymentId,omitempty"`
 	Status        string          `json:"status"`
 	WorkerCount   int             `json:"workerCount"`
 	StartedAt     time.Time       `json:"startedAt"`
