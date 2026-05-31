@@ -4,13 +4,14 @@ import { fetchHealthStatus, fetchInfrastructureMetrics } from '@/services/api/in
 import { fetchTelemetrySummary } from '@/services/api/telemetryService'
 import { Card } from '@/components/ui/Card'
 import { MetricSparkline } from '@/components/charts/MetricSparkline'
+import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 import { Badge } from '@/components/ui/Badge'
 import { Info, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
 
 export function DashboardHomePage() {
-  const { data: summary } = useQuery(['telemetrySummary'], fetchTelemetrySummary)
-  const { data: healthStatus } = useQuery(['healthStatus'], fetchHealthStatus)
-  const { data: infrastructure } = useQuery(['infrastructureMetrics'], fetchInfrastructureMetrics)
+  const { data: summary } = useQuery({ queryKey: ['telemetrySummary'], queryFn: fetchTelemetrySummary })
+  const { data: healthStatus } = useQuery({ queryKey: ['healthStatus'], queryFn: fetchHealthStatus })
+  const { data: infrastructure } = useQuery({ queryKey: ['infrastructureMetrics'], queryFn: fetchInfrastructureMetrics })
 
   return (
     <div className="space-y-8">
@@ -103,17 +104,7 @@ export function DashboardHomePage() {
             ))}
           </div>
         </Card>
-        <Card title="Pipeline status" description="Recent telemetry events and operational trending.">
-          <div className="mt-4 grid gap-4">
-            {infrastructure?.slice(2, 4).map((metric) => (
-              <div key={metric.label} className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-sm text-slate-400">{metric.label}</p>
-                <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
-                <p className="mt-1 text-sm text-slate-500">{metric.detail}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <ActivityFeed />
       </section>
     </div>
   )

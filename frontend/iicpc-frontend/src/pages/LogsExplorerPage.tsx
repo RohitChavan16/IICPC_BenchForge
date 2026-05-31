@@ -10,7 +10,7 @@ const levels = ['all', 'info', 'warn', 'error', 'debug'] as const
 export function LogsExplorerPage() {
   const [query, setQuery] = useState('')
   const [level, setLevel] = useState<'all' | 'info' | 'warn' | 'error' | 'debug'>('all')
-  const { data: logs } = useQuery(['logs', query, level], () => fetchLogs(query, level === 'all' ? undefined : level))
+  const { data: logs } = useQuery({ queryKey: ['logs', query, level], queryFn: () => fetchLogs(query, level === 'all' ? undefined : level) })
 
   return (
     <div className="space-y-8">

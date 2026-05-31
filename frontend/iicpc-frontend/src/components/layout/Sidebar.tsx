@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 
 const links = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { label: 'Submit Code', to: '/submit', icon: FileText },
   { label: 'Benchmark Sessions', to: '/benchmarks', icon: Sparkles },
   { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
   { label: 'Live Telemetry', to: '/telemetry', icon: Radar },

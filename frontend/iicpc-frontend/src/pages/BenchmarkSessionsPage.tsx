@@ -5,9 +5,10 @@ import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
 import type { BenchmarkSession } from '@/types/api'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Search } from 'lucide-react'
-import { formatDuration, formatNumber, formatRelativeDate } from '@/utils/formatters'
 import { BenchmarkSessionCard } from '@/components/benchmark/BenchmarkSessionCard'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { Search, FileX } from 'lucide-react'
+import { formatDuration, formatNumber, formatRelativeDate } from '@/utils/formatters'
 
 const statusVariants = {
   Running: 'info',
@@ -31,7 +32,7 @@ export function BenchmarkSessionsPage() {
   const [statusFilter, setStatusFilter] = useState<typeof statusOptions[number]>('All')
   const [sortKey, setSortKey] = useState<SortKey>('updatedAt')
   const [page, setPage] = useState(1)
-  const { data, isLoading, isError } = useQuery(['benchmarkSessions'], fetchBenchmarkSessions)
+  const { data, isLoading, isError } = useQuery({ queryKey: ['benchmarkSessions'], queryFn: fetchBenchmarkSessions })
 
   const sessions = data?.items ?? []
 
@@ -76,8 +77,25 @@ export function BenchmarkSessionsPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl py-20 text-center text-white">
-        <p className="text-xl">Loading benchmark sessions...</p>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <Skeleton className="h-4 w-40 mb-3" />
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <Skeleton className="h-12 w-80 rounded-3xl" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-32 w-full rounded-3xl" />
+          <Skeleton className="h-32 w-full rounded-3xl" />
+          <Skeleton className="h-32 w-full rounded-3xl" />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-40 w-full rounded-3xl" />
+          <Skeleton className="h-40 w-full rounded-3xl" />
+          <Skeleton className="h-40 w-full rounded-3xl" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-3xl" />
       </div>
     )
   }
@@ -197,30 +215,42 @@ export function BenchmarkSessionsPage() {
               </tr>
             </thead>
             <tbody>
-              {visibleSessions.map((session) => {
-                const durationLabel = session.duration ? formatDuration(session.duration) : 'Running'
-                const tps = session.duration ? session.totalRequests / session.duration : 0
-
-                return (
-                  <tr key={session.id} className="border-t border-white/10 hover:bg-white/5">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-white">{session.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">Updated {formatRelativeDate(session.updatedAt)}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant={statusVariants[session.status]}>{session.status}</Badge>
-                    </td>
-                    <td className="px-6 py-4 text-white">{tps ? formatNumber(tps) : '—'}</td>
-                    <td className="px-6 py-4 text-white">{session.p99.toFixed(0)} ms</td>
-                    <td className="px-6 py-4 text-slate-300">{durationLabel}</td>
-                    <td className="px-6 py-4 text-right">
-                      <Link to={`/benchmarks/${session.id}`} className="text-cyan-300 hover:text-white">
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
+              {visibleSessions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center">
+                      <FileX className="h-12 w-12 text-slate-500 mb-3" />
+                      <p className="text-lg font-medium text-white">No sessions found</p>
+                      <p className="text-sm">We couldn't find any benchmark sessions matching your criteria.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                visibleSessions.map((session) => {
+                  const durationLabel = session.duration ? formatDuration(session.duration) : 'Running'
+                  const tps = session.duration ? session.totalRequests / session.duration : 0
+  
+                  return (
+                    <tr key={session.id} className="border-t border-white/10 hover:bg-white/5">
+                      <td className="px-6 py-4">
+                        <p className="font-semibold text-white">{session.name}</p>
+                        <p className="mt-1 text-xs text-slate-500">Updated {formatRelativeDate(session.updatedAt)}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={statusVariants[session.status]}>{session.status}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-white">{tps ? formatNumber(tps) : '—'}</td>
+                      <td className="px-6 py-4 text-white">{session.p99.toFixed(0)} ms</td>
+                      <td className="px-6 py-4 text-slate-300">{durationLabel}</td>
+                      <td className="px-6 py-4 text-right">
+                        <Link to={`/benchmarks/${session.id}`} className="text-cyan-300 hover:text-white">
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>

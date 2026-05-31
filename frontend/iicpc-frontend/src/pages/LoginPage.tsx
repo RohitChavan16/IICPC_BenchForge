@@ -11,8 +11,8 @@ import { login } from '@/services/api/authService'
 import { useToast } from '@/components/ui/ToastProvider'
 
 const loginSchema = z.object({
-  email: z.string().email('Enter a valid email'),
-  password: z.string().min(8, 'Password must contain at least 8 characters'),
+  email: z.string().min(1, 'Email is required').email('Enter a valid email'),
+  password: z.string().min(1, 'Password is required').min(8, 'Password must contain at least 8 characters'),
 })
 
 type LoginForm = z.infer<typeof loginSchema>
@@ -36,10 +36,15 @@ export function LoginPage() {
   }, [])
 
   const onSubmit = async (values: LoginForm) => {
-    const response = await login(values)
-    setAuth(response.user, response.token)
-    pushToast({ title: 'Welcome back', description: 'You are now authenticated.', variant: 'success' })
-    navigate('/dashboard')
+    try {
+      const response = await login({ email: values.email, password: values.password })
+      setAuth(response.user, response.token)
+      pushToast({ title: 'Welcome back', description: 'You are now authenticated.', variant: 'success' })
+      navigate('/dashboard')
+    } catch (error: unknown) {
+      const message = (error as { message?: string })?.message ?? 'Please check your credentials and try again.'
+      pushToast({ title: 'Login failed', description: message, variant: 'error' })
+    }
   }
 
   return (
@@ -52,16 +57,16 @@ export function LoginPage() {
             <p className="text-sm leading-6 text-slate-400">Sign in to monitor live telemetry, start benchmark runs, and inspect worker health.</p>
           </div>
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-slate-300">Email</label>
-              <Input type="email" placeholder="you@benchforge.io" {...register('email')} />
-              {errors.email ? <p className="text-sm text-rose-400">{errors.email.message}</p> : null}
+            <div className="space-y-2">
+              <label htmlFor="login-email" className="block text-sm font-medium text-slate-300">Email</label>
+              <Input id="login-email" type="email" autoComplete="email" placeholder="you@benchforge.io" aria-invalid={!!errors.email} {...register('email')} />
+              {errors.email ? <p className="text-sm text-rose-400" role="alert">{errors.email.message}</p> : null}
             </div>
 
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-slate-300">Password</label>
-              <Input type="password" placeholder="Enter your password" {...register('password')} />
-              {errors.password ? <p className="text-sm text-rose-400">{errors.password.message}</p> : null}
+            <div className="space-y-2">
+              <label htmlFor="login-password" className="block text-sm font-medium text-slate-300">Password</label>
+              <Input id="login-password" type="password" autoComplete="current-password" placeholder="Enter your password" aria-invalid={!!errors.password} {...register('password')} />
+              {errors.password ? <p className="text-sm text-rose-400" role="alert">{errors.password.message}</p> : null}
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>

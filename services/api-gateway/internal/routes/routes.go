@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/handlers"
 )
 
@@ -33,8 +34,12 @@ func proxyToSubmission(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
-func SetupRoutes(router *gin.Engine) {
+func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler) {
 	router.GET("/health", handlers.HealthCheck)
+
+	router.POST("/auth/register", authHandler.Register)
+	router.POST("/auth/login", authHandler.Login)
+	router.GET("/auth/me", authHandler.Me)
 
 	// Proxy benchmark-related API calls to benchmark-service
 	router.Any("/benchmarks", func(c *gin.Context) { proxyToBenchmark(c) })

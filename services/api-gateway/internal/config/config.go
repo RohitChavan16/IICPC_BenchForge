@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	Port         string
-	AppEnv       string
-	ServiceName  string
-	PostgresURL  string
-	RedisURL     string
+	Port        string
+	AppEnv      string
+	ServiceName string
+	PostgresURL string
+	RedisURL    string
+	JWTSecret   string
 }
 
 func LoadConfig() *Config {
@@ -28,5 +29,6 @@ func LoadConfig() *Config {
 		ServiceName: os.Getenv("SERVICE_NAME"),
 		PostgresURL: os.Getenv("POSTGRES_URL"),
 		RedisURL:    os.Getenv("REDIS_URL"),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
 	}
 }

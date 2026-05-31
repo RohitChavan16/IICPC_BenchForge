@@ -38,12 +38,17 @@ export function LeaderboardPage() {
   const [sortKey, setSortKey] = useState<SortKey>('rank')
   const [selectedEntry, setSelectedEntry] = useState<LeaderboardEntry | null>(null)
 
-  const { data: leaderboardData, isLoading: isLeaderboardLoading } = useQuery(['leaderboardEntries'], fetchLeaderboardEntries, {
+  const { data: leaderboardData, isLoading: isLeaderboardLoading } = useQuery({
+    queryKey: ['leaderboardEntries'],
+    queryFn: fetchLeaderboardEntries,
     refetchInterval: 10000,
   })
-  const { data: topData, isLoading: isTopLoading } = useQuery(['leaderboardTop'], fetchTopLeaderboardEntries, {
+  const { data: topData, isLoading: isTopLoading } = useQuery({
+    queryKey: ['leaderboardTop'],
+    queryFn: fetchTopLeaderboardEntries,
     refetchInterval: 10000,
   })
+
 
   const leaderboard = leaderboardData?.items ?? []
   const topEntries = topData ?? []

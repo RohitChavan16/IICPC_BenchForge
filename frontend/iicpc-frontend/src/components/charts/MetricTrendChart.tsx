@@ -38,7 +38,7 @@ function formatSeriesToChart(data: any[]) {
 export const MetricTrendChart: React.FC<Props> = ({ promql, title, unit }) => {
   const [range, setRange] = useState<TimeWindow>('5m')
 
-  const { data, isLoading, isError } = useQuery(['prom_range', promql, range], () => fetchPrometheusRange(promql, range), { refetchInterval: false })
+  const { data, isLoading, isError } = useQuery({ queryKey: ['prom_range', promql, range], queryFn: () => fetchPrometheusRange(promql, range), refetchInterval: false })
 
   const { seriesNames, dataPoints } = useMemo(() => formatSeriesToChart(data ?? []), [data])
 

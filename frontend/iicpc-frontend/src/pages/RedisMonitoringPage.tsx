@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 export function RedisMonitoringPage() {
-  const { data: metrics, isLoading, isError } = useQuery(['redisMetrics'], fetchRedisMetrics)
+  const { data: metrics, isLoading, isError } = useQuery({ queryKey: ['redisMetrics'], queryFn: fetchRedisMetrics })
 
   return (
     <div className="space-y-8">

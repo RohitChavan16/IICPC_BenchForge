@@ -1,15 +1,17 @@
 package server
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/routes"
 )
 
-func NewServer(port string) *gin.Engine {
+func NewServer(port string, db *sql.DB, jwtSecret string) *gin.Engine {
 	router := gin.Default()
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
@@ -24,7 +26,8 @@ func NewServer(port string) *gin.Engine {
 		c.Next()
 	})
 
-	routes.SetupRoutes(router)
+	authHandler := auth.NewAuthHandler(db, jwtSecret)
+	routes.SetupRoutes(router, authHandler)
 
 	fmt.Println("API Gateway running on port:", port)
 

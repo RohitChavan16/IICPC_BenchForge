@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import { X, CheckCircle, AlertTriangle } from 'lucide-react'
 
-export type ToastVariant = 'success' | 'error' | 'info' | 'warning'
+export type ToastVariant = 'success' | 'error' | 'info' | 'warning' | 'destructive'
 
 export interface ToastMessage {
   id: string
@@ -21,14 +21,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+    const id = `${toast.title}-${Date.now()}`
     setToasts((current) => [
       ...current,
       {
-        id: `${toast.title}-${Date.now()}`,
+        id,
         variant: toast.variant ?? 'info',
         ...toast,
       },
     ])
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setToasts((current) => current.filter((t) => t.id !== id))
+    }, 5000)
   }, [])
 
   const removeToast = useCallback((id: string) => {
@@ -47,8 +52,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className="pointer-events-auto rounded-3xl border border-white/10 bg-slate-900/95 p-4 shadow-xl backdrop-blur-xl"
           >
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 text-cyan-300">
-                {toast.variant === 'success' ? <CheckCircle size={18} /> : toast.variant === 'error' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
+              <div className={`mt-0.5 ${toast.variant === 'error' || toast.variant === 'destructive' ? 'text-rose-400' : toast.variant === 'warning' ? 'text-amber-400' : 'text-cyan-300'}`}>
+                {toast.variant === 'error' || toast.variant === 'destructive' || toast.variant === 'warning' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-white">{toast.title}</p>

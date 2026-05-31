@@ -6,20 +6,19 @@ import { fetchTelemetryHistory } from '@/services/api/telemetryService'
 import { Card } from '@/components/ui/Card'
 import { LiveLineChart } from '@/components/charts/LiveLineChart'
 import { Badge } from '@/components/ui/Badge'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { formatDuration, formatPercent } from '@/utils/formatters'
 
 export function BenchmarkDetailPage() {
   const { benchmarkId } = useParams()
   const navigate = useNavigate()
-  const { data: benchmark, isLoading, isError } = useQuery(
-    ['benchmarkDetail', benchmarkId],
-    () => fetchBenchmarkDetail(benchmarkId ?? ''),
-    {
-      enabled: Boolean(benchmarkId),
-      retry: false,
-    },
-  )
-  const { data: history } = useQuery(['telemetryHistory'], fetchTelemetryHistory)
+  const { data: benchmark, isLoading, isError } = useQuery({
+    queryKey: ['benchmarkDetail', benchmarkId],
+    queryFn: () => fetchBenchmarkDetail(benchmarkId ?? ''),
+    enabled: Boolean(benchmarkId),
+    retry: false,
+  })
+  const { data: history } = useQuery({ queryKey: ['telemetryHistory'], queryFn: fetchTelemetryHistory })
 
   const successRate = benchmark?.totalRequests
     ? (benchmark.successCount / benchmark.totalRequests) * 100
@@ -38,8 +37,24 @@ export function BenchmarkDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl py-20 text-center text-white">
-        <p className="text-xl">Loading benchmark details...</p>
+      <div className="space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <Skeleton className="h-4 w-32 mb-3" />
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <Skeleton className="h-8 w-24 rounded-full" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1.6fr_0.9fr]">
+          <div className="space-y-6">
+            <Skeleton className="h-80 w-full rounded-3xl" />
+            <Skeleton className="h-40 w-full rounded-3xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full rounded-3xl" />
+            <Skeleton className="h-48 w-full rounded-3xl" />
+          </div>
+        </div>
       </div>
     )
   }

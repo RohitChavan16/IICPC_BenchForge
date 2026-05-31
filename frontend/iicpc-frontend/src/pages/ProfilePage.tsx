@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 
 export function ProfilePage() {
-  const { data: user } = useQuery(['userProfile'], fetchProfile)
+  const { data: user } = useQuery({ queryKey: ['userProfile'], queryFn: fetchProfile })
 
   return (
     <div className="space-y-8">

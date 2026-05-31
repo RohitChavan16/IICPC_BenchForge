@@ -2,8 +2,15 @@ import { apiClient } from './apiClient'
 import { endpoints } from './endpoints'
 import type { UserProfile } from '@/types/user'
 
-export interface AuthCredentials {
+export interface LoginCredentials {
   email: string
+  password: string
+}
+
+export interface RegisterCredentials {
+  name: string
+  email: string
+  team: string
   password: string
 }
 
@@ -12,43 +19,17 @@ export interface AuthResponse {
   token: string
 }
 
-const fallbackUser: UserProfile = {
-  id: 'user-01',
-  name: 'Avery Morgan',
-  email: 'avery@benchforge.io',
-  role: 'Platform SRE',
-  team: 'Benchmark Ops',
+export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(endpoints.authLogin, credentials)
+  return response.data
 }
 
-export async function login(credentials: AuthCredentials): Promise<AuthResponse> {
-  try {
-    const response = await apiClient.post(endpoints.authLogin, credentials)
-    return response.data as AuthResponse
-  } catch (error) {
-    return {
-      user: fallbackUser,
-      token: 'mock-jwt-token',
-    }
-  }
-}
-
-export async function register(credentials: AuthCredentials): Promise<AuthResponse> {
-  try {
-    const response = await apiClient.post(endpoints.authRegister, credentials)
-    return response.data as AuthResponse
-  } catch (error) {
-    return {
-      user: fallbackUser,
-      token: 'mock-jwt-token',
-    }
-  }
+export async function register(credentials: RegisterCredentials): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>(endpoints.authRegister, credentials)
+  return response.data
 }
 
 export async function fetchProfile(): Promise<UserProfile> {
-  try {
-    const response = await apiClient.get(endpoints.authProfile)
-    return response.data as UserProfile
-  } catch (error) {
-    return fallbackUser
-  }
+  const response = await apiClient.get(endpoints.authProfile)
+  return response.data as UserProfile
 }

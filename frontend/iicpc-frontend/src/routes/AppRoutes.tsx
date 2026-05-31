@@ -4,6 +4,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { DashboardHomePage } from '@/pages/DashboardHomePage'
+import { SubmissionPage } from '@/pages/SubmissionPage'
 import { BenchmarkSessionsPage } from '@/pages/BenchmarkSessionsPage'
 import { BenchmarkDetailPage } from '@/pages/BenchmarkDetailPage'
 import { BenchmarkAnalyticsPage } from '@/pages/BenchmarkAnalyticsPage'
@@ -46,6 +47,7 @@ export function AppRoutes() {
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardHomePage /></ProtectedRoute>} />
+      <Route path="/submit" element={<ProtectedRoute><SubmissionPage /></ProtectedRoute>} />
       <Route path="/benchmarks" element={<ProtectedRoute><BenchmarkSessionsPage /></ProtectedRoute>} />
       <Route path="/benchmarks/analytics" element={<ProtectedRoute><BenchmarkAnalyticsPage /></ProtectedRoute>} />
       <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />

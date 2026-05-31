@@ -9,8 +9,8 @@ import { MetricTrendChart } from '@/components/charts/MetricTrendChart'
 import { METRIC_CATALOG } from '@/services/prometheus/metricMappings'
 
 export function InfrastructureMonitoringPage() {
-  const { data: healthStatus, isLoading: healthLoading, isError: healthError } = useQuery(['healthStatus'], fetchHealthStatus)
-  const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useQuery(['infrastructureMetrics'], fetchInfrastructureMetrics)
+  const { data: healthStatus, isLoading: healthLoading, isError: healthError } = useQuery({ queryKey: ['healthStatus'], queryFn: fetchHealthStatus })
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useQuery({ queryKey: ['infrastructureMetrics'], queryFn: fetchInfrastructureMetrics })
 
   return (
     <div className="space-y-8">

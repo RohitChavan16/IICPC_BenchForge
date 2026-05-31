@@ -16,10 +16,10 @@ function formatPercent(v: number | null) {
 
 export const ServiceHealthCard: React.FC<Props> = ({ label, job }) => {
   // instant up
-  const { data: upData, isLoading: upLoading, isError: upError } = useQuery(['service_up', job], () => instantQuery(`up{job=\"${job}\"}`), { staleTime: 5000 })
+  const { data: upData, isLoading: upLoading, isError: upError } = useQuery({ queryKey: ['service_up', job], queryFn: () => instantQuery(`up{job=\"${job}\"}`), staleTime: 5000 })
 
   // availability over 15m
-  const { data: availData, isLoading: availLoading, isError: availError } = useQuery(['service_avail', job], () => instantQuery(`avg_over_time(up{job=\"${job}\"}[15m])`), { staleTime: 5000 })
+  const { data: availData, isLoading: availLoading, isError: availError } = useQuery({ queryKey: ['service_avail', job], queryFn: () => instantQuery(`avg_over_time(up{job=\"${job}\"}[15m])`), staleTime: 5000 })
 
   const upValue = upData && upData.length > 0 ? Number(upData[0].value[1]) : null
   const lastScrapeTs = upData && upData.length > 0 ? Number(upData[0].value[0]) * 1000 : null

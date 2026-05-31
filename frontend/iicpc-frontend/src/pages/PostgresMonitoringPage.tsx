@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 export function PostgresMonitoringPage() {
-  const { data: metrics, isLoading, isError } = useQuery(['postgresMetrics'], fetchPostgresMetrics)
+  const { data: metrics, isLoading, isError } = useQuery({ queryKey: ['postgresMetrics'], queryFn: fetchPostgresMetrics })
 
   return (
     <div className="space-y-8">

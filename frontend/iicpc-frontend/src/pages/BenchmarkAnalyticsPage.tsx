@@ -8,7 +8,7 @@ import { BenchmarkComparisonCard } from '@/components/analytics/BenchmarkCompari
 import type { BenchmarkSession } from '@/types/api'
 
 export function BenchmarkAnalyticsPage() {
-  const { data: sessions = [], isLoading, isError } = useQuery(['allBenchmarks'], fetchAllBenchmarks)
+  const { data: sessions = [], isLoading, isError } = useQuery({ queryKey: ['allBenchmarks'], queryFn: fetchAllBenchmarks })
   const [windowSize, setWindowSize] = useState<number | 'all'>(5)
   const [selectedRuns, setSelectedRuns] = useState<string[]>([])
   const [metric, setMetric] = useState<'tps' | 'successRate' | 'p50' | 'p90' | 'p99' | 'totalRequests'>('tps')
