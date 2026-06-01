@@ -5,7 +5,9 @@ import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { DashboardHomePage } from '@/pages/DashboardHomePage'
 import { SubmissionPage } from '@/pages/SubmissionPage'
+import { DeploymentPage } from '@/pages/DeploymentPage'
 import { BenchmarkSessionsPage } from '@/pages/BenchmarkSessionsPage'
+import { NewBenchmarkPage } from '@/pages/NewBenchmarkPage'
 import { BenchmarkDetailPage } from '@/pages/BenchmarkDetailPage'
 import { BenchmarkAnalyticsPage } from '@/pages/BenchmarkAnalyticsPage'
 import { LeaderboardPage } from '@/pages/LeaderboardPage'
@@ -48,7 +50,9 @@ export function AppRoutes() {
       <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardHomePage /></ProtectedRoute>} />
       <Route path="/submit" element={<ProtectedRoute><SubmissionPage /></ProtectedRoute>} />
+      <Route path="/deployments/new" element={<ProtectedRoute><DeploymentPage /></ProtectedRoute>} />
       <Route path="/benchmarks" element={<ProtectedRoute><BenchmarkSessionsPage /></ProtectedRoute>} />
+      <Route path="/benchmarks/new" element={<ProtectedRoute><NewBenchmarkPage /></ProtectedRoute>} />
       <Route path="/benchmarks/analytics" element={<ProtectedRoute><BenchmarkAnalyticsPage /></ProtectedRoute>} />
       <Route path="/leaderboard" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
       <Route path="/benchmarks/:benchmarkId" element={<ProtectedRoute><BenchmarkDetailPage /></ProtectedRoute>} />

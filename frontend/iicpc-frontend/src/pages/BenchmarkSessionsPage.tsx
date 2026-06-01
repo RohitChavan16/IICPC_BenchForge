@@ -116,6 +116,12 @@ export function BenchmarkSessionsPage() {
           <h1 className="mt-2 text-3xl font-semibold text-white">Benchmark sessions</h1>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            to="/benchmarks/new"
+            className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-400"
+          >
+            Start Benchmark
+          </Link>
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input

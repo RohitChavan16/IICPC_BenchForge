@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { UploadCloud, FileCode2, Box, Server, Zap, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
+import * as submissionService from '@/services/api/submissionService'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 type SubmissionStatus = 'idle' | 'uploading' | 'building' | 'deploying' | 'benchmarking' | 'completed' | 'failed'
 
@@ -48,8 +50,29 @@ export function SubmissionPage() {
     }
   }, [status])
 
-  const handleUpload = () => {
-    setStatus('uploading')
+  const { user } = useAuthStore()
+
+  const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!user) return
+
+    const formData = new FormData(e.currentTarget)
+    formData.append('teamName', user.teamName)
+
+    try {
+      setStatus('uploading')
+      // Simulate slow upload for effect
+      await new Promise((res) => setTimeout(res, 1000))
+      
+      const submission = await submissionService.createSubmission(formData)
+      console.log('Submission created:', submission)
+      // Here we would normally start polling or move to deployment phase
+      // For now we just mock the rest of the flow by kicking off building
+      setStatus('building')
+    } catch (err) {
+      console.error(err)
+      setStatus('failed')
+    }
   }
 
   return (
@@ -68,15 +91,28 @@ export function SubmissionPage() {
             exit={{ opacity: 0, y: -10 }}
             className="grid gap-6 md:grid-cols-2"
           >
-            <Card className="flex flex-col items-center justify-center border-dashed border-white/20 bg-slate-950/50 p-12 text-center hover:border-cyan-500/50 hover:bg-slate-950/80 transition-colors">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10 text-cyan-400">
-                <UploadCloud size={40} />
-              </div>
-              <h3 className="mt-6 text-xl font-semibold text-white">Upload Source or Binary</h3>
-              <p className="mt-2 text-sm text-slate-400">Drag and drop your ZIP or TAR file here, or click to browse.</p>
-              <Button className="mt-8 px-8" onClick={handleUpload}>
-                Select File
-              </Button>
+            <Card title="Upload Source or Binary">
+              <form onSubmit={handleUpload} className="space-y-4">
+                <div>
+                  <label className="text-sm text-slate-400">Submission Name</label>
+                  <input type="text" name="submissionName" required className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400" placeholder="e.g. baseline-engine" />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400">Language</label>
+                  <select name="language" required className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400">
+                    <option value="go">Go</option>
+                    <option value="rust">Rust</option>
+                    <option value="cpp">C++</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-slate-400">File (.zip)</label>
+                  <input type="file" name="file" accept=".zip" required className="mt-1 w-full text-slate-300 file:mr-4 file:rounded-full file:border-0 file:bg-cyan-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-400 hover:file:bg-cyan-500/30" />
+                </div>
+                <Button type="submit" className="w-full mt-4">
+                  Upload & Deploy
+                </Button>
+              </form>
             </Card>
 
             <div className="space-y-6">

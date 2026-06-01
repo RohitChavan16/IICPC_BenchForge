@@ -16,4 +16,6 @@ export const endpoints = {
   postgres: '/infrastructure/postgres',
   logs: '/logs',
   notifications: '/notifications',
+  submissions: '/submissions',
+  deployments: '/deployments',
 }

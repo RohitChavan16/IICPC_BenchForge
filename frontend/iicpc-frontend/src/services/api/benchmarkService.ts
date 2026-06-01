@@ -20,3 +20,16 @@ export async function fetchBenchmarkDetail(id: string): Promise<BenchmarkSession
   const response = await apiClient.get(endpoints.benchmarkDetail(id))
   return response.data as BenchmarkSession
 }
+
+export interface CreateBenchmarkPayload {
+  name: string
+  targetType: 'mock' | 'deployment'
+  deploymentId?: string
+  workerCount: number
+  totalRequests: number
+}
+
+export async function createBenchmark(payload: CreateBenchmarkPayload): Promise<BenchmarkSession> {
+  const response = await apiClient.post(endpoints.benchmarkSessions, payload)
+  return response.data as BenchmarkSession
+}

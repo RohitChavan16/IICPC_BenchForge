@@ -4,22 +4,24 @@ import { useAuthStore } from '@/stores/useAuthStore'
 
 const links = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Submit Code', to: '/submit', icon: FileText },
+  { label: 'Submit Code', to: '/submit', icon: FileText, role: 'benchmark-team' },
   { label: 'Benchmark Sessions', to: '/benchmarks', icon: Sparkles },
   { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
-  { label: 'Live Telemetry', to: '/telemetry', icon: Radar },
-  { label: 'Worker Monitoring', to: '/workers', icon: Activity },
-  { label: 'Infrastructure', to: '/infrastructure', icon: ServerCog },
-  { label: 'Logs Explorer', to: '/logs', icon: FileText },
+  { label: 'Live Telemetry', to: '/telemetry', icon: Radar, role: 'admin' },
+  { label: 'Worker Monitoring', to: '/workers', icon: Activity, role: 'admin' },
+  { label: 'Infrastructure', to: '/infrastructure', icon: ServerCog, role: 'admin' },
+  { label: 'Logs Explorer', to: '/logs', icon: FileText, role: 'admin' },
 ]
 
 const infraLinks = [
-  { label: 'Redis', to: '/infrastructure/redis', icon: Cpu },
-  { label: 'PostgreSQL', to: '/infrastructure/postgres', icon: Database },
+  { label: 'Redis', to: '/infrastructure/redis', icon: Cpu, role: 'admin' },
+  { label: 'PostgreSQL', to: '/infrastructure/postgres', icon: Database, role: 'admin' },
 ]
 
 export function Sidebar() {
   const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.role === 'admin'
+
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[280px] flex-col border-r border-white/10 bg-slate-950/95 px-4 py-6 backdrop-blur-xl xl:flex">
@@ -34,7 +36,9 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-2">
-        {links.map((item) => {
+        {links
+          .filter((item) => !item.role || item.role === user?.role)
+          .map((item) => {
           const Icon = item.icon
           return (
             <NavLink
@@ -55,28 +59,32 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-8 rounded-[32px] border border-white/10 bg-slate-900/70 p-5">
-        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Infrastructure</p>
-        <div className="mt-4 space-y-2">
-          {infraLinks.map((item) => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
-                    isActive ? 'bg-violet-500/10 text-violet-300' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  }`
-                }
-              >
-                <Icon size={16} />
-                {item.label}
-              </NavLink>
-            )
-          })}
+      {isAdmin && (
+        <div className="mt-8 rounded-[32px] border border-white/10 bg-slate-900/70 p-5">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Infrastructure</p>
+          <div className="mt-4 space-y-2">
+            {infraLinks
+              .filter((item) => !item.role || item.role === user?.role)
+              .map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
+                      isActive ? 'bg-violet-500/10 text-violet-300' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`
+                  }
+                >
+                  <Icon size={16} />
+                  {item.label}
+                </NavLink>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-auto rounded-[32px] border border-white/10 bg-slate-900/75 p-4">
         <div className="flex items-center gap-3">
