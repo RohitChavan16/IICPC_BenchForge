@@ -4,6 +4,8 @@ import "time"
 
 type Deployment struct {
 	ID               string     `json:"id"`
+	UserID           string     `json:"userId"`
+	TeamID           string     `json:"teamId"`
 	SubmissionID     string     `json:"submissionId"`
 	ContainerID      string     `json:"containerId,omitempty"`
 	ContainerImage   string     `json:"containerImage,omitempty"`

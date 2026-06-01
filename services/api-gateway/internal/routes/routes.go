@@ -8,6 +8,7 @@ import (
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/handlers"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/middleware"
 )
 
 func proxyToBenchmark(c *gin.Context) {
@@ -34,25 +35,36 @@ func proxyToSubmission(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
-func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler) {
+func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddleware *middleware.AuthMiddleware) {
 	router.GET("/health", handlers.HealthCheck)
 
 	router.POST("/auth/register", authHandler.Register)
 	router.POST("/auth/login", authHandler.Login)
 	router.GET("/auth/me", authHandler.Me)
 
-	// Proxy benchmark-related API calls to benchmark-service
-	router.Any("/benchmarks", func(c *gin.Context) { proxyToBenchmark(c) })
-	router.Any("/benchmarks/*proxyPath", func(c *gin.Context) { proxyToBenchmark(c) })
+	// Contestant/User routes (Require Auth)
+	protected := router.Group("/")
+	protected.Use(authMiddleware.RequireAuth())
+	{
+		protected.Any("/benchmarks", func(c *gin.Context) { proxyToBenchmark(c) })
+		protected.Any("/benchmarks/*proxyPath", func(c *gin.Context) { proxyToBenchmark(c) })
 
-	// Proxy submission-related API calls to submission-service
-	router.Any("/submissions", func(c *gin.Context) { proxyToSubmission(c) })
-	router.Any("/submissions/*proxyPath", func(c *gin.Context) { proxyToSubmission(c) })
+		protected.Any("/submissions", func(c *gin.Context) { proxyToSubmission(c) })
+		protected.Any("/submissions/*proxyPath", func(c *gin.Context) { proxyToSubmission(c) })
+	}
 
-	// Proxy telemetry worker monitoring to telemetry-service.
-	router.Any("/workers", func(c *gin.Context) { proxyToTelemetry(c) })
-
-	// Proxy leaderboard queries to leaderboard-service
+	// Public or Authenticated
 	router.Any("/leaderboard", func(c *gin.Context) { proxyToLeaderboard(c) })
 	router.Any("/leaderboard/*proxyPath", func(c *gin.Context) { proxyToLeaderboard(c) })
+
+	// Admin routes
+	admin := router.Group("/")
+	admin.Use(authMiddleware.RequireAuth(), authMiddleware.RequireRole("admin"))
+	{
+		admin.Any("/workers", func(c *gin.Context) { proxyToTelemetry(c) })
+		admin.Any("/workers/*proxyPath", func(c *gin.Context) { proxyToTelemetry(c) })
+		
+		admin.Any("/telemetry", func(c *gin.Context) { proxyToTelemetry(c) })
+		admin.Any("/telemetry/*proxyPath", func(c *gin.Context) { proxyToTelemetry(c) })
+	}
 }

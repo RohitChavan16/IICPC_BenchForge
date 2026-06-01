@@ -6,21 +6,27 @@ import (
 )
 
 type Benchmark struct {
-	ID            string          `json:"id"`
-	Name          string          `json:"name"`
-	DeploymentID  string          `json:"deploymentId,omitempty"`
-	Status        string          `json:"status"`
-	WorkerCount   int             `json:"workerCount"`
-	StartedAt     time.Time       `json:"startedAt"`
+	ID               string          `json:"id"`
+	Name             string          `json:"name"`
+	UserID           string          `json:"userId"`
+	TeamID           string          `json:"teamId"`
+	SubmissionID     string          `json:"submissionId,omitempty"`
+	DeploymentID     string          `json:"deploymentId,omitempty"`
+	TargetType       string          `json:"targetType"`
+	Status           string          `json:"status"`
+	WorkerCount      int             `json:"workerCount"`
+	TotalJobs        int             `json:"totalJobs"`
+	StartedAt        time.Time       `json:"startedAt"`
 	FinishedAt    *time.Time      `json:"finishedAt,omitempty"`
 	Duration      *int            `json:"duration,omitempty"`
 	TotalRequests int64           `json:"totalRequests"`
 	SuccessCount  int64           `json:"successCount"`
 	FailureCount  int64           `json:"failureCount"`
 	P50           float64         `json:"p50"`
-	P90           float64         `json:"p90"`
-	P99           float64         `json:"p99"`
-	Metadata      json.RawMessage `json:"metadata,omitempty"`
-	CreatedAt     time.Time       `json:"createdAt"`
-	UpdatedAt     time.Time       `json:"updatedAt"`
+	P90              float64         `json:"p90"`
+	P99              float64         `json:"p99"`
+	CorrectnessScore float64         `json:"correctnessScore"`
+	Metadata         json.RawMessage `json:"metadata,omitempty"`
+	CreatedAt        time.Time       `json:"createdAt"`
+	UpdatedAt        time.Time       `json:"updatedAt"`
 }

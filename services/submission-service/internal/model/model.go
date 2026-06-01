@@ -4,6 +4,8 @@ import "time"
 
 type Submission struct {
 	ID             string    `json:"id"`
+	UserID         string    `json:"userId"`
+	TeamID         string    `json:"teamId"`
 	TeamName       string    `json:"teamName"`
 	SubmissionName string    `json:"submissionName"`
 	Language       string    `json:"language"`

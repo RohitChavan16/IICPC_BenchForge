@@ -24,5 +24,8 @@ func NewServer(db *sql.DB) *mux.Router {
 	// Update benchmark status
 	r.HandleFunc("/benchmarks/{id}/status", benchmarkHandler.UpdateBenchmarkStatus).Methods("PATCH")
 
+	// Stop benchmark
+	r.HandleFunc("/benchmarks/{id}/stop", benchmarkHandler.StopBenchmark).Methods("POST")
+
 	return r
 }

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
   p99 NUMERIC,
   total_requests BIGINT NOT NULL DEFAULT 0,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
+  correctness_score NUMERIC NOT NULL DEFAULT 0,
   final_score NUMERIC NOT NULL DEFAULT 0,
   rank INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -86,8 +87,8 @@ WHERE b.id = $1
 	finalScore := computeFinalScore(computedTps, computedSuccessRate, p99.Float64)
 
 	query = `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
+INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())
 ON CONFLICT (benchmark_id) DO UPDATE SET
   team_name = EXCLUDED.team_name,
   submission_name = EXCLUDED.submission_name,
@@ -99,24 +100,39 @@ ON CONFLICT (benchmark_id) DO UPDATE SET
   p99 = EXCLUDED.p99,
   total_requests = EXCLUDED.total_requests,
   duration_seconds = EXCLUDED.duration_seconds,
+  correctness_score = EXCLUDED.correctness_score,
   final_score = EXCLUDED.final_score,
   updated_at = now()
 `
-	if _, err := db.Exec(query, benchmarkID, teamName, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, finalScore); err != nil {
+	if _, err := db.Exec(query, benchmarkID, teamName, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, computedSuccessRate, finalScore); err != nil {
 		return err
 	}
 
 	return updateLeaderboardRanks(db)
 }
 
-func computeFinalScore(tps, successRate, p99 float64) float64 {
-	if p99 < 0 {
-		p99 = 0
+func computeFinalScore(tps, correctnessScore, p99 float64) float64 {
+	if correctnessScore < 0 {
+		correctnessScore = 0
 	}
-	if successRate < 0 {
-		successRate = 0
+	correctnessPart := correctnessScore * 0.5
+
+	tpsScore := (tps / 20000.0) * 100.0
+	if tpsScore > 100 {
+		tpsScore = 100
 	}
-	return math.Round((tps*100+successRate*10-p99*1.5)*100) / 100
+	tpsPart := tpsScore * 0.3
+
+	p99Score := 100.0 - (p99 / 10.0)
+	if p99Score > 100 {
+		p99Score = 100
+	}
+	if p99Score < 0 {
+		p99Score = 0
+	}
+	p99Part := p99Score * 0.2
+
+	return math.Round((correctnessPart + tpsPart + p99Part)*100) / 100
 }
 
 func updateLeaderboardRanks(db *sql.DB) error {

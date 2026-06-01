@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -45,30 +47,73 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	if req.DeploymentID == "" {
-		http.Error(w, "deploymentId is required", http.StatusBadRequest)
-		return
+	if req.TargetType != "mock" && req.TargetType != "deployment" {
+		req.TargetType = "mock"
 	}
-	if req.WorkerCount < 0 {
-		http.Error(w, "workerCount must be >= 0", http.StatusBadRequest)
-		return
-	}
-	var exists bool
-	if err := h.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM deployments WHERE id=$1 AND deployment_status='RUNNING')`, req.DeploymentID).Scan(&exists); err != nil {
-		log.Printf("validate deployment error: %v", err)
+	
+	if req.WorkerCount <= 0 { req.WorkerCount = 100 }
+	if req.TotalRequests <= 0 { req.TotalRequests = 1000 }
+
+	// MVP Rule: Only one active benchmark globally
+	var activeCount int
+	if err := h.db.QueryRow(`SELECT COUNT(*) FROM benchmarks WHERE status IN ('CREATED', 'RUNNING')`).Scan(&activeCount); err != nil {
+		log.Printf("check active benchmarks error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-	if !exists {
-		http.Error(w, "deployment not found or not running", http.StatusBadRequest)
+	if activeCount > 0 {
+		http.Error(w, "a benchmark is already currently active", http.StatusConflict)
 		return
 	}
-	b, err := repository.CreateBenchmark(h.db, req.Name, req.DeploymentID, req.WorkerCount, req.Metadata)
+
+	targetURL := "http://mock-exchange:9000"
+	
+	if req.TargetType == "deployment" {
+		if req.DeploymentID == "" {
+			http.Error(w, "deploymentId is required for deployment target", http.StatusBadRequest)
+			return
+		}
+		var containerPort int
+		err := h.db.QueryRow(`SELECT container_port FROM deployments WHERE id=$1 AND deployment_status='RUNNING'`, req.DeploymentID).Scan(&containerPort)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "deployment not found or not running", http.StatusBadRequest)
+			} else {
+				log.Printf("validate deployment error: %v", err)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+			return
+		}
+		targetURL = fmt.Sprintf("http://deployment-%s:%d", req.DeploymentID, containerPort)
+	}
+
+	req.UserID = r.Header.Get("X-User-Id")
+	req.TeamID = r.Header.Get("X-Team-Id")
+
+	b, err := repository.CreateBenchmark(h.db, req.Name, req.UserID, req.TeamID, req.SubmissionID, req.DeploymentID, req.TargetType, req.WorkerCount, req.TotalRequests, req.Metadata)
 	if err != nil {
 		log.Printf("create benchmark error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
+	
+	// Trigger bot-worker
+	workerReqBody, _ := json.Marshal(map[string]interface{}{
+		"benchmarkId": b.ID,
+		"targetUrl": targetURL,
+		"workerCount": b.WorkerCount,
+		"totalRequests": b.TotalJobs,
+	})
+	
+	resp, err := http.Post("http://bot-worker:8085/run", "application/json", bytes.NewBuffer(workerReqBody))
+	if err != nil || resp.StatusCode >= 400 {
+		log.Printf("failed to trigger bot-worker: %v", err)
+		repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0)
+		http.Error(w, "failed to start benchmark worker", http.StatusInternalServerError)
+		return
+	}
+	repository.UpdateBenchmarkStatus(h.db, b.ID, "RUNNING", 0, 0, 0, 0, 0, 0)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Location", "/benchmarks/"+b.ID)
 	w.WriteHeader(http.StatusCreated)
@@ -136,4 +181,41 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(b)
+}
+
+func (h *BenchmarkHandler) StopBenchmark(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	b, err := repository.GetBenchmarkByID(h.db, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if b.Status != "RUNNING" {
+		http.Error(w, "benchmark is not running", http.StatusBadRequest)
+		return
+	}
+
+	// Trigger bot-worker stop
+	resp, err := http.Post("http://bot-worker:8085/stop", "application/json", nil)
+	if err != nil || resp.StatusCode >= 400 {
+		log.Printf("failed to stop bot-worker: %v", err)
+		http.Error(w, "failed to stop benchmark worker", http.StatusInternalServerError)
+		return
+	}
+
+	repository.UpdateBenchmarkStatus(h.db, id, "STOPPED", b.TotalRequests, b.SuccessCount, b.FailureCount, b.P50, b.P90, b.P99)
+	updated, _ := repository.GetBenchmarkByID(h.db, id)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
 }

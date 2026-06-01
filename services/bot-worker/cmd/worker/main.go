@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/benchmarkclient"
@@ -14,12 +16,23 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type RunRequest struct {
+	BenchmarkID   string `json:"benchmarkId"`
+	TargetURL     string `json:"targetUrl"`
+	WorkerCount   int    `json:"workerCount"`
+	TotalRequests int    `json:"totalRequests"`
+}
+
+var (
+	rdb              *redis.Client
+	benchmarkClient  *benchmarkclient.Client
+	activeMu         sync.Mutex
+	activeCancel     context.CancelFunc
+	activeBenchmarkID string
+)
+
 func main() {
-
-	totalJobs := 1000
-	totalWorkers := 100
-
-	rdb := redis.NewClient(&redis.Options{
+	rdb = redis.NewClient(&redis.Options{
 		Addr: "redis:6379",
 	})
 
@@ -27,94 +40,146 @@ func main() {
 	if benchmarkServiceURL == "" {
 		benchmarkServiceURL = "http://api-gateway:8080"
 	}
+	benchmarkClient = benchmarkclient.NewClient(benchmarkServiceURL, 5*time.Second)
 
-	benchmarkClient := benchmarkclient.NewClient(benchmarkServiceURL, 5*time.Second)
+	http.HandleFunc("/run", handleRun)
+	http.HandleFunc("/stop", handleStop)
 
-	benchmarkName := fmt.Sprintf("benchmark-%s", time.Now().UTC().Format("20060102-150405"))
-	metadata, _ := json.Marshal(map[string]string{
-		"engine": "benchforge",
-	})
+	log.Println("Bot worker listening on :8085")
+	if err := http.ListenAndServe(":8085", nil); err != nil {
+		log.Fatalf("failed to start bot-worker: %v", err)
+	}
+}
 
-	// optional: deployment id to bind this benchmark to a deployed container
-	deploymentID := os.Getenv("DEPLOYMENT_ID")
-
-	ctx := context.Background()
-	benchmarkID := ""
-
-	created, err := benchmarkClient.CreateBenchmark(ctx, benchmarkclient.CreateBenchmarkRequest{
-		Name:         benchmarkName,
-		DeploymentID: deploymentID,
-		WorkerCount:  totalWorkers,
-		Metadata:     metadata,
-	})
-	if err != nil {
-		log.Printf("BenchmarkCreatedFailed name=%s error=%v", benchmarkName, err)
-	} else {
-		benchmarkID = created.ID
-		log.Printf("BenchmarkCreated benchmarkID=%s name=%s workerCount=%d", benchmarkID, benchmarkName, totalWorkers)
+func handleRun(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req RunRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.BenchmarkID == "" || req.TargetURL == "" || req.WorkerCount <= 0 || req.TotalRequests <= 0 {
+		http.Error(w, "invalid parameters", http.StatusBadRequest)
+		return
 	}
 
-	jobs := make(chan int, totalJobs)
-	results := make(chan metrics.RequestMetric, totalJobs)
+	activeMu.Lock()
+	if activeCancel != nil {
+		activeMu.Unlock()
+		http.Error(w, "a benchmark is already running", http.StatusConflict)
+		return
+	}
+	
+	ctx, cancel := context.WithCancel(context.Background())
+	activeCancel = cancel
+	activeBenchmarkID = req.BenchmarkID
+	activeMu.Unlock()
 
-	exchangeURL := "http://mock-exchange:9000"
+	go runBenchmark(ctx, req)
 
-	for w := 1; w <= totalWorkers; w++ {
-		go workers.Worker(w, jobs, results, exchangeURL, rdb)
+	w.WriteHeader(http.StatusAccepted)
+	fmt.Fprintf(w, `{"status":"started", "benchmarkId":"%s"}`, req.BenchmarkID)
+}
+
+func handleStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	activeMu.Lock()
+	defer activeMu.Unlock()
+
+	if activeCancel != nil {
+		activeCancel()
+		activeCancel = nil
+		activeBenchmarkID = ""
+		fmt.Fprintf(w, `{"status":"stopped"}`)
+	} else {
+		fmt.Fprintf(w, `{"status":"not_running"}`)
+	}
+}
+
+
+func runBenchmark(ctx context.Context, req RunRequest) {
+	log.Printf("Starting benchmark pool for %s", req.BenchmarkID)
+	
+	jobs := make(chan int, req.TotalRequests)
+	results := make(chan metrics.RequestMetric, req.TotalRequests)
+
+	for w := 1; w <= req.WorkerCount; w++ {
+		go workers.Worker(ctx, w, jobs, results, req.TargetURL, rdb)
 	}
 
 	start := time.Now()
-
-	for j := 1; j <= totalJobs; j++ {
-		jobs <- j
-	}
-
-	close(jobs)
+	
+	go func() {
+		for j := 1; j <= req.TotalRequests; j++ {
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- j:
+			}
+		}
+		close(jobs)
+	}()
 
 	var metricsList []metrics.RequestMetric
 	success := 0
+	failureCount := int64(0)
+	completedJobs := 0
 
-	for a := 1; a <= totalJobs; a++ {
-		result := <-results
-		metricsList = append(metricsList, result)
-
-		if result.Success {
-			success++
+	for a := 1; a <= req.TotalRequests; a++ {
+		select {
+		case <-ctx.Done():
+			break
+		case result := <-results:
+			metricsList = append(metricsList, result)
+			completedJobs++
+			if result.Success {
+				success++
+			} else {
+				failureCount++
+			}
 		}
 	}
 
 	duration := time.Since(start)
-	tps := float64(totalJobs) / duration.Seconds()
-	failureCount := int64(totalJobs - success)
-
+	tps := 0.0
+	if duration.Seconds() > 0 {
+		tps = float64(completedJobs) / duration.Seconds()
+	}
+	
 	p50, p90, p99 := calculatePercentiles(metricsList)
 
-	log.Printf("BenchmarkCompleted benchmarkID=%s totalRequests=%d successCount=%d failureCount=%d duration=%s tps=%.2f p50=%.2f p90=%.2f p99=%.2f", benchmarkID, totalJobs, success, failureCount, duration, tps, p50, p90, p99)
+	log.Printf("BenchmarkCompleted benchmarkID=%s completed=%d success=%d failure=%d duration=%s tps=%.2f p50=%.2f p90=%.2f p99=%.2f", 
+		req.BenchmarkID, completedJobs, success, failureCount, duration, tps, p50, p90, p99)
 
-	if benchmarkID != "" {
-		_, err := benchmarkClient.UpdateStatus(ctx, benchmarkID, benchmarkclient.UpdateStatusRequest{
-			Status:        "Completed",
-			TotalRequests: int64(totalJobs),
-			SuccessCount:  int64(success),
-			FailureCount:  failureCount,
-			P50:           p50,
-			P90:           p90,
-			P99:           p99,
-		})
-		if err != nil {
-			log.Printf("BenchmarkPersistedFailed benchmarkID=%s error=%v", benchmarkID, err)
-		} else {
-			log.Printf("BenchmarkPersisted benchmarkID=%s", benchmarkID)
-		}
-	} else {
-		log.Printf("BenchmarkPersistedSkipped no benchmarkID available")
+	status := "COMPLETED"
+	if ctx.Err() != nil {
+		status = "STOPPED"
 	}
 
-	fmt.Println("================================")
-	fmt.Println("Benchmark Complete")
-	fmt.Println("================================")
-	fmt.Println("Total Requests:", totalJobs)
-	fmt.Println("Successful:", success)
-	fmt.Println("Duration:", duration)
-	fmt.Printf("TPS: %.2f\n", tps)
+	_, err := benchmarkClient.UpdateStatus(context.Background(), req.BenchmarkID, benchmarkclient.UpdateStatusRequest{
+		Status:        status,
+		TotalRequests: int64(completedJobs),
+		SuccessCount:  int64(success),
+		FailureCount:  failureCount,
+		P50:           p50,
+		P90:           p90,
+		P99:           p99,
+	})
+
+	if err != nil {
+		log.Printf("BenchmarkPersistedFailed benchmarkID=%s error=%v", req.BenchmarkID, err)
+	}
+
+	activeMu.Lock()
+	if activeBenchmarkID == req.BenchmarkID {
+		activeCancel = nil
+		activeBenchmarkID = ""
+	}
+	activeMu.Unlock()
 }

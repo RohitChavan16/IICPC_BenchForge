@@ -40,6 +40,8 @@ services:
     build:
       context: ./services/bot-worker
     container_name: bot-worker
+    ports:
+      - "8085:8085"
     restart: unless-stopped
     depends_on:
       - mock-exchange

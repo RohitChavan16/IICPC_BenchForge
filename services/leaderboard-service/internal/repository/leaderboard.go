@@ -45,7 +45,7 @@ func ListLeaderboardEntries(db *sql.DB, limit, offset int) ([]model.LeaderboardE
 		return nil, 0, err
 	}
 
-	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, rank, created_at, updated_at FROM leaderboard_entries ORDER BY rank ASC NULLS LAST, final_score DESC LIMIT $1 OFFSET $2`, limit, offset)
+	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, rank, created_at, updated_at FROM leaderboard_entries ORDER BY rank ASC NULLS LAST, final_score DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -54,7 +54,7 @@ func ListLeaderboardEntries(db *sql.DB, limit, offset int) ([]model.LeaderboardE
 	items := []model.LeaderboardEntry{}
 	for rows.Next() {
 		var entry model.LeaderboardEntry
-		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, entry)
@@ -63,7 +63,7 @@ func ListLeaderboardEntries(db *sql.DB, limit, offset int) ([]model.LeaderboardE
 }
 
 func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry, error) {
-	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, rank, created_at, updated_at FROM leaderboard_entries ORDER BY rank ASC NULLS LAST, final_score DESC LIMIT $1`, limit)
+	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, rank, created_at, updated_at FROM leaderboard_entries ORDER BY rank ASC NULLS LAST, final_score DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry,
 	items := []model.LeaderboardEntry{}
 	for rows.Next() {
 		var entry model.LeaderboardEntry
-		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, entry)
@@ -81,7 +81,7 @@ func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry,
 }
 
 func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardEntry, error) {
-	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, rank, created_at, updated_at FROM leaderboard_entries WHERE LOWER(team_name) = LOWER($1) ORDER BY rank ASC NULLS LAST, final_score DESC`, team)
+	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, rank, created_at, updated_at FROM leaderboard_entries WHERE LOWER(team_name) = LOWER($1) ORDER BY rank ASC NULLS LAST, final_score DESC`, team)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 	items := []model.LeaderboardEntry{}
 	for rows.Next() {
 		var entry model.LeaderboardEntry
-		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, entry)
@@ -98,10 +98,10 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 	return items, rows.Err()
 }
 
-func UpsertLeaderboardEntry(db *sql.DB, benchmarkID, teamName, submissionName, deploymentID string, tps, successRate, p50, p90, p99 float64, totalRequests int64, duration int, finalScore float64) error {
+func UpsertLeaderboardEntry(db *sql.DB, benchmarkID, teamName, submissionName, deploymentID string, tps, successRate, p50, p90, p99 float64, totalRequests int64, duration int, correctnessScore float64, finalScore float64) error {
 	query := `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())
+INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())
 ON CONFLICT (benchmark_id) DO UPDATE SET
   team_name = EXCLUDED.team_name,
   submission_name = EXCLUDED.submission_name,
@@ -113,10 +113,11 @@ ON CONFLICT (benchmark_id) DO UPDATE SET
   p99 = EXCLUDED.p99,
   total_requests = EXCLUDED.total_requests,
   duration_seconds = EXCLUDED.duration_seconds,
+  correctness_score = EXCLUDED.correctness_score,
   final_score = EXCLUDED.final_score,
   updated_at = now()
 `
-	if _, err := db.Exec(query, benchmarkID, teamName, submissionName, deploymentID, tps, successRate, p50, p90, p99, totalRequests, duration, finalScore); err != nil {
+	if _, err := db.Exec(query, benchmarkID, teamName, submissionName, deploymentID, tps, successRate, p50, p90, p99, totalRequests, duration, correctnessScore, finalScore); err != nil {
 		return err
 	}
 	return updateLeaderboardRanks(db)
@@ -139,7 +140,7 @@ WHERE leaderboard_entries.id = ranked.id
 
 func BackfillLeaderboardEntries(db *sql.DB) error {
 	query := `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, final_score, created_at, updated_at)
+INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, created_at, updated_at)
 SELECT
   b.id,
   s.team_name,
@@ -152,10 +153,8 @@ SELECT
   COALESCE(b.p99, 0),
   b.total_requests,
   COALESCE(b.duration_seconds, 0),
-  CASE
-    WHEN b.total_requests > 0 THEN (CASE WHEN b.duration_seconds > 0 THEN (b.total_requests::numeric / b.duration_seconds) ELSE 0 END) * 100 + (CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) * 10 - COALESCE(b.p99, 0) * 1.5
-    ELSE 0
-  END AS final_score,
+  CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS correctness_score,
+  0 AS final_score, -- will be updated by a separate backfill pass if needed, or we just leave as 0 and it updates on next run
   now(),
   now()
 FROM benchmarks b
@@ -170,14 +169,28 @@ WHERE b.status = 'COMPLETED' AND l.id IS NULL
 	return updateLeaderboardRanks(db)
 }
 
-func ComputeFinalScore(tps, successRate, p99 float64) float64 {
-	if successRate < 0 {
-		successRate = 0
+func ComputeFinalScore(tps, correctnessScore, p99 float64) float64 {
+	if correctnessScore < 0 {
+		correctnessScore = 0
 	}
-	if p99 < 0 {
-		p99 = 0
+	correctnessPart := correctnessScore * 0.5
+
+	tpsScore := (tps / 20000.0) * 100.0
+	if tpsScore > 100 {
+		tpsScore = 100
 	}
-	return tps*100 + successRate*10 - p99*1.5
+	tpsPart := tpsScore * 0.3
+
+	p99Score := 100.0 - (p99 / 10.0)
+	if p99Score > 100 {
+		p99Score = 100
+	}
+	if p99Score < 0 {
+		p99Score = 0
+	}
+	p99Part := p99Score * 0.2
+
+	return math.Round((correctnessPart + tpsPart + p99Part)*100) / 100
 }
 
 func SafeDuration(duration *int) int {
@@ -244,6 +257,7 @@ WHERE b.id = $1
 		P99:            p99.Float64,
 		TotalRequests:  totalRequests,
 		Duration:       d,
+		CorrectnessScore: successRate,
 		FinalScore:     math.Round(finalScore*100) / 100,
 	}, nil
 }
@@ -253,5 +267,5 @@ func UpsertLeaderboardEntryFromBenchmark(db *sql.DB, benchmarkID string) error {
 	if err != nil {
 		return err
 	}
-	return UpsertLeaderboardEntry(db, benchmarkID, entry.TeamName, entry.SubmissionName, entry.DeploymentID, entry.TPS, entry.SuccessRate, entry.P50, entry.P90, entry.P99, entry.TotalRequests, entry.Duration, entry.FinalScore)
+	return UpsertLeaderboardEntry(db, benchmarkID, entry.TeamName, entry.SubmissionName, entry.DeploymentID, entry.TPS, entry.SuccessRate, entry.P50, entry.P90, entry.P99, entry.TotalRequests, entry.Duration, entry.CorrectnessScore, entry.FinalScore)
 }

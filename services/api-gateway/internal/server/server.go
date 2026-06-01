@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/middleware"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/routes"
 )
 
@@ -27,7 +28,8 @@ func NewServer(port string, db *sql.DB, jwtSecret string) *gin.Engine {
 	})
 
 	authHandler := auth.NewAuthHandler(db, jwtSecret)
-	routes.SetupRoutes(router, authHandler)
+	authMiddleware := middleware.NewAuthMiddleware(db, jwtSecret)
+	routes.SetupRoutes(router, authHandler, authMiddleware)
 
 	fmt.Println("API Gateway running on port:", port)
 

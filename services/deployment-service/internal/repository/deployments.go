@@ -6,9 +6,9 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/deployment-service/internal/model"
 )
 
-func CreateDeployment(db *sql.DB, submissionID string, containerPort int) (*model.Deployment, error) {
-	query := `INSERT INTO deployments (submission_id, container_port, deployment_status, created_at, updated_at) VALUES ($1, $2, 'PENDING', now(), now()) RETURNING id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at`
-	row := db.QueryRow(query, submissionID, containerPort)
+func CreateDeployment(db *sql.DB, submissionID, userID, teamID string, containerPort int) (*model.Deployment, error) {
+	query := `INSERT INTO deployments (submission_id, container_port, deployment_status, created_at, updated_at, user_id, team_id) VALUES ($1, $2, 'PENDING', now(), now(), $3, $4) RETURNING id, user_id, team_id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at`
+	row := db.QueryRow(query, submissionID, containerPort, userID, teamID)
 	var d model.Deployment
 	var hostPort sql.NullInt64
 	var deployedAt sql.NullTime
@@ -16,9 +16,13 @@ func CreateDeployment(db *sql.DB, submissionID string, containerPort int) (*mode
 	var containerID sql.NullString
 	var containerImage sql.NullString
 	var deploymentLog sql.NullString
-	if err := row.Scan(&d.ID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
+	var dbUserID sql.NullString
+	var dbTeamID sql.NullString
+	if err := row.Scan(&d.ID, &dbUserID, &dbTeamID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
 		return nil, err
 	}
+	d.UserID = dbUserID.String
+	d.TeamID = dbTeamID.String
 	if containerID.Valid {
 		d.ContainerID = containerID.String
 	}
@@ -42,7 +46,7 @@ func CreateDeployment(db *sql.DB, submissionID string, containerPort int) (*mode
 }
 
 func GetDeploymentByID(db *sql.DB, id string) (*model.Deployment, error) {
-	row := db.QueryRow(`SELECT id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments WHERE id=$1`, id)
+	row := db.QueryRow(`SELECT id, user_id, team_id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments WHERE id=$1`, id)
 	var d model.Deployment
 	var hostPort sql.NullInt64
 	var deployedAt sql.NullTime
@@ -50,9 +54,13 @@ func GetDeploymentByID(db *sql.DB, id string) (*model.Deployment, error) {
 	var containerID sql.NullString
 	var containerImage sql.NullString
 	var deploymentLog sql.NullString
-	if err := row.Scan(&d.ID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
+	var userID sql.NullString
+	var teamID sql.NullString
+	if err := row.Scan(&d.ID, &userID, &teamID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
 		return nil, err
 	}
+	d.UserID = userID.String
+	d.TeamID = teamID.String
 	if containerID.Valid {
 		d.ContainerID = containerID.String
 	}
@@ -76,7 +84,7 @@ func GetDeploymentByID(db *sql.DB, id string) (*model.Deployment, error) {
 }
 
 func ListDeployments(db *sql.DB, limit int) ([]model.Deployment, error) {
-	rows, err := db.Query(`SELECT id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments ORDER BY created_at DESC LIMIT $1`, limit)
+	rows, err := db.Query(`SELECT id, user_id, team_id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments ORDER BY created_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +98,13 @@ func ListDeployments(db *sql.DB, limit int) ([]model.Deployment, error) {
 		var containerID sql.NullString
 		var containerImage sql.NullString
 		var deploymentLog sql.NullString
-		if err := rows.Scan(&d.ID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		var userID sql.NullString
+		var teamID sql.NullString
+		if err := rows.Scan(&d.ID, &userID, &teamID, &d.SubmissionID, &containerID, &containerImage, &hostPort, &d.ContainerPort, &d.DeploymentStatus, &deploymentLog, &deployedAt, &stoppedAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
 			return nil, err
 		}
+		d.UserID = userID.String
+		d.TeamID = teamID.String
 		if containerID.Valid {
 			d.ContainerID = containerID.String
 		}

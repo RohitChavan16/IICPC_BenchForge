@@ -109,7 +109,10 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 		cp = req.ContainerPort
 	}
 
-	dep, err := repository.CreateDeployment(h.db, req.SubmissionID, cp)
+	userID := r.Header.Get("X-User-Id")
+	teamID := r.Header.Get("X-Team-Id")
+
+	dep, err := repository.CreateDeployment(h.db, req.SubmissionID, userID, teamID, cp)
 	if err != nil {
 		log.Printf("create deployment db error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)

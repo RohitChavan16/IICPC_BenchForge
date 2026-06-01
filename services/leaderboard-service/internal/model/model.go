@@ -13,9 +13,10 @@ type LeaderboardEntry struct {
 	P50            float64   `json:"p50"`
 	P90            float64   `json:"p90"`
 	P99            float64   `json:"p99"`
-	TotalRequests  int64     `json:"totalRequests"`
-	Duration       int       `json:"duration"`
-	FinalScore     float64   `json:"finalScore"`
+	TotalRequests    int64     `json:"totalRequests"`
+	Duration         int       `json:"duration"`
+	CorrectnessScore float64   `json:"correctnessScore"`
+	FinalScore       float64   `json:"finalScore"`
 	Rank           int       `json:"rank"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`

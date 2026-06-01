@@ -3,10 +3,15 @@ package dto
 import "encoding/json"
 
 type CreateBenchmarkRequest struct {
-	Name         string          `json:"name"`
-	DeploymentID string          `json:"deploymentId"`
-	WorkerCount  int             `json:"workerCount"`
-	Metadata     json.RawMessage `json:"metadata,omitempty"`
+	Name          string          `json:"name"`
+	UserID        string          `json:"userId"`
+	TeamID        string          `json:"teamId"`
+	SubmissionID  string          `json:"submissionId,omitempty"`
+	DeploymentID  string          `json:"deploymentId,omitempty"`
+	TargetType    string          `json:"targetType"` // "mock" or "deployment"
+	WorkerCount   int             `json:"workerCount"`
+	TotalRequests int             `json:"totalRequests"`
+	Metadata      json.RawMessage `json:"metadata,omitempty"`
 }
 
 type UpdateStatusRequest struct {

@@ -9,7 +9,7 @@ import (
 )
 
 func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
-	rows, err := db.Query(`SELECT id, name, deployment_id, status, worker_count, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, metadata, created_at, updated_at FROM benchmarks ORDER BY created_at DESC LIMIT $1`, limit)
+	rows, err := db.Query(`SELECT id, name, user_id, team_id, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, created_at, updated_at FROM benchmarks ORDER BY created_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,9 @@ func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
 		var meta sql.NullString
 		var finished sql.NullTime
 		var duration sql.NullInt64
-		if err := rows.Scan(&b.ID, &b.Name, &b.DeploymentID, &b.Status, &b.WorkerCount, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
+		var submissionID, deploymentID, userID, teamID, targetType sql.NullString
+		
+		if err := rows.Scan(&b.ID, &b.Name, &userID, &teamID, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &b.CorrectnessScore, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
 			log.Printf("row scan error: %v", err)
 			continue
 		}
@@ -34,18 +36,26 @@ func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
 		if meta.Valid {
 			b.Metadata = json.RawMessage(meta.String)
 		}
+		if userID.Valid { b.UserID = userID.String }
+		if teamID.Valid { b.TeamID = teamID.String }
+		if submissionID.Valid { b.SubmissionID = submissionID.String }
+		if deploymentID.Valid { b.DeploymentID = deploymentID.String }
+		if targetType.Valid { b.TargetType = targetType.String }
+
 		items = append(items, b)
 	}
 	return items, nil
 }
 
 func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
-	row := db.QueryRow(`SELECT id, name, deployment_id, status, worker_count, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, metadata, created_at, updated_at FROM benchmarks WHERE id=$1`, id)
+	row := db.QueryRow(`SELECT id, name, user_id, team_id, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, created_at, updated_at FROM benchmarks WHERE id=$1`, id)
 	var b model.Benchmark
 	var meta sql.NullString
 	var finished sql.NullTime
 	var duration sql.NullInt64
-	if err := row.Scan(&b.ID, &b.Name, &b.DeploymentID, &b.Status, &b.WorkerCount, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
+	var submissionID, deploymentID, userID, teamID, targetType sql.NullString
+
+	if err := row.Scan(&b.ID, &b.Name, &userID, &teamID, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &b.CorrectnessScore, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
 		return nil, err
 	}
 	if finished.Valid {
@@ -58,18 +68,34 @@ func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
 	if meta.Valid {
 		b.Metadata = json.RawMessage(meta.String)
 	}
+	if userID.Valid { b.UserID = userID.String }
+	if teamID.Valid { b.TeamID = teamID.String }
+	if submissionID.Valid { b.SubmissionID = submissionID.String }
+	if deploymentID.Valid { b.DeploymentID = deploymentID.String }
+	if targetType.Valid { b.TargetType = targetType.String }
 	return &b, nil
 }
 
-func CreateBenchmark(db *sql.DB, name string, deploymentID string, workerCount int, metadata json.RawMessage) (*model.Benchmark, error) {
+func CreateBenchmark(db *sql.DB, name string, userID string, teamID string, submissionID string, deploymentID string, targetType string, workerCount int, totalJobs int, metadata json.RawMessage) (*model.Benchmark, error) {
 	var b model.Benchmark
-	// Insert and return full row
-	query := `INSERT INTO benchmarks (name, deployment_id, status, worker_count, metadata, started_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, now(), now(), now()) RETURNING id, name, deployment_id, status, worker_count, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, metadata, created_at, updated_at`
-	row := db.QueryRow(query, name, deploymentID, "CREATED", workerCount, string(metadata))
+	
+	var dbSubID interface{} = nil
+	if submissionID != "" { dbSubID = submissionID }
+	
+	var dbDepID interface{} = nil
+	if deploymentID != "" { dbDepID = deploymentID }
+
+	query := `INSERT INTO benchmarks (name, user_id, team_id, submission_id, deployment_id, target_type, status, worker_count, total_jobs, metadata, started_at, created_at, updated_at) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now(), now()) 
+	          RETURNING id, name, user_id, team_id, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, created_at, updated_at`
+	
+	row := db.QueryRow(query, name, userID, teamID, dbSubID, dbDepID, targetType, "CREATED", workerCount, totalJobs, string(metadata))
 	var meta sql.NullString
 	var finished sql.NullTime
 	var duration sql.NullInt64
-	if err := row.Scan(&b.ID, &b.Name, &b.DeploymentID, &b.Status, &b.WorkerCount, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
+	var rSubID, rDepID, rUserID, rTeamID, rTargetType sql.NullString
+
+	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &b.CorrectnessScore, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
 		return nil, err
 	}
 	if finished.Valid {
@@ -82,17 +108,25 @@ func CreateBenchmark(db *sql.DB, name string, deploymentID string, workerCount i
 	if meta.Valid {
 		b.Metadata = json.RawMessage(meta.String)
 	}
+	if rUserID.Valid { b.UserID = rUserID.String }
+	if rTeamID.Valid { b.TeamID = rTeamID.String }
+	if rSubID.Valid { b.SubmissionID = rSubID.String }
+	if rDepID.Valid { b.DeploymentID = rDepID.String }
+	if rTargetType.Valid { b.TargetType = rTargetType.String }
+	
 	return &b, nil
 }
 
 func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests int64, successCount int64, failureCount int64, p50, p90, p99 float64) (*model.Benchmark, error) {
-	query := `UPDATE benchmarks SET status=$1, total_requests=$2, success_count=$3, failure_count=$4, p50=$5, p90=$6, p99=$7, finished_at=CASE WHEN $1 IN ('COMPLETED','FAILED') THEN now() ELSE finished_at END, duration_seconds=CASE WHEN $1 IN ('COMPLETED','FAILED') THEN EXTRACT(EPOCH FROM (now()-started_at))::int ELSE duration_seconds END, updated_at=now() WHERE id=$8 RETURNING id, name, deployment_id, status, worker_count, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, metadata, created_at, updated_at`
+	query := `UPDATE benchmarks SET status=$1, total_requests=$2, success_count=$3, failure_count=$4, p50=$5, p90=$6, p99=$7, finished_at=CASE WHEN $1 IN ('COMPLETED','FAILED') THEN now() ELSE finished_at END, duration_seconds=CASE WHEN $1 IN ('COMPLETED','FAILED') THEN EXTRACT(EPOCH FROM (now()-started_at))::int ELSE duration_seconds END, updated_at=now() WHERE id=$8 RETURNING id, name, user_id, team_id, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, created_at, updated_at`
 	row := db.QueryRow(query, status, totalRequests, successCount, failureCount, p50, p90, p99, id)
 	var b model.Benchmark
 	var meta sql.NullString
 	var finished sql.NullTime
 	var duration sql.NullInt64
-	if err := row.Scan(&b.ID, &b.Name, &b.DeploymentID, &b.Status, &b.WorkerCount, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
+	var rSubID, rDepID, rUserID, rTeamID, rTargetType sql.NullString
+
+	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &b.P50, &b.P90, &b.P99, &b.CorrectnessScore, &meta, &b.CreatedAt, &b.UpdatedAt); err != nil {
 		return nil, err
 	}
 	if finished.Valid {
@@ -105,5 +139,10 @@ func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests i
 	if meta.Valid {
 		b.Metadata = json.RawMessage(meta.String)
 	}
+	if rUserID.Valid { b.UserID = rUserID.String }
+	if rTeamID.Valid { b.TeamID = rTeamID.String }
+	if rSubID.Valid { b.SubmissionID = rSubID.String }
+	if rDepID.Valid { b.DeploymentID = rDepID.String }
+	if rTargetType.Valid { b.TargetType = rTargetType.String }
 	return &b, nil
 }
