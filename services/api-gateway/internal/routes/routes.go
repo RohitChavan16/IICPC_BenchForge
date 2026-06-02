@@ -35,11 +35,18 @@ func proxyToSubmission(c *gin.Context) {
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
+func proxyToDeployment(c *gin.Context) {
+	target, _ := url.Parse("http://deployment-service:8091")
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
 func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddleware *middleware.AuthMiddleware) {
 	router.GET("/health", handlers.HealthCheck)
 
 	router.POST("/auth/register", authHandler.Register)
 	router.POST("/auth/login", authHandler.Login)
+	router.POST("/auth/logout", authHandler.Logout)
 	router.GET("/auth/me", authHandler.Me)
 
 	// Contestant/User routes (Require Auth)
@@ -51,6 +58,9 @@ func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddlewa
 
 		protected.Any("/submissions", func(c *gin.Context) { proxyToSubmission(c) })
 		protected.Any("/submissions/*proxyPath", func(c *gin.Context) { proxyToSubmission(c) })
+
+		protected.Any("/deployments", func(c *gin.Context) { proxyToDeployment(c) })
+		protected.Any("/deployments/*proxyPath", func(c *gin.Context) { proxyToDeployment(c) })
 	}
 
 	// Public or Authenticated

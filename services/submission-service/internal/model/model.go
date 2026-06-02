@@ -11,6 +11,7 @@ type Submission struct {
 	Language       string    `json:"language"`
 	FilePath       string    `json:"filePath"`
 	Status         string    `json:"status"`
+	BuildLog       string    `json:"buildLog,omitempty"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 }

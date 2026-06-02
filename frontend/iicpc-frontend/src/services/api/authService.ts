@@ -33,3 +33,7 @@ export async function fetchProfile(): Promise<UserProfile> {
   const response = await apiClient.get(endpoints.authProfile)
   return response.data as UserProfile
 }
+
+export async function logout(): Promise<void> {
+  await apiClient.post(endpoints.authLogout)
+}

@@ -10,6 +10,7 @@ type Benchmark struct {
 	Name             string          `json:"name"`
 	UserID           string          `json:"userId"`
 	TeamID           string          `json:"teamId"`
+	TeamName         string          `json:"teamName"`
 	SubmissionID     string          `json:"submissionId,omitempty"`
 	DeploymentID     string          `json:"deploymentId,omitempty"`
 	TargetType       string          `json:"targetType"`

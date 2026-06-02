@@ -3,5 +3,5 @@ export interface UserProfile {
   name: string
   email: string
   role: string
-  teamName: string
+  team: string
 }

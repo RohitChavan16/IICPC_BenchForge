@@ -49,6 +49,16 @@ func (a *Aggregator) AddMetric(
 	}
 }
 
+func (a *Aggregator) Reset() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.latencies = make([]float64, 0)
+	a.totalRequests = 0
+	a.failedRequests = 0
+	a.windowStart = time.Now()
+}
+
 func (a *Aggregator) Snapshot() MetricsSnapshot {
 
 	a.mu.Lock()

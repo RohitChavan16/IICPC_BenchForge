@@ -38,7 +38,7 @@ func main() {
 
 	benchmarkServiceURL := os.Getenv("BENCHMARK_SERVICE_URL")
 	if benchmarkServiceURL == "" {
-		benchmarkServiceURL = "http://api-gateway:8080"
+		benchmarkServiceURL = "http://benchmark-service:8082"
 	}
 	benchmarkClient = benchmarkclient.NewClient(benchmarkServiceURL, 5*time.Second)
 
@@ -109,9 +109,19 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	jobs := make(chan int, req.TotalRequests)
 	results := make(chan metrics.RequestMetric, req.TotalRequests)
 
+	var wg sync.WaitGroup
 	for w := 1; w <= req.WorkerCount; w++ {
-		go workers.Worker(ctx, w, jobs, results, req.TargetURL, rdb)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID)
+		}(w)
 	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	start := time.Now()
 	
@@ -131,18 +141,13 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	failureCount := int64(0)
 	completedJobs := 0
 
-	for a := 1; a <= req.TotalRequests; a++ {
-		select {
-		case <-ctx.Done():
-			break
-		case result := <-results:
-			metricsList = append(metricsList, result)
-			completedJobs++
-			if result.Success {
-				success++
-			} else {
-				failureCount++
-			}
+	for result := range results {
+		metricsList = append(metricsList, result)
+		completedJobs++
+		if result.Success {
+			success++
+		} else {
+			failureCount++
 		}
 	}
 
@@ -159,7 +164,7 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 
 	status := "COMPLETED"
 	if ctx.Err() != nil {
-		status = "STOPPED"
+		status = "CANCELLED"
 	}
 
 	_, err := benchmarkClient.UpdateStatus(context.Background(), req.BenchmarkID, benchmarkclient.UpdateStatusRequest{
@@ -175,6 +180,11 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	if err != nil {
 		log.Printf("BenchmarkPersistedFailed benchmarkID=%s error=%v", req.BenchmarkID, err)
 	}
+
+	metrics.PublishMetric(context.Background(), rdb, metrics.RequestMetric{
+		BotType:   "system_control",
+		WorkerID:  "STOP_STREAM",
+	})
 
 	activeMu.Lock()
 	if activeBenchmarkID == req.BenchmarkID {

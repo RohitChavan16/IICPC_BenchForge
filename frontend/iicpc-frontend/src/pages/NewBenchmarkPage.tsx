@@ -10,7 +10,7 @@ import { useToast } from '@/components/ui/ToastProvider'
 export function NewBenchmarkPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { addToast } = useToast()
+  const { pushToast } = useToast()
 
   const [name, setName] = useState('')
   const [targetType, setTargetType] = useState<'mock' | 'deployment'>('mock')
@@ -22,22 +22,22 @@ export function NewBenchmarkPage() {
     mutationFn: createBenchmark,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['benchmarks'] })
-      addToast('success', 'Benchmark started successfully')
+      pushToast({ variant: 'success', title: 'Benchmark started successfully' })
       navigate(`/benchmarks/${data.id}`)
     },
     onError: (error: any) => {
-      addToast('error', error.response?.data || 'Failed to start benchmark')
+      pushToast({ variant: 'error', title: error.response?.data || 'Failed to start benchmark' })
     }
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
-      addToast('error', 'Benchmark name is required')
+      pushToast({ variant: 'error', title: 'Benchmark name is required' })
       return
     }
     if (targetType === 'deployment' && !deploymentId.trim()) {
-      addToast('error', 'Deployment ID is required')
+      pushToast({ variant: 'error', title: 'Deployment ID is required' })
       return
     }
     

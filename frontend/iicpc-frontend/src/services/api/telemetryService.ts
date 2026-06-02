@@ -20,3 +20,12 @@ export async function fetchTelemetrySummary(): Promise<MetricSnapshot> {
     return mockTelemetryHistory[mockTelemetryHistory.length - 1]
   }
 }
+
+export async function fetchBenchmarkTelemetryHistory(benchmarkId: string): Promise<MetricSnapshot[]> {
+  try {
+    const response = await apiClient.get(`${endpoints.telemetryHistory}?benchmarkId=${benchmarkId}`)
+    return response.data as MetricSnapshot[]
+  } catch (error) {
+    return []
+  }
+}

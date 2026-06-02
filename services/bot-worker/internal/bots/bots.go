@@ -5,7 +5,13 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
+	"time"
+	"context"
 )
+
+var httpClient = &http.Client{
+	Timeout: 5 * time.Second,
+}
 
 type Order struct {
 	Symbol   string  `json:"symbol"`
@@ -41,12 +47,14 @@ func WhaleBot() Order {
 	}
 }
 
-func SendOrder(exchangeURL string, order Order) (*http.Response, error) {
+func SendOrder(ctx context.Context, exchangeURL string, order Order) (*http.Response, error) {
 	body, _ := json.Marshal(order)
 
-	return http.Post(
-		exchangeURL+"/order",
-		"application/json",
-		bytes.NewBuffer(body),
-	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, exchangeURL+"/order", bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return httpClient.Do(req)
 }

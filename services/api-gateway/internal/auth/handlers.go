@@ -164,3 +164,10 @@ func (h *AuthHandler) buildToken(userID string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(h.jwtSecret))
 }
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// In a stateless JWT setup without a blocklist, logout is primarily a client-side action.
+	// We return a 200 OK so the client knows it can safely discard the token.
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully."})
+}
+

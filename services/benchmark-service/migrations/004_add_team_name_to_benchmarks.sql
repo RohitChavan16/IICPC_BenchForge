@@ -1,0 +1,2 @@
+ALTER TABLE benchmarks
+ADD COLUMN IF NOT EXISTS team_name TEXT;

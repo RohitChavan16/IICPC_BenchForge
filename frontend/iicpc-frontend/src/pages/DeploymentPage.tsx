@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useNavigate } from 'react-router-dom'
 import * as deploymentService from '@/services/api/deploymentService'
-import { Server, Activity, ArrowRight } from 'lucide-react'
+import { Server, Activity, } from 'lucide-react'
 
 export function DeploymentPage() {
   const [submissionId, setSubmissionId] = useState('')

@@ -1,7 +1,6 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { instantQuery } from '@/services/prometheus/prometheus'
-import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 type Props = {

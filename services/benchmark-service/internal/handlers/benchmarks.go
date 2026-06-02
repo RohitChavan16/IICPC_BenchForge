@@ -54,16 +54,17 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 	if req.WorkerCount <= 0 { req.WorkerCount = 100 }
 	if req.TotalRequests <= 0 { req.TotalRequests = 1000 }
 
-	// MVP Rule: Only one active benchmark globally
 	var activeCount int
-	if err := h.db.QueryRow(`SELECT COUNT(*) FROM benchmarks WHERE status IN ('CREATED', 'RUNNING')`).Scan(&activeCount); err != nil {
-		log.Printf("check active benchmarks error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	if activeCount > 0 {
-		http.Error(w, "a benchmark is already currently active", http.StatusConflict)
-		return
+	if req.DeploymentID != "" {
+		if err := h.db.QueryRow(`SELECT COUNT(*) FROM benchmarks WHERE deployment_id=$1 AND status IN ('CREATED', 'QUEUED', 'RUNNING')`, req.DeploymentID).Scan(&activeCount); err != nil {
+			log.Printf("check active benchmarks error: %v", err)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		if activeCount > 0 {
+			http.Error(w, "a benchmark is already currently active for this deployment", http.StatusConflict)
+			return
+		}
 	}
 
 	targetURL := "http://mock-exchange:9000"
@@ -89,8 +90,9 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 
 	req.UserID = r.Header.Get("X-User-Id")
 	req.TeamID = r.Header.Get("X-Team-Id")
+	req.TeamName = r.Header.Get("X-Team-Name")
 
-	b, err := repository.CreateBenchmark(h.db, req.Name, req.UserID, req.TeamID, req.SubmissionID, req.DeploymentID, req.TargetType, req.WorkerCount, req.TotalRequests, req.Metadata)
+	b, err := repository.CreateBenchmark(h.db, req.Name, req.UserID, req.TeamID, req.TeamName, req.SubmissionID, req.DeploymentID, req.TargetType, req.WorkerCount, req.TotalRequests, req.Metadata)
 	if err != nil {
 		log.Printf("create benchmark error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -153,7 +155,7 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 		http.Error(w, "status is required", http.StatusBadRequest)
 		return
 	}
-	validStatuses := map[string]bool{"CREATED": true, "RUNNING": true, "COMPLETED": true, "FAILED": true}
+	validStatuses := map[string]bool{"CREATED": true, "QUEUED": true, "RUNNING": true, "COMPLETED": true, "FAILED": true, "CANCELLED": true}
 	if !validStatuses[req.Status] {
 		http.Error(w, "invalid status", http.StatusBadRequest)
 		return
@@ -174,8 +176,10 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 	}
 
 	if req.Status == "COMPLETED" {
-		if err := repository.UpsertLeaderboardEntryFromBenchmark(h.db, id); err != nil {
-			log.Printf("leaderboard upsert error: %v", err)
+		if b.TargetType == "deployment" {
+			if err := repository.UpsertLeaderboardEntryFromBenchmark(h.db, id); err != nil {
+				log.Printf("leaderboard upsert error: %v", err)
+			}
 		}
 	}
 
@@ -214,7 +218,7 @@ func (h *BenchmarkHandler) StopBenchmark(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	repository.UpdateBenchmarkStatus(h.db, id, "STOPPED", b.TotalRequests, b.SuccessCount, b.FailureCount, b.P50, b.P90, b.P99)
+	repository.UpdateBenchmarkStatus(h.db, id, "CANCELLED", b.TotalRequests, b.SuccessCount, b.FailureCount, b.P50, b.P90, b.P99)
 	updated, _ := repository.GetBenchmarkByID(h.db, id)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updated)

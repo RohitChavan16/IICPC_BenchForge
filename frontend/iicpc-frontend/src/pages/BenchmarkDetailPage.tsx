@@ -17,6 +17,10 @@ export function BenchmarkDetailPage() {
     queryFn: () => fetchBenchmarkDetail(benchmarkId ?? ''),
     enabled: Boolean(benchmarkId),
     retry: false,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status?.toUpperCase()
+      return (status === 'RUNNING' || status === 'QUEUED' || status === 'CREATED') ? 2000 : false
+    }
   })
   const { data: history } = useQuery({ queryKey: ['telemetryHistory'], queryFn: fetchTelemetryHistory })
 

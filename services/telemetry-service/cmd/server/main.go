@@ -62,7 +62,7 @@ func main() {
 	)
 
 	// START HTTP SERVER
-	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu)
+	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu, db)
 
 	// SIGNAL CHANNEL
 	sigChan := make(chan os.Signal, 1)

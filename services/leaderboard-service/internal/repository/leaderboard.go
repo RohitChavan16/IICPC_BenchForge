@@ -24,11 +24,14 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
   p99 NUMERIC,
   total_requests BIGINT NOT NULL DEFAULT 0,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
+  correctness_score NUMERIC NOT NULL DEFAULT 0,
   final_score NUMERIC NOT NULL DEFAULT 0,
   rank INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE leaderboard_entries ADD COLUMN IF NOT EXISTS correctness_score NUMERIC NOT NULL DEFAULT 0;
 
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(team_name);

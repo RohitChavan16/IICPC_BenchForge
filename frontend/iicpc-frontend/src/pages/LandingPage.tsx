@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowRight, Activity, Cpu, Database, Sparkles, ShieldCheck, Box, Zap, BarChart, Server, Layers } from 'lucide-react'
+import { Activity, Cpu, Database, Sparkles, Box, Zap, BarChart, Server, } from 'lucide-react'
 
 const features = [
   { label: 'Live Observability', icon: Activity, desc: 'Real-time metrics from distributed test runners.' },

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Radar, Activity, Cpu, Database, ServerCog, Bell, Sparkles, Trophy, FileText, Settings, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Radar, Activity, Cpu, Database, ServerCog, Sparkles, Trophy, FileText, UserCircle } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -86,20 +86,36 @@ export function Sidebar() {
         </div>
       )}
 
-      <div className="mt-auto rounded-[32px] border border-white/10 bg-slate-900/75 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-cyan-500/10 text-cyan-300">
-            <UserCircle size={20} />
+      <div className="mt-auto space-y-4">
+        <div className="rounded-[32px] border border-white/10 bg-slate-900/75 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-cyan-500/10 text-cyan-300">
+              <UserCircle size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">{user?.name ?? 'Benchmark Admin'}</p>
+              <p className="text-xs text-slate-500">{user?.role ?? 'Platform Operator'}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white">{user?.name ?? 'Benchmark Admin'}</p>
-            <p className="text-xs text-slate-500">{user?.role ?? 'Platform Operator'}</p>
+          <div className="mt-4 flex items-center justify-between text-slate-400">
+            <span>Notifications</span>
+            <span className="rounded-full bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">5</span>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between text-slate-400">
-          <span>Notifications</span>
-          <span className="rounded-full bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">5</span>
-        </div>
+
+        <button
+          onClick={async () => {
+            try {
+              const { logout } = await import('@/services/api/authService')
+              await logout()
+            } catch (e) {}
+            useAuthStore.getState().logout()
+            window.location.href = '/login'
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-3xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400 transition hover:bg-rose-500/20 hover:text-rose-300"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   )

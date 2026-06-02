@@ -1,6 +1,7 @@
 export const endpoints = {
   health: '/health',
   authLogin: '/auth/login',
+  authLogout: '/auth/logout',
   authRegister: '/auth/register',
   authProfile: '/auth/me',
   benchmarkSessions: '/benchmarks',

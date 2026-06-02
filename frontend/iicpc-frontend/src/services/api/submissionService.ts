@@ -7,6 +7,7 @@ export interface Submission {
   submissionName: string
   language: string
   status: string
+  buildLog?: string
   createdAt: string
   updatedAt: string
 }
@@ -23,4 +24,9 @@ export async function createSubmission(data: FormData): Promise<Submission> {
 export async function getSubmission(id: string): Promise<Submission> {
   const response = await apiClient.get(`${endpoints.submissions}/${id}`)
   return response.data as Submission
+}
+
+export async function listSubmissions(): Promise<Submission[]> {
+  const response = await apiClient.get(endpoints.submissions)
+  return response.data.items as Submission[]
 }

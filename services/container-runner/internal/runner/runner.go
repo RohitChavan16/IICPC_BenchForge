@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"net/http"
 )
 
 type Runner struct {
@@ -111,6 +112,27 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 	}
 	r.recordBuildResult(id, imageTag, logOutput)
 	log.Printf("built image %s for submission %s", imageTag, id)
+
+	// Trigger deployment
+	go func() {
+		deploymentURL := os.Getenv("DEPLOYMENT_SERVICE_URL")
+		if deploymentURL == "" {
+			deploymentURL = "http://deployment-service:8091"
+		}
+		
+		reqBody := fmt.Sprintf(`{"submissionId": "%s"}`, id)
+		resp, err := http.Post(deploymentURL+"/api/v1/deployments", "application/json", strings.NewReader(reqBody))
+		if err != nil {
+			log.Printf("Failed to trigger deployment for submission %s: %v", id, err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			log.Printf("Failed to trigger deployment for submission %s: status %d", id, resp.StatusCode)
+		} else {
+			log.Printf("Successfully triggered deployment for submission %s", id)
+		}
+	}()
 }
 
 func (r *Runner) failSubmission(id, reason string) {
@@ -200,9 +222,9 @@ func detectLanguageFromFiles(root string) string {
 func dockerfileForLanguage(lang string) string {
 	switch strings.ToLower(lang) {
 	case "go":
-		return `FROM golang:1.26-alpine
+		return `FROM golang:1.22-alpine
 WORKDIR /app
-COPY . ..
+COPY . .
 RUN go build -o app ./...
 CMD ["/app/app"]`
 	case "rust":

@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Bell } from 'lucide-react'
 
 export function NotificationsPage() {
-  const { data: notifications } = useQuery<NotificationItem[]>(['notifications'], fetchNotifications)
+  const { data: notifications } = useQuery<NotificationItem[]>({
+    queryKey: ['notifications'],
+    queryFn: fetchNotifications,
+  })
 
   return (
     <div className="space-y-8">

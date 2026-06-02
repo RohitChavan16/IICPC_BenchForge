@@ -96,6 +96,8 @@ services:
       - postgres
     env_file:
       - ./services/container-runner/.env
+    environment:
+      - DEPLOYMENT_SERVICE_URL=http://deployment-service:8091
     volumes:
       - submission_uploads:/data/submissions
       - /var/run/docker.sock:/var/run/docker.sock # optional: allows docker build (host dind)
@@ -111,6 +113,8 @@ services:
       - postgres
     env_file:
       - ./services/deployment-service/.env
+    environment:
+      - BENCHMARK_SERVICE_URL=http://benchmark-service:8082
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

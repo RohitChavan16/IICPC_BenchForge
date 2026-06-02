@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Trophy, Sparkles, ArrowUpDown, Search, ChevronRight } from 'lucide-react'
+import { Trophy, Search, ChevronRight } from 'lucide-react'
 import { fetchLeaderboardEntries, fetchTopLeaderboardEntries } from '@/services/api/leaderboardService'
 import type { LeaderboardEntry } from '@/types/api'
 import { Card } from '@/components/ui/Card'
@@ -36,9 +37,8 @@ function getPerformanceLabel(entry: LeaderboardEntry) {
 export function LeaderboardPage() {
   const [filter, setFilter] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('rank')
-  const [selectedEntry, setSelectedEntry] = useState<LeaderboardEntry | null>(null)
 
-  const { data: leaderboardData, isLoading: isLeaderboardLoading } = useQuery({
+  const { data: leaderboardData } = useQuery({
     queryKey: ['leaderboardEntries'],
     queryFn: fetchLeaderboardEntries,
     refetchInterval: 10000,
@@ -208,14 +208,13 @@ export function LeaderboardPage() {
                   <td className="px-6 py-4 text-emerald-300">{formatPercent(entry.successRate)}</td>
                   <td className="px-6 py-4 text-white">{entry.p99.toFixed(0)} ms</td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedEntry(entry)}
+                    <Link
+                      to={`/leaderboard/${entry.teamName}`}
                       className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-cyan-300 transition hover:bg-white/10"
                     >
                       View
                       <ChevronRight size={16} />
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -224,59 +223,7 @@ export function LeaderboardPage() {
         </div>
       </Card>
 
-      {selectedEntry ? (
-        <Card title="Benchmark details" description="Inspect the selected leaderboard run.">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-6">
-              <p className="text-sm text-slate-400">Team</p>
-              <p className="mt-2 text-xl font-semibold text-white">{selectedEntry.teamName}</p>
-              <p className="mt-2 text-sm text-slate-400">Submission</p>
-              <p className="text-base font-semibold text-white">{selectedEntry.submissionName}</p>
-              <div className="mt-4 space-y-3 text-sm text-slate-400">
-                <p>Deployment ID: <span className="text-white">{selectedEntry.deploymentId}</span></p>
-                <p>Benchmark ID: <span className="text-white">{selectedEntry.benchmarkId}</span></p>
-                <p>Updated {formatRelativeDate(selectedEntry.updatedAt)}</p>
-              </div>
-            </div>
-            <div className="rounded-[28px] border border-white/10 bg-slate-950/80 p-6">
-              <p className="text-sm text-slate-400">Performance summary</p>
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-3xl bg-slate-900/80 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Final score</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">{formatNumber(selectedEntry.finalScore)}</p>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-3xl bg-slate-900/80 p-4 text-slate-300">
-                    <p className="text-xs uppercase tracking-[0.24em]">TPS</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{formatNumber(selectedEntry.tps)}</p>
-                  </div>
-                  <div className="rounded-3xl bg-slate-900/80 p-4 text-slate-300">
-                    <p className="text-xs uppercase tracking-[0.24em]">Success</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{formatPercent(selectedEntry.successRate)}</p>
-                  </div>
-                  <div className="rounded-3xl bg-slate-900/80 p-4 text-slate-300">
-                    <p className="text-xs uppercase tracking-[0.24em]">Duration</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{formatDuration(selectedEntry.duration)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Badge variant={getBadgeVariant(selectedEntry)}>{getPerformanceLabel(selectedEntry)}</Badge>
-            <Badge variant="info">Rank #{selectedEntry.rank}</Badge>
-            <Badge variant="success">{selectedEntry.successRate.toFixed(1)}% success</Badge>
-            <Badge variant="warning">{selectedEntry.p99.toFixed(0)}ms p99</Badge>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSelectedEntry(null)}
-            className="mt-6 rounded-3xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white transition hover:bg-white/10"
-          >
-            Close details
-          </button>
-        </Card>
-      ) : null}
+      {/* Inline details removed in favor of LeaderboardDetailsPage */}
     </div>
   )
 }

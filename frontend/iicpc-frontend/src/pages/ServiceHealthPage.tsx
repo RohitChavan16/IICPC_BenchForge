@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { ServiceHealthCard } from '@/components/infra/ServiceHealthCard'
 
 const SERVICES = [

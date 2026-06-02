@@ -16,11 +16,12 @@ import (
 )
 
 type Metric struct {
-	RequestID string `json:"request_id"`
-	BotType   string `json:"bot_type"`
-	Latency   int64  `json:"latency"`
-	Success   bool   `json:"success"`
-	WorkerID  string `json:"worker_id"`
+	RequestID   string `json:"request_id"`
+	BotType     string `json:"bot_type"`
+	Latency     int64  `json:"latency"`
+	Success     bool   `json:"success"`
+	WorkerID    string `json:"worker_id"`
+	BenchmarkID string `json:"benchmark_id"`
 }
 
 func StartConsumer(
@@ -36,7 +37,9 @@ func StartConsumer(
 
 	consumerID := uuid.NewString()
 
-	go startBroadcaster(ctx, agg, hub, workerAggs, workerLastSeen, workerMu)
+	stopBroadcasterCh := make(chan struct{}, 1)
+
+	go startBroadcaster(ctx, agg, hub, workerAggs, workerLastSeen, workerMu, stopBroadcasterCh)
 
 	for {
         select {
@@ -86,6 +89,7 @@ func StartConsumer(
 					workerLastSeen,
 					workerMu,
 					message,
+					stopBroadcasterCh,
 				)
 			}
 		}
@@ -101,6 +105,7 @@ func processMessage(
 	workerLastSeen map[string]time.Time,
 	workerMu *sync.Mutex,
 	message redis.XMessage,
+	stopBroadcasterCh chan struct{},
 ) {
 
 	raw, ok := message.Values["metric"].(string)
@@ -117,6 +122,16 @@ func processMessage(
 	)
 
 	if err != nil {
+		return
+	}
+
+	if metric.BotType == "system_control" && metric.WorkerID == "STOP_STREAM" {
+		select {
+		case stopBroadcasterCh <- struct{}{}:
+		default:
+		}
+		// Acknowledge and return
+		rdb.XAck(ctx, StreamName, GroupName, message.ID)
 		return
 	}
     
@@ -142,11 +157,12 @@ func processMessage(
     err = database.InsertMetric(
 	db,
 	database.Metric{
-		RequestID: metric.RequestID,
-		BotType:   metric.BotType,
-		WorkerID:  metric.WorkerID,
-		Latency:   metric.Latency,
-		Success:   metric.Success,
+		RequestID:   metric.RequestID,
+		BotType:     metric.BotType,
+		WorkerID:    metric.WorkerID,
+		BenchmarkID: metric.BenchmarkID,
+		Latency:     metric.Latency,
+		Success:     metric.Success,
 	},
 )
 
@@ -180,9 +196,11 @@ func startBroadcaster(
 	workerAggs map[string]*aggregator.Aggregator,
 	workerLastSeen map[string]time.Time,
 	workerMu *sync.Mutex,
+	stopBroadcasterCh chan struct{},
 ) {
 
 	ticker := time.NewTicker(1 * time.Second)
+	paused := false
 
 	for {
 
@@ -195,8 +213,45 @@ func startBroadcaster(
 		ticker.Stop()
 
 		return
+	
+	case <-stopBroadcasterCh:
+		// Benchmark stopped: emit one final snapshot with TPS=0 and pause streaming.
+		paused = true
+		agg.Reset()
+		workerMu.Lock()
+		for id, wa := range workerAggs {
+			wa.Reset()
+			delete(workerAggs, id)
+			delete(workerLastSeen, id)
+		}
+		workerMu.Unlock()
+		
+		finalPayload := struct {
+			TPS         float64                               `json:"tps"`
+			P50         float64                               `json:"p50"`
+			P90         float64                               `json:"p90"`
+			P99         float64                               `json:"p99"`
+			FailureRate float64                               `json:"failure_rate"`
+			Total       int                                   `json:"total"`
+			Global      aggregator.MetricsSnapshot            `json:"global"`
+			Workers     map[string]aggregator.MetricsSnapshot `json:"workers"`
+		}{
+			TPS: 0, P50: 0, P90: 0, P99: 0, FailureRate: 0, Total: 0,
+			Global:  aggregator.MetricsSnapshot{},
+			Workers: make(map[string]aggregator.MetricsSnapshot),
+		}
+		data, _ := json.Marshal(finalPayload)
+		hub.Broadcast(data)
 
 	case <-ticker.C:
+		if paused {
+			// Check if new metrics have arrived indicating a new benchmark
+			globalSnap := agg.Snapshot()
+			if globalSnap.Total == 0 {
+				continue
+			}
+			paused = false // Resume broadcasting
+		}
 
 		// global snapshot
 		globalSnap := agg.Snapshot()

@@ -2,6 +2,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT,
+  team_id TEXT,
   team_name TEXT NOT NULL,
   submission_name TEXT NOT NULL,
   language TEXT NOT NULL,

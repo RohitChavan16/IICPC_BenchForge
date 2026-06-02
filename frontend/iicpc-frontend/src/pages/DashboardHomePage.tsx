@@ -14,7 +14,14 @@ export function DashboardHomePage() {
   const { data: summary } = useQuery({ queryKey: ['telemetrySummary'], queryFn: fetchTelemetrySummary })
   const { data: healthStatus } = useQuery({ queryKey: ['healthStatus'], queryFn: fetchHealthStatus })
   const { data: infrastructure } = useQuery({ queryKey: ['infrastructureMetrics'], queryFn: fetchInfrastructureMetrics })
-  const { data: benchmarksData } = useQuery({ queryKey: ['benchmarks'], queryFn: fetchBenchmarkSessions })
+  const { data: benchmarksData } = useQuery({ 
+    queryKey: ['benchmarks'], 
+    queryFn: fetchBenchmarkSessions,
+    refetchInterval: (query) => {
+      const active = query.state.data?.items?.some(b => b.status === 'RUNNING' || b.status === 'QUEUED' || b.status === 'CREATED')
+      return active ? 3000 : 15000
+    }
+  })
 
   const activeBenchmarks = benchmarksData?.items.filter(b => b.status === 'RUNNING' || b.status === 'CREATED') || []
   const hasActiveBenchmark = activeBenchmarks.length > 0
@@ -62,9 +69,9 @@ export function DashboardHomePage() {
                 <div className="rounded-[28px] border border-white/10 bg-slate-950/75 p-6">
                   <div className="flex items-center gap-3 text-slate-400">
                     <Zap size={18} />
-                    <p className="text-sm uppercase tracking-[0.24em]">Event backlog</p>
+                    <p className="text-sm uppercase tracking-[0.24em]">Total Requests</p>
                   </div>
-                  <p className="mt-4 text-4xl font-semibold text-white">{infrastructure ? infrastructure[0]?.value ?? 'stable' : 'stable'}</p>
+                  <p className="mt-4 text-4xl font-semibold text-white">{summary ? formatNumber(summary.total) : '--'}</p>
                 </div>
               </div>
             </>

@@ -20,6 +20,7 @@ func Worker(
 	results chan<- metrics.RequestMetric,
 	exchangeURL string,
 	rdb *redis.Client,
+	benchmarkID string,
 ) {
 	for {
 		select {
@@ -31,13 +32,14 @@ func Worker(
 			}
 			order := bots.RetailTrader()
 			start := time.Now()
-			resp, err := bots.SendOrder(exchangeURL, order)
+			resp, err := bots.SendOrder(ctx, exchangeURL, order)
 			latency := time.Since(start)
 
 			metric := metrics.RequestMetric{
 				RequestID: uuid.NewString(),
 				BotType:   "retail",
 				WorkerID:  fmt.Sprintf("worker-%02d", id),
+				BenchmarkID: benchmarkID,
 				Latency:   latency,
 				Success:   err == nil && checkCorrectnessStub(resp),
 				Timestamp: time.Now(),

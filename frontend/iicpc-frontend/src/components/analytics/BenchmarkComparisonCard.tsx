@@ -1,4 +1,3 @@
-import React from 'react'
 import type { BenchmarkSession } from '@/types/api'
 import { formatNumber, formatDuration, formatPercent } from '@/utils/formatters'
 

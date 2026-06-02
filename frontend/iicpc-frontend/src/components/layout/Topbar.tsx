@@ -45,6 +45,26 @@ export function Topbar() {
             <span className="hidden sm:inline-block">{user?.name ?? 'Operator'}</span>
             <span className="rounded-full bg-cyan-500/15 px-2 py-1 text-xs uppercase tracking-[0.24em] text-cyan-300">{user?.role ?? 'SRE'}</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                // Call backend logout
+                const { logout } = await import('@/services/api/authService')
+                await logout()
+              } catch (e) {
+                // Ignore failure if backend is unreachable
+              }
+              // Clear frontend state
+              useAuthStore.getState().logout()
+              window.location.href = '/login'
+            }}
+            className="inline-flex h-11 px-4 items-center justify-center rounded-3xl border border-white/10 bg-slate-900/80 text-rose-400 transition hover:bg-rose-950/30 hover:text-rose-300 hover:border-rose-500/30"
+            aria-label="Logout"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>

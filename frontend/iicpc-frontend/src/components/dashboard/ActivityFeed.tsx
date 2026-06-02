@@ -1,17 +1,84 @@
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
-import { Box, Server, UploadCloud, Zap, CheckCircle, AlertCircle } from 'lucide-react'
-
-// Mock data for the activity feed
-const activities = [
-  { id: 1, time: 'Just now', type: 'benchmark', text: 'Benchmark completed for "Rust-HFT-v2"', icon: CheckCircle, color: 'text-emerald-400' },
-  { id: 2, time: '2m ago', type: 'telemetry', text: 'Peak TPS of 18,402 recorded', icon: Zap, color: 'text-cyan-400' },
-  { id: 3, time: '5m ago', type: 'deploy', text: 'Deployed 100 worker nodes in us-east', icon: Server, color: 'text-violet-400' },
-  { id: 4, time: '8m ago', type: 'build', text: 'Container build successful', icon: Box, color: 'text-emerald-400' },
-  { id: 5, time: '10m ago', type: 'upload', text: 'Submission "Rust-HFT-v2" uploaded', icon: UploadCloud, color: 'text-slate-400' },
-  { id: 6, time: '1h ago', type: 'error', text: 'Node crash detected, auto-recovering', icon: AlertCircle, color: 'text-rose-400' },
-]
+import { Box, UploadCloud, CheckCircle, AlertCircle, Play } from 'lucide-react'
+import * as submissionService from '@/services/api/submissionService'
+import * as benchmarkService from '@/services/api/benchmarkService'
 
 export function ActivityFeed() {
+  const [activities, setActivities] = useState<any[]>([])
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const subs = await submissionService.listSubmissions()
+        const benchs = await benchmarkService.fetchBenchmarkSessions()
+        
+        const events: any[] = []
+        
+        subs.forEach(s => {
+          events.push({
+            id: `sub-${s.id}`,
+            time: new Date(s.createdAt),
+            type: 'upload',
+            text: `Submission "${s.submissionName}" uploaded`,
+            icon: UploadCloud,
+            color: 'text-slate-400'
+          })
+          if (s.status === 'BUILT') {
+            events.push({
+              id: `sub-b-${s.id}`,
+              time: new Date(s.updatedAt),
+              type: 'build',
+              text: `Container build successful for "${s.submissionName}"`,
+              icon: Box,
+              color: 'text-emerald-400'
+            })
+          }
+        })
+
+        benchs.items.forEach((b: any) => {
+          events.push({
+            id: `bench-${b.id}`,
+            time: new Date(b.createdAt),
+            type: 'benchmark',
+            text: `Benchmark started for "${b.name}"`,
+            icon: Play,
+            color: 'text-cyan-400'
+          })
+          if (b.status === 'COMPLETED') {
+            events.push({
+              id: `bench-c-${b.id}`,
+              time: new Date(b.updatedAt),
+              type: 'benchmark',
+              text: `Benchmark completed for "${b.name}"`,
+              icon: CheckCircle,
+              color: 'text-emerald-400'
+            })
+          } else if (b.status === 'FAILED') {
+            events.push({
+              id: `bench-f-${b.id}`,
+              time: new Date(b.updatedAt),
+              type: 'error',
+              text: `Benchmark failed for "${b.name}"`,
+              icon: AlertCircle,
+              color: 'text-rose-400'
+            })
+          }
+        })
+
+        events.sort((a, b) => b.time.getTime() - a.time.getTime())
+        
+        setActivities(events.slice(0, 8))
+      } catch (err) {
+        console.error('Failed to load activities', err)
+      }
+    }
+    
+    loadEvents()
+    const interval = setInterval(loadEvents, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <Card title="Activity Feed" description="Real-time events from the benchmark engine.">
       <div className="mt-6 space-y-6">
@@ -28,7 +95,7 @@ export function ActivityFeed() {
             
             <div className="flex flex-col pt-2">
               <p className="text-sm font-medium text-white">{activity.text}</p>
-              <p className="mt-1 text-xs text-slate-500">{activity.time}</p>
+              <p className="mt-1 text-xs text-slate-500">{activity.time.toLocaleTimeString()}</p>
             </div>
           </div>
         ))}
