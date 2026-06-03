@@ -4,13 +4,14 @@ import (
 	"database/sql"
 
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/deployment-service/internal/handlers"
 )
 
-func NewServer(db *sql.DB) *mux.Router {
+func NewServer(db *sql.DB, rdb *redis.Client) *mux.Router {
 	r := mux.NewRouter()
-	h := handlers.NewHandler(db)
+	h := handlers.NewHandler(db, rdb)
 
 	r.HandleFunc("/deployments", h.ListDeployments).Methods("GET")
 	r.HandleFunc("/deployments", h.CreateDeployment).Methods("POST")

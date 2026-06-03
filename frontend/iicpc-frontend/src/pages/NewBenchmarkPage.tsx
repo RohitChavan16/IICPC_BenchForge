@@ -14,6 +14,7 @@ export function NewBenchmarkPage() {
 
   const [name, setName] = useState('')
   const [targetType, setTargetType] = useState<'mock' | 'deployment'>('mock')
+  const [submissionId, setSubmissionId] = useState('')
   const [deploymentId, setDeploymentId] = useState('')
   const [workerCount, setWorkerCount] = useState(100)
   const [totalRequests, setTotalRequests] = useState(1000)
@@ -36,14 +37,21 @@ export function NewBenchmarkPage() {
       pushToast({ variant: 'error', title: 'Benchmark name is required' })
       return
     }
-    if (targetType === 'deployment' && !deploymentId.trim()) {
-      pushToast({ variant: 'error', title: 'Deployment ID is required' })
-      return
+    if (targetType === 'deployment') {
+      if (!submissionId.trim()) {
+        pushToast({ variant: 'error', title: 'Submission ID is required for deployment target' })
+        return
+      }
+      if (!deploymentId.trim()) {
+        pushToast({ variant: 'error', title: 'Deployment ID is required for deployment target' })
+        return
+      }
     }
     
     mutate({
       name,
       targetType,
+      submissionId: targetType === 'deployment' ? submissionId : undefined,
       deploymentId: targetType === 'deployment' ? deploymentId : undefined,
       workerCount,
       totalRequests,
@@ -84,17 +92,30 @@ export function NewBenchmarkPage() {
           </div>
 
           {targetType === 'deployment' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Deployment ID</label>
-              <input
-                type="text"
-                value={deploymentId}
-                onChange={(e) => setDeploymentId(e.target.value)}
-                placeholder="e.g. dep-xxxx"
-                className="w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
-                required
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Submission ID</label>
+                <input
+                  type="text"
+                  value={submissionId}
+                  onChange={(e) => setSubmissionId(e.target.value)}
+                  placeholder="e.g. sub-xxxx"
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Deployment ID</label>
+                <input
+                  type="text"
+                  value={deploymentId}
+                  onChange={(e) => setDeploymentId(e.target.value)}
+                  placeholder="e.g. dep-xxxx"
+                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                  required
+                />
+              </div>
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-4">

@@ -24,6 +24,7 @@ export async function fetchBenchmarkDetail(id: string): Promise<BenchmarkSession
 export interface CreateBenchmarkPayload {
   name: string
   targetType: 'mock' | 'deployment'
+  submissionId?: string
   deploymentId?: string
   workerCount: number
   totalRequests: number

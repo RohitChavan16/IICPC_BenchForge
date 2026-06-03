@@ -18,7 +18,7 @@ export function DashboardHomePage() {
     queryKey: ['benchmarks'], 
     queryFn: fetchBenchmarkSessions,
     refetchInterval: (query) => {
-      const active = query.state.data?.items?.some(b => b.status === 'RUNNING' || b.status === 'QUEUED' || b.status === 'CREATED')
+      const active = (query.state.data as any)?.items?.filter((b: any) => b.status === 'RUNNING' || b.status === 'QUEUED' || b.status === 'CREATED').length
       return active ? 3000 : 15000
     }
   })

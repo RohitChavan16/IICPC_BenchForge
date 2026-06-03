@@ -8,6 +8,7 @@ import (
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/container-runner/internal/runner"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -31,7 +32,15 @@ func main() {
 		log.Fatalf("failed to connect db: %v", err)
 	}
 
-	r := runner.NewRunner(db, uploadDir)
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+
+	r := runner.NewRunner(db, rdb, uploadDir)
 
 	log.Println("container-runner started: polling for submissions")
 	// Run loop (blocking)

@@ -10,7 +10,7 @@ export const endpoints = {
   leaderboardTop: '/leaderboard/top',
   leaderboardTeam: (team: string) => `/leaderboard/team/${encodeURIComponent(team)}`,
   telemetrySummary: '/telemetry/summary',
-  telemetryHistory: '/telemetry/history',
+  telemetryHistory: '/history',
   workers: '/workers',
   infrastructure: '/infrastructure',
   redis: '/infrastructure/redis',

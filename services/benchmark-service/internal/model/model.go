@@ -28,6 +28,11 @@ type Benchmark struct {
 	P99              float64         `json:"p99"`
 	CorrectnessScore float64         `json:"correctnessScore"`
 	Metadata         json.RawMessage `json:"metadata,omitempty"`
+	QueuePosition    int             `json:"queuePosition,omitempty"`
+	LastHeartbeat    *time.Time      `json:"lastHeartbeat,omitempty"`
+	FailureReason    string          `json:"failureReason,omitempty"`
+	WaitTimeSeconds  *int            `json:"waitTimeSeconds,omitempty"`
+	ExecutionTimeSeconds *int        `json:"executionTimeSeconds,omitempty"`
 	CreatedAt        time.Time       `json:"createdAt"`
 	UpdatedAt        time.Time       `json:"updatedAt"`
 }

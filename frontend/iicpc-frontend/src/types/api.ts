@@ -43,6 +43,10 @@ export interface BenchmarkSession {
   p90: number
   p99: number
   metadata?: Record<string, unknown> | null
+  queuePosition?: number
+  failureReason?: string
+  waitTimeSeconds?: number
+  executionTimeSeconds?: number
   createdAt: string
   updatedAt: string
 }

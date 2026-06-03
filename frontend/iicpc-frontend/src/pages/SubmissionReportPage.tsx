@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Server, Zap, CheckCircle, ArrowLeft, Trophy } from 'lucide-react'
+import { Server, Zap, CheckCircle, ArrowLeft, Trophy, BarChart2, Activity, Play, XCircle } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import * as submissionService from '@/services/api/submissionService'
 import * as deploymentService from '@/services/api/deploymentService'
 import * as benchmarkService from '@/services/api/benchmarkService'
 import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
+import { fetchBenchmarkTelemetryHistory } from '@/services/api/telemetryService'
 
 export function SubmissionReportPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,30 +20,27 @@ export function SubmissionReportPage() {
       if (!id) return
       setLoading(true)
       try {
-        // MVP: Frontend aggregation
-        // 1. Get all submissions (no GET /id yet in submissionService, so we list and find)
         const subs = await submissionService.listSubmissions()
         const submission = subs.find(s => s.id === id)
         
-        // 2. Get deployment
         const deps = await deploymentService.listDeployments()
         const deployment = deps.items.find(d => d.submissionId === id)
         
-        // 3. Get benchmark
         let benchmark = null
         if (deployment) {
           const benchs = await benchmarkService.fetchBenchmarkSessions()
           benchmark = benchs.items.find((b: any) => b.deploymentId === deployment.id)
         }
         
-        // 4. Get leaderboard position
         let leaderboardEntry = null
+        let history = []
         if (benchmark) {
           const lb = await fetchLeaderboardEntries()
           leaderboardEntry = lb.items.find((e: any) => e.benchmarkId === benchmark.id)
+          history = await fetchBenchmarkTelemetryHistory(benchmark.id)
         }
 
-        setData({ submission, deployment, benchmark, leaderboardEntry })
+        setData({ submission, deployment, benchmark, leaderboardEntry, history })
       } catch (err) {
         console.error(err)
       } finally {
@@ -59,7 +58,76 @@ export function SubmissionReportPage() {
     return <div className="text-center py-20 text-slate-400">Submission not found.</div>
   }
 
-  const { submission, deployment, benchmark, leaderboardEntry } = data
+  const { submission, deployment, benchmark, leaderboardEntry, history } = data
+
+  // Score Calculations
+  let correctnessScore = 0
+  let correctnessPart = 0
+  let tpsPart = 0
+  let p99Part = 0
+  let finalScore = 0
+
+  if (leaderboardEntry) {
+    correctnessScore = leaderboardEntry.correctnessScore || 0
+    correctnessPart = Math.max(0, correctnessScore) * 0.5
+    
+    let tpsS = (leaderboardEntry.tps / 20000.0) * 100.0
+    if (tpsS > 100) tpsS = 100
+    tpsPart = tpsS * 0.3
+
+    let p99S = 100.0 - (leaderboardEntry.p99 / 10.0)
+    if (p99S > 100) p99S = 100
+    if (p99S < 0) p99S = 0
+    p99Part = p99S * 0.2
+
+    finalScore = leaderboardEntry.finalScore
+  }
+
+  const formatHistoryData = (historyData: any[]) => {
+    return historyData.map((d: any) => ({
+      time: new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      tps: d.tps || 0,
+      successRate: d.success_rate || 0,
+      latency: d.p50 || 0
+    }))
+  }
+
+  const chartData = history ? formatHistoryData(history) : []
+
+  let buildState = "PENDING"
+  let deployState = "PENDING"
+  let benchState = "PENDING"
+
+  if (submission.status?.toLowerCase() === 'completed') {
+    buildState = "COMPLETED"
+    deployState = "COMPLETED"
+    benchState = "COMPLETED"
+  } else if (submission.status?.toLowerCase() === 'failed') {
+    if (['UPLOAD', 'BUILD'].includes(submission.currentStage)) {
+      buildState = "FAILED"
+      deployState = "ABORTED"
+      benchState = "ABORTED"
+    } else if (submission.currentStage === 'DEPLOYMENT' || submission.currentStage === 'VALIDATION') {
+      buildState = "COMPLETED"
+      deployState = "FAILED"
+      benchState = "ABORTED"
+    } else {
+      buildState = "COMPLETED"
+      deployState = deployment ? deployment.deploymentStatus : "RUNNING"
+      benchState = "FAILED"
+    }
+  } else {
+    if (['UPLOAD', 'BUILD'].includes(submission.currentStage)) {
+      buildState = "BUILDING"
+    } else if (submission.currentStage === 'DEPLOYMENT' || submission.currentStage === 'VALIDATION') {
+      buildState = "COMPLETED"
+      deployState = deployment ? deployment.deploymentStatus : "STARTING"
+    } else {
+      buildState = "COMPLETED"
+      deployState = deployment ? deployment.deploymentStatus : "RUNNING"
+      benchState = benchmark ? benchmark.status : "STARTING"
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -83,7 +151,7 @@ export function SubmissionReportPage() {
                 <Trophy className="text-emerald-400" />
                 Rank #{leaderboardEntry.rank}
               </h2>
-              <p className="text-slate-300 mt-1">Final Score: <span className="text-emerald-400 font-bold">{leaderboardEntry.finalScore.toFixed(2)}</span></p>
+              <p className="text-slate-300 mt-1">Final Score: <span className="text-emerald-400 font-bold">{finalScore.toFixed(2)}</span></p>
             </div>
             <Link to={`/leaderboard/${leaderboardEntry.teamName}`}>
               <Button variant="secondary" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20">
@@ -94,57 +162,202 @@ export function SubmissionReportPage() {
         </Card>
       )}
 
+      {/* Overview Details Section */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card title="Build Status">
-          <div className="mt-4 flex items-center gap-4">
-            <CheckCircle className="text-emerald-400" size={24} />
+          <div className="mt-4 flex items-start gap-4">
+            {buildState === 'FAILED' ? (
+              <XCircle className="text-rose-400 mt-1" size={24} />
+            ) : buildState === 'COMPLETED' ? (
+              <CheckCircle className="text-emerald-400 mt-1" size={24} />
+            ) : (
+              <CheckCircle className="text-cyan-400 mt-1" size={24} />
+            )}
             <div>
-              <p className="text-white font-medium">{submission.status}</p>
-              <p className="text-xs text-slate-400 mt-1">Image: {submission.containerImage || 'N/A'}</p>
+              <p className={`font-medium ${
+                buildState === 'FAILED' ? 'text-rose-400' :
+                buildState === 'COMPLETED' ? 'text-emerald-400' :
+                'text-cyan-400'
+              }`}>
+                {buildState}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">Image: <span className="text-slate-300">{submission.containerImage || 'N/A'}</span></p>
             </div>
           </div>
         </Card>
 
         <Card title="Deployment">
-          <div className="mt-4 flex items-center gap-4">
-            <Server className={deployment ? 'text-cyan-400' : 'text-slate-600'} size={24} />
+          <div className="mt-4 flex items-start gap-4">
+            {deployState === 'FAILED' || deployState === 'ABORTED' ? (
+              <XCircle className="text-rose-400 mt-1" size={24} />
+            ) : deployState === 'COMPLETED' || deployState === 'RUNNING' ? (
+              <Server className="text-emerald-400 mt-1" size={24} />
+            ) : (
+              <Server className="text-slate-600 mt-1" size={24} />
+            )}
             <div>
-              <p className="text-white font-medium">{deployment ? deployment.deploymentStatus : 'Pending'}</p>
-              {deployment && <p className="text-xs text-slate-400 mt-1">Port: {deployment.hostPort}</p>}
+              <p className={`font-medium ${
+                deployState === 'FAILED' || deployState === 'ABORTED' ? 'text-rose-400' :
+                deployState === 'COMPLETED' || deployState === 'RUNNING' ? 'text-emerald-400' :
+                'text-white'
+              }`}>
+                {deployState}
+              </p>
+              {deployment && deployState !== 'ABORTED' && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-slate-400">Host Port: <span className="text-slate-300">{deployment.hostPort}</span></p>
+                  <p className="text-xs text-slate-400">Internal Port: <span className="text-slate-300">{deployment.containerPort}</span></p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
 
         <Card title="Benchmark">
-          <div className="mt-4 flex items-center gap-4">
-            <Zap className={benchmark ? 'text-violet-400' : 'text-slate-600'} size={24} />
+          <div className="mt-4 flex items-start gap-4">
+            {benchState === 'FAILED' || benchState === 'ABORTED' ? (
+              <XCircle className="text-rose-400 mt-1" size={24} />
+            ) : benchState === 'COMPLETED' ? (
+              <Zap className="text-emerald-400 mt-1" size={24} />
+            ) : benchState !== 'PENDING' ? (
+              <Zap className="text-cyan-400 mt-1" size={24} />
+            ) : (
+              <Zap className="text-slate-600 mt-1" size={24} />
+            )}
             <div>
-              <p className="text-white font-medium">{benchmark ? benchmark.status : 'Pending'}</p>
-              {benchmark && <p className="text-xs text-slate-400 mt-1">Total Requests: {benchmark.totalRequests}</p>}
+              <p className={`font-medium ${
+                benchState === 'FAILED' || benchState === 'ABORTED' ? 'text-rose-400' :
+                benchState === 'COMPLETED' ? 'text-emerald-400' :
+                benchState !== 'PENDING' ? 'text-cyan-400' :
+                'text-white'
+              }`}>
+                {benchState}
+              </p>
+              {benchmark && benchState !== 'ABORTED' && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-slate-400">Total Requests: <span className="text-slate-300">{benchmark.totalRequests}</span></p>
+                  <p className="text-xs text-slate-400">Workers: <span className="text-slate-300">{benchmark.workerCount}</span></p>
+                  <p className="text-xs text-slate-400">Duration: <span className="text-slate-300">{benchmark.duration}s</span></p>
+                </div>
+              )}
             </div>
           </div>
         </Card>
       </div>
 
-      {benchmark && benchmark.status === 'COMPLETED' && leaderboardEntry && (
-        <Card title="Performance Metrics">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6">
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
-              <p className="text-sm text-slate-400 mb-1">Throughput</p>
-              <p className="text-2xl font-semibold text-cyan-400">{leaderboardEntry.tps.toFixed(0)} <span className="text-sm font-normal text-slate-500">TPS</span></p>
+      {/* Full Benchmark Metrics Table */}
+      {benchmark && benchmark.status === 'COMPLETED' && (
+        <Card title="Detailed Execution Metrics" className="overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
+              <p className="text-xs text-slate-400">Success</p>
+              <p className="text-lg font-mono text-emerald-400">{benchmark.successCount}</p>
             </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
-              <p className="text-sm text-slate-400 mb-1">Latency p50</p>
-              <p className="text-2xl font-semibold text-emerald-400">{(leaderboardEntry.p50).toFixed(2)} <span className="text-sm font-normal text-slate-500">ms</span></p>
+            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
+              <p className="text-xs text-slate-400">Failures</p>
+              <p className="text-lg font-mono text-rose-400">{benchmark.failureCount}</p>
             </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
-              <p className="text-sm text-slate-400 mb-1">Latency p99</p>
-              <p className="text-2xl font-semibold text-rose-400">{(leaderboardEntry.p99).toFixed(2)} <span className="text-sm font-normal text-slate-500">ms</span></p>
+            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
+              <p className="text-xs text-slate-400">p50 Latency</p>
+              <p className="text-lg font-mono text-amber-400">{(benchmark.p50 || 0).toFixed(2)}ms</p>
             </div>
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
-              <p className="text-sm text-slate-400 mb-1">Success Rate</p>
-              <p className="text-2xl font-semibold text-purple-400">{(leaderboardEntry.successRate).toFixed(1)} <span className="text-sm font-normal text-slate-500">%</span></p>
+            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
+              <p className="text-xs text-slate-400">p90 Latency</p>
+              <p className="text-lg font-mono text-orange-400">{(benchmark.p90 || 0).toFixed(2)}ms</p>
             </div>
+            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
+              <p className="text-xs text-slate-400">p99 Latency</p>
+              <p className="text-lg font-mono text-rose-400">{(benchmark.p99 || 0).toFixed(2)}ms</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Score Breakdown Section */}
+      {leaderboardEntry && (
+        <Card title="Score Breakdown">
+          <div className="flex flex-col md:flex-row gap-8 mt-4">
+            <div className="flex-1 space-y-4">
+              <p className="text-sm text-slate-400">
+                The final score is calculated using the formula:
+                <br />
+                <code className="bg-black/30 p-1 rounded text-cyan-300 text-xs mt-2 inline-block">
+                  Final Score = Correctness (50%) + TPS (30%) + Latency p99 (20%)
+                </code>
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
+                  <span className="text-sm text-slate-300">Correctness Part</span>
+                  <span className="font-mono text-emerald-400">+{correctnessPart.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
+                  <span className="text-sm text-slate-300">TPS Part (Max 20k)</span>
+                  <span className="font-mono text-emerald-400">+{tpsPart.toFixed(4)}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
+                  <span className="text-sm text-slate-300">Latency p99 Part</span>
+                  <span className="font-mono text-emerald-400">+{p99Part.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
+                  <span className="text-sm font-semibold text-cyan-300">Total Score</span>
+                  <span className="font-mono font-bold text-cyan-400">{finalScore.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 flex flex-col justify-center items-center bg-black/20 rounded-xl border border-white/5 p-6">
+              <div className="text-center">
+                <p className="text-sm text-slate-400 mb-2">Calculated Success Rate</p>
+                <p className="text-4xl font-bold text-white">{leaderboardEntry.successRate.toFixed(1)}%</p>
+                {leaderboardEntry.successRate === 0 && (
+                  <p className="text-xs text-rose-400 mt-2 max-w-xs">
+                    0 successes recorded during benchmark run. This severely impacts the final score.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Historical Charts */}
+      {history && history.length > 0 && (
+        <Card title="Historical Telemetry">
+          <div className="grid md:grid-cols-2 gap-6 mt-6">
+            
+            <div className="h-64">
+              <p className="text-xs text-slate-400 mb-2 text-center">TPS over Time</p>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
+                  <YAxis stroke="#94a3b8" fontSize={10} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#2dd4bf' }}
+                  />
+                  <Line type="monotone" dataKey="tps" stroke="#2dd4bf" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="h-64">
+              <p className="text-xs text-slate-400 mb-2 text-center">Average Latency (ms)</p>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
+                  <YAxis stroke="#94a3b8" fontSize={10} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#fbbf24' }}
+                  />
+                  <Line type="monotone" dataKey="latency" stroke="#fbbf24" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
           </div>
         </Card>
       )}

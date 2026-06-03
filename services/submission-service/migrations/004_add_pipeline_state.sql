@@ -1,0 +1,6 @@
+ALTER TABLE submissions 
+ADD COLUMN current_stage TEXT,
+ADD COLUMN stage_status TEXT,
+ADD COLUMN failure_reason TEXT,
+ADD COLUMN started_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN finished_at TIMESTAMP WITH TIME ZONE;

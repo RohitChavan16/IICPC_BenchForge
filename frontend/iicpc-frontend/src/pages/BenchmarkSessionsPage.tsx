@@ -242,7 +242,12 @@ export function BenchmarkSessionsPage() {
                         <p className="mt-1 text-xs text-slate-500">Updated {formatRelativeDate(session.updatedAt)}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={statusVariants[session.status]}>{session.status}</Badge>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge variant={statusVariants[session.status]}>{session.status}</Badge>
+                          {session.status === 'Queued' && session.queuePosition !== undefined && session.queuePosition > 0 && (
+                            <span className="text-xs text-slate-400">Position #{session.queuePosition}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-white">{tps ? formatNumber(tps) : '—'}</td>
                       <td className="px-6 py-4 text-white">{session.p99.toFixed(0)} ms</td>

@@ -85,11 +85,16 @@ export function BenchmarkDetailPage() {
           <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Session detail</p>
           <h1 className="mt-2 text-3xl font-semibold text-white">{benchmark.name}</h1>
         </div>
-        <Badge
-          variant={benchmark.status === 'Completed' ? 'success' : benchmark.status === 'Failed' ? 'danger' : benchmark.status === 'Running' ? 'info' : 'warning'}
-        >
-          {benchmark.status}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge
+            variant={benchmark.status === 'Completed' ? 'success' : benchmark.status === 'Failed' ? 'danger' : benchmark.status === 'Running' ? 'info' : 'warning'}
+          >
+            {benchmark.status}
+          </Badge>
+          {benchmark.status === 'Queued' && benchmark.queuePosition !== undefined && benchmark.queuePosition > 0 && (
+            <span className="text-sm font-medium text-slate-400">Queue Position #{benchmark.queuePosition}</span>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_0.9fr]">
@@ -132,6 +137,20 @@ export function BenchmarkDetailPage() {
               <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
                 <p className="text-slate-400">Failure count</p>
                 <p>{benchmark.failureCount.toLocaleString()}</p>
+              </div>
+              {benchmark.failureReason && (
+                <div className="grid gap-2 rounded-3xl border border-red-500/30 bg-red-950/20 p-4">
+                  <p className="text-red-400">Failure Reason</p>
+                  <p className="text-red-200">{benchmark.failureReason}</p>
+                </div>
+              )}
+              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+                <p className="text-slate-400">Wait time</p>
+                <p>{benchmark.waitTimeSeconds !== undefined ? `${benchmark.waitTimeSeconds}s` : '—'}</p>
+              </div>
+              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+                <p className="text-slate-400">Execution time</p>
+                <p>{benchmark.executionTimeSeconds !== undefined ? `${benchmark.executionTimeSeconds}s` : '—'}</p>
               </div>
             </div>
           </Card>

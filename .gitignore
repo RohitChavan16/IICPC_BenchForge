@@ -19,6 +19,7 @@ build/
 
 # Go test binaries
 *.test
+services/*/benchmark-service
 
 # Go coverage
 coverage.out

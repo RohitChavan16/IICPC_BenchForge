@@ -136,6 +136,28 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		close(jobs)
 	}()
 
+	// Heartbeat goroutine
+	go func() {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+		benchmarkURL := "http://benchmark-service:8082/benchmarks/" + req.BenchmarkID + "/heartbeat"
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				client := &http.Client{Timeout: 5 * time.Second}
+				req, err := http.NewRequest("PATCH", benchmarkURL, nil)
+				if err == nil {
+					resp, _ := client.Do(req)
+					if resp != nil {
+						resp.Body.Close()
+					}
+				}
+			}
+		}
+	}()
+
 	var metricsList []metrics.RequestMetric
 	success := 0
 	failureCount := int64(0)

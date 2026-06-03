@@ -1,127 +1,106 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { UploadCloud, FileCode2, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock } from 'lucide-react'
+import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare } from 'lucide-react'
 import * as submissionService from '@/services/api/submissionService'
-import * as deploymentService from '@/services/api/deploymentService'
-import * as benchmarkService from '@/services/api/benchmarkService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSubmissionStore } from '@/stores/useSubmissionStore'
-import { useWebsocket } from '@/hooks/useWebsocket'
 import { useToast } from '@/components/ui/ToastProvider'
 import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
 
 const timelineSteps = [
-  { id: 'uploading', label: 'Uploaded', icon: UploadCloud, desc: 'Securely transferred submission.' },
-  { id: 'building', label: 'Build Status', icon: Box, desc: 'Compiling and sandboxing.' },
-  { id: 'deploying', label: 'Deployment', icon: Server, desc: 'Allocating resources on workers.' },
-  { id: 'benchmarking', label: 'Benchmark', icon: Zap, desc: 'Generating distributed load.' },
-  { id: 'completed', label: 'Completed', icon: CheckCircle, desc: 'Run finished successfully.' },
+  { id: 'UPLOAD', label: 'Upload', icon: UploadCloud, desc: 'Securely transferring submission.' },
+  { id: 'BUILD', label: 'Build Image', icon: Box, desc: 'Compiling and creating isolated sandbox.' },
+  { id: 'DEPLOYMENT', label: 'Deployment', icon: Server, desc: 'Allocating resources on cluster.' },
+  { id: 'VALIDATION', label: 'Validation', icon: ShieldCheck, desc: 'Verifying exchange endpoints.' },
+  { id: 'BENCHMARK', label: 'Benchmark', icon: Zap, desc: 'Running distributed load test.' },
 ]
 
 export function SubmissionPage() {
   const { user } = useAuthStore()
   const { pushToast } = useToast()
   
-  
-  const { activeSubmission, submissionsHistory, fetchSubmissions, updateSubmissionStatus } = useSubmissionStore()
-  const [activeDeployment, setActiveDeployment] = useState<deploymentService.Deployment | null>(null)
-  
+  const { activeSubmission, submissionsHistory, fetchSubmissions, setActiveSubmission } = useSubmissionStore()
   const [isUploading, setIsUploading] = useState(false)
   const [showUploadForm, setShowUploadForm] = useState(false)
-  
-  
-
-  const { latest: telemetryLatest } = useWebsocket()
   const [leaderboard, setLeaderboard] = useState<any[]>([])
 
-  // Fetch initial state
+  const [logs, setLogs] = useState<any[]>([])
+  const logsEndRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     fetchSubmissions()
     fetchLeaderboardEntries().then(data => setLeaderboard(data.items || [])).catch(console.error)
   }, [fetchSubmissions])
 
-  // Poll for deployment related to active submission
+  // WebSocket for Logs and State Updates
   useEffect(() => {
-    if (!activeSubmission) return
+    if (!activeSubmission?.id) return
 
-    let interval: ReturnType<typeof setInterval>
-
-    const poll = async () => {
-      try {
-        const { items } = await deploymentService.listDeployments()
-        const match = items.find(d => d.submissionId === activeSubmission.id)
-        if (match) {
-          setActiveDeployment(match)
-          const status = match.deploymentStatus?.toLowerCase()
-          if (status === 'failed' || status === 'stopped' || status === 'running') {
-             // We can stop polling deployment once it's running or failed. 
-             // Actually, if it's running, we want to know if it fails later? For MVP, we can keep polling or stop polling if a benchmark takes over.
-          }
+    setLogs([])
+    // We should construct the correct WS URL based on API Gateway config or direct submission-service URL
+    // API Gateway proxies WebSockets, so we can use wss://<domain>/submissions/{id}/stream
+    // Since we're using Vite proxy, we might connect to ws://localhost:8080/submissions/{id}/stream
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+    const wsBaseUrl = apiBaseUrl.replace(/^http/, 'ws')
+    const token = useAuthStore.getState().token
+    const wsUrl = `${wsBaseUrl}/submissions/${activeSubmission.id}/stream?token=${token}`
+    
+    const ws = new WebSocket(wsUrl)
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      if (data.type === 'log') {
+        setLogs(prev => [...prev, data])
+      } else if (data.type === 'state_change') {
+        // Optimistically update the activeSubmission state in memory
+        setActiveSubmission({
+          ...activeSubmission,
+          currentStage: data.stage,
+          stageStatus: data.stage_status,
+          failureReason: data.stage_status === 'FAILED' ? data.message : activeSubmission.failureReason,
+          status: data.stage === 'BENCHMARK' && data.stage_status === 'SUCCESS' ? 'completed' : 
+                  data.stage_status === 'FAILED' ? 'failed' : activeSubmission.status
+        })
+        fetchSubmissions()
+        if (data.stage_status === 'FAILED') {
+          pushToast({ title: 'Pipeline Failed', description: data.message || 'Error occurred', variant: 'error' })
+        } else if (data.stage === 'BENCHMARK' && data.stage_status === 'SUCCESS') {
+          pushToast({ title: 'Success', description: 'Pipeline completed successfully!', variant: 'success' })
         }
-      } catch (err: any) {
-        console.error('Failed to fetch deployments', err)
-        clearInterval(interval)
-        updateSubmissionStatus(activeSubmission.id, 'failed')
-        pushToast({ title: 'Deployment Error', description: 'Failed to fetch status. Please re-upload your submission.', variant: 'error' })
       }
     }
 
-    poll()
-    interval = setInterval(poll, 5000)
-    return () => clearInterval(interval)
-  }, [activeSubmission, updateSubmissionStatus, pushToast])
+    ws.onerror = (err) => console.error("WebSocket error:", err)
 
-  const [activeBenchmark, setActiveBenchmark] = useState<any | null>(null)
-
-  // Poll for benchmark related to active deployment
-  useEffect(() => {
-    if (!activeDeployment) return
-
-    let interval: ReturnType<typeof setInterval>
-
-    const poll = async () => {
-      try {
-        const { items } = await benchmarkService.fetchBenchmarkSessions()
-        const match = items.find((b: any) => b.deploymentId === activeDeployment.id)
-        if (match) {
-          setActiveBenchmark(match)
-          const status = match.status?.toLowerCase()
-          if (status === 'completed' || status === 'failed' || status === 'cancelled') {
-            clearInterval(interval)
-          }
-        }
-      } catch (err: any) {
-        console.error('Failed to fetch benchmarks', err)
-        clearInterval(interval)
-        if (activeSubmission) {
-          updateSubmissionStatus(activeSubmission.id, 'failed')
-        }
-        pushToast({ title: 'Benchmark Error', description: 'Failed to fetch benchmark. Please re-upload your submission.', variant: 'error' })
-      }
+    return () => {
+      ws.close()
     }
+  }, [activeSubmission?.id])
 
-    poll()
-    interval = setInterval(poll, 3000)
-    return () => clearInterval(interval)
-  }, [activeDeployment, activeSubmission, updateSubmissionStatus, pushToast])
+  useEffect(() => {
+    // Auto-scroll logs
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [logs])
 
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!user) return
 
     const formData = new FormData(e.currentTarget)
-    // IMPORTANT: backend expects 'teamName', but we get user.team from auth profile!
     formData.append('teamName', user.team || user.name)
 
     try {
       setIsUploading(true)
-      await submissionService.createSubmission(formData)
+      const newSub = await submissionService.createSubmission(formData)
       pushToast({ title: 'Success', description: 'Submission uploaded.', variant: 'success' })
       setShowUploadForm(false)
-      fetchSubmissions()
+      setActiveSubmission(newSub)
+      fetchSubmissions() // Refresh history
     } catch (err: any) {
       pushToast({ title: 'Upload Failed', description: err.message || 'Unknown error', variant: 'error' })
     } finally {
@@ -129,35 +108,30 @@ export function SubmissionPage() {
     }
   }
 
-	// Deprecated Manual Buttons
-	// const handleDeploy = async () => { ... }
-	// const handleRunBenchmark = async () => { ... }
-
   const getTimelineState = () => {
-    let stepIndex = 0
+    let stepIndex = -1
     let isFailed = false
 
     if (activeSubmission) {
-      stepIndex = 0 // Uploaded
-      const subStatus = activeSubmission.status.toLowerCase()
-      if (subStatus === 'built') stepIndex = 1
-      if (subStatus === 'failed') { stepIndex = 1; isFailed = true }
+      const stage = activeSubmission.currentStage || 'UPLOAD'
+      const status = activeSubmission.stageStatus || 'SUCCESS'
       
-      if (activeDeployment) {
-        stepIndex = 2
-        const depStatus = activeDeployment.deploymentStatus.toLowerCase()
-        if (depStatus === 'running') stepIndex = 2
-        if (depStatus === 'failed') { stepIndex = 2; isFailed = true }
+      stepIndex = timelineSteps.findIndex(s => s.id === stage)
+      if (stepIndex === -1) stepIndex = 0 // Default to first
 
-        if (activeBenchmark) {
-          stepIndex = 3
-          const benchStatus = activeBenchmark.status.toLowerCase()
-          if (benchStatus === 'running') stepIndex = 3
-          if (benchStatus === 'failed') { stepIndex = 3; isFailed = true }
-          if (benchStatus === 'completed') stepIndex = 4
-        } else if (telemetryLatest && telemetryLatest.tps > 0) {
-          stepIndex = 3
-        }
+      if (status === 'SUCCESS') {
+        // If success on current stage, visually we are waiting for next or currently on next
+        stepIndex += 1
+      }
+      
+      if (status === 'FAILED') {
+        isFailed = true
+      }
+      
+      // Safety catch if backend explicitly marks as completed
+      if (activeSubmission.status === 'completed' || activeSubmission.status === 'COMPLETED') {
+        stepIndex = timelineSteps.length
+        isFailed = false
       }
     }
 
@@ -170,7 +144,7 @@ export function SubmissionPage() {
   const showEmptyUpload = !showActivePanel || showUploadForm
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8">
       <div>
         <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Command Center</p>
         <h1 className="mt-2 text-3xl font-semibold text-white">Submission Management</h1>
@@ -217,19 +191,28 @@ export function SubmissionPage() {
             </Card>
 
             <div className="space-y-6">
-              <Card title="Submission Guidelines" description="Ensure your code meets the platform requirements.">
+              <Card title="Exchange Contract v1 Requirements" description="Your engine MUST implement the following endpoints to pass validation.">
                 <ul className="mt-4 space-y-4 text-sm text-slate-300">
                   <li className="flex gap-3">
-                    <FileCode2 className="text-violet-400" size={20} />
-                    <span>Supported languages: C++, Rust, Go. Must include a Dockerfile if submitting source code.</span>
+                    <ShieldCheck className="text-emerald-400 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="font-semibold text-emerald-300">GET /health</p>
+                      <p className="text-slate-400 mt-1">Return HTTP 200 OK. Used by the validation stage to ensure your container is fully booted.</p>
+                    </div>
                   </li>
                   <li className="flex gap-3">
-                    <Server className="text-violet-400" size={20} />
-                    <span>Listens on port 8080. Accepts HTTP REST and WebSocket connections.</span>
+                    <Zap className="text-purple-400 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="font-semibold text-purple-300">POST /order</p>
+                      <p className="text-slate-400 mt-1">Accepts JSON: <code className="bg-white/10 px-1 py-0.5 rounded">{"{ symbol, price, quantity, side }"}</code>. Must return HTTP 2xx on successful matching/logging. Bots will generate up to 20k TPS to this endpoint.</p>
+                    </div>
                   </li>
                   <li className="flex gap-3">
-                    <Zap className="text-violet-400" size={20} />
-                    <span>Must handle massive concurrency. Bots will generate up to 20k TPS.</span>
+                    <Server className="text-cyan-400 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="font-semibold text-cyan-300">Port 8080</p>
+                      <p className="text-slate-400 mt-1">Your web server MUST listen on port 8080, binding to 0.0.0.0.</p>
+                    </div>
                   </li>
                 </ul>
               </Card>
@@ -254,154 +237,196 @@ export function SubmissionPage() {
               </Button>
             </div>
 
-            <Card className="relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-violet-500/5" />
-              <div className="relative p-6">
-                <h3 className="text-lg font-semibold text-white mb-8">Pipeline Status</h3>
-                
-                <div className="relative">
-                  <div className="absolute left-8 top-0 bottom-0 w-px bg-white/10" />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="relative overflow-hidden h-[600px] flex flex-col">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5" />
+                <div className="relative p-6 flex-1 flex flex-col min-h-0">
+                  <h3 className="text-lg font-semibold text-white mb-8 shrink-0">Pipeline Timeline</h3>
+                  
+                  <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar min-h-0">
+                    <div className="relative">
+                      <div className="absolute left-8 top-0 bottom-0 w-px bg-white/10" />
 
-                  <div className="space-y-8">
-                    {activeStepIndex === 4 ? (
-                      <div className="flex flex-col items-center justify-center p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-                        <CheckCircle className="text-emerald-400 mb-4" size={48} />
-                        <h3 className="text-2xl font-bold text-white mb-2">Submission Completed ✓</h3>
-                        <p className="text-emerald-200/80 mb-8 text-center max-w-md">Your submission has been successfully built, deployed, and benchmarked.</p>
-                        
-                        <div className="flex gap-4">
-                          <Link to={`/submissions/${activeSubmission?.id}/report`}>
-                            <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
-                              View Report
-                            </Button>
-                          </Link>
-                          <Link to={`/leaderboard/${user?.team || user?.name}`}>
-                            <Button variant="secondary" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20">
-                              View Leaderboard Position
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      timelineSteps.map((step, idx) => {
-                      const isPast = activeStepIndex > idx
-                      const isActive = activeStepIndex === idx
-                      const isError = isActive && hasFailed
-                      
-                      return (
-                        <div key={step.id} className="relative flex items-center gap-6">
-                          <div className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl border transition-colors ${
-                            isError ? 'border-rose-500 bg-rose-500/20 text-rose-400 shadow-[0_0_20px_-5px_rgba(244,63,94,0.5)]' :
-                            isActive ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]' :
-                            isPast ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' :
-                            'border-white/10 bg-slate-900/50 text-slate-500'
-                          }`}>
-                            {isError ? <XCircle size={24} /> :
-                             (isActive && !hasFailed && step.id !== 'uploading' && step.id !== 'completed') ? <Loader2 className="animate-spin" size={24} /> : 
-                             <step.icon size={24} />}
-                          </div>
+                      <div className="space-y-8 pb-8">
+                      {activeStepIndex === timelineSteps.length && !hasFailed ? (
+                        <div className="flex flex-col items-center justify-center p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                          <CheckCircle className="text-emerald-400 mb-4" size={48} />
+                          <h3 className="text-2xl font-bold text-white mb-2">Pipeline Completed ✓</h3>
+                          <p className="text-emerald-200/80 mb-8 text-center max-w-md">Your submission has been successfully built, deployed, validated, and benchmarked.</p>
                           
-                          <div className={isActive ? 'opacity-100' : isPast ? 'opacity-80' : 'opacity-40'}>
-                            <div className="flex items-center gap-4">
-                              <p className={`text-lg font-semibold ${isError ? 'text-rose-400' : 'text-white'}`}>{step.label}</p>
-                            </div>
-                            <p className="text-sm text-slate-400 mt-1">{step.desc}</p>
-                            
-                            {/* Build Log Display */}
-                            {(isActive || isPast) && step.id === 'building' && activeSubmission?.buildLog && (
-                              <div className={`mt-4 p-4 rounded-lg border max-h-60 overflow-y-auto font-mono text-xs ${isError ? 'bg-rose-950/30 border-rose-500/20 text-rose-300' : 'bg-black/50 border-white/10 text-slate-300'}`}>
-                                <pre className="whitespace-pre-wrap">{activeSubmission.buildLog}</pre>
-                              </div>
-                            )}
-                            
-                            {/* Live Telemetry Info if benchmarking */}
-                            {isActive && step.id === 'benchmarking' && telemetryLatest && (
-                              <div className="mt-4 flex gap-6 text-sm">
-                                <div className="flex flex-col">
-                                  <span className="text-slate-400">TPS</span>
-                                  <span className="text-cyan-400 font-mono text-lg">{telemetryLatest.tps.toFixed(0)}</span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-slate-400">P50</span>
-                                  <span className="text-emerald-400 font-mono text-lg">{(telemetryLatest.p50 / 1000000).toFixed(2)}ms</span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-slate-400">P99</span>
-                                  <span className="text-rose-400 font-mono text-lg">{(telemetryLatest.p99 / 1000000).toFixed(2)}ms</span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-slate-400">Success</span>
-                                  <span className="text-purple-400 font-mono text-lg">{((1 - telemetryLatest.failureRate) * 100).toFixed(1)}%</span>
-                                </div>
-                              </div>
-                            )}
+                          <div className="flex gap-4">
+                            <Link to={`/submissions/${activeSubmission?.id}/report`}>
+                              <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
+                                View Report
+                              </Button>
+                            </Link>
                           </div>
                         </div>
-                      )
-                    })
-                    )}
+                      ) : (
+                        timelineSteps.map((step, idx) => {
+                          const isPast = activeStepIndex > idx
+                          const isActive = activeStepIndex === idx
+                          const isError = isActive && hasFailed
+                          
+                          return (
+                            <div key={step.id} className="relative flex items-start gap-6 min-h-[5rem]">
+                              <div className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl border transition-colors flex-shrink-0 ${
+                                isError ? 'border-rose-500 bg-rose-500/20 text-rose-400 shadow-[0_0_20px_-5px_rgba(244,63,94,0.5)]' :
+                                isActive ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-[0_0_20px_-5px_rgba(6,182,212,0.5)]' :
+                                isPast ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' :
+                                'border-white/10 bg-slate-900/50 text-slate-500'
+                              }`}>
+                                {isError ? <XCircle size={24} /> :
+                                 (isActive && !hasFailed) ? <Loader2 className="animate-spin" size={24} /> : 
+                                 isPast ? <CheckCircle size={24} /> :
+                                 <step.icon size={24} />}
+                              </div>
+                              
+                              <div className={`mt-2 ${isActive ? 'opacity-100' : isPast ? 'opacity-80' : 'opacity-40'}`}>
+                                <div className="flex items-center gap-4">
+                                  <p className={`text-lg font-semibold ${isError ? 'text-rose-400' : 'text-white'}`}>{step.label}</p>
+                                </div>
+                                <p className="text-sm text-slate-400 mt-1">{step.desc}</p>
+                                
+                                {isError && activeSubmission.failureReason && (
+                                  <div className="mt-3 p-3 rounded bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">
+                                    <p className="font-semibold mb-1">Failure Reason:</p>
+                                    <p>{activeSubmission.failureReason}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card title="Submission History" className="mt-8">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead>
-                    <tr className="border-b border-white/10 text-slate-400">
-                      <th className="pb-3 font-medium">Name</th>
-                      <th className="pb-3 font-medium">Language</th>
-                      <th className="pb-3 font-medium">Status</th>
-                      <th className="pb-3 font-medium">Rank / Score</th>
-                      <th className="pb-3 font-medium">Created At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {submissionsHistory.map((sub) => (
-                      <tr key={sub.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                        <td className="py-4 text-white font-medium">{sub.submissionName}</td>
-                        <td className="py-4">
-                          <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs">{sub.language}</span>
-                        </td>
-                        <td className="py-4">
-                           <span className={`px-2 py-1 rounded text-xs ${
-                             sub.status === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                             sub.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                             'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                           }`}>
-                             {sub.status.toUpperCase()}
-                           </span>
-                        </td>
-                        <td className="py-4">
-                          {leaderboard.find(l => l.submissionName === sub.submissionName) ? (
-                            <div className="flex flex-col">
-                              <span className="text-emerald-400 font-semibold">#{leaderboard.find(l => l.submissionName === sub.submissionName).rank}</span>
-                              <span className="text-xs text-slate-500">Score: {leaderboard.find(l => l.submissionName === sub.submissionName).finalScore.toFixed(2)}</span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-500">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 text-slate-400 flex items-center gap-2">
-                          <Clock size={14} /> {new Date(sub.createdAt).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {submissionsHistory.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-500">
-                          No submissions found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+              {/* Logs Panel */}
+              <Card className="flex flex-col h-[600px] overflow-hidden p-0 border-slate-800 bg-[#0a0a0a]">
+                <div className="bg-slate-900/80 p-4 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-slate-300 font-semibold">
+                    <TerminalSquare size={20} className="text-cyan-400" />
+                    <span>Live Output</span>
+                  </div>
+                  {activeStepIndex < timelineSteps.length && !hasFailed && (
+                    <div className="flex items-center gap-2 text-xs text-cyan-400/80">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                      </span>
+                      STREAMING
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed custom-scrollbar">
+                  {logs.map((log, i) => (
+                    <div key={i} className="mb-2 flex items-start gap-4 hover:bg-white/5 px-2 py-1 -mx-2 rounded transition-colors">
+                      <span className="text-slate-500 flex-shrink-0 select-none">
+                        [{new Date(log.timestamp).toLocaleTimeString()}]
+                      </span>
+                      <span className={`flex-shrink-0 w-20 text-xs font-semibold select-none ${
+                        log.stage === 'BUILD' ? 'text-amber-400' :
+                        log.stage === 'DEPLOYMENT' ? 'text-blue-400' :
+                        log.stage === 'VALIDATION' ? 'text-purple-400' :
+                        log.stage === 'BENCHMARK' ? 'text-emerald-400' : 'text-slate-400'
+                      }`}>
+                        {log.stage}
+                      </span>
+                      <span className={`whitespace-pre-wrap break-all ${
+                        log.message?.toLowerCase().includes('failed') || log.message?.toLowerCase().includes('error') ? 'text-rose-400' :
+                        log.message?.toLowerCase().includes('success') || log.message?.toLowerCase().includes('ok') ? 'text-emerald-400' :
+                        'text-slate-300'
+                      }`}>
+                        {log.message}
+                      </span>
+                    </div>
+                  ))}
+                  <div ref={logsEndRef} />
+                  {logs.length === 0 && (
+                    <div className="text-slate-600 flex h-full items-center justify-center">
+                      Waiting for logs...
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Card title="Submission History" className="mt-8">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead>
+              <tr className="border-b border-white/10 text-slate-400">
+                <th className="pb-3 font-medium">Name</th>
+                <th className="pb-3 font-medium">Language</th>
+                <th className="pb-3 font-medium">Status</th>
+                <th className="pb-3 font-medium">Rank / Score</th>
+                <th className="pb-3 font-medium">Created At</th>
+                <th className="pb-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submissionsHistory.map((sub) => (
+                <tr key={sub.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <td className="py-4 text-white font-medium">{sub.submissionName}</td>
+                  <td className="py-4">
+                    <span className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs">{sub.language}</span>
+                  </td>
+                  <td className="py-4">
+                     <div className="flex flex-col gap-1 items-start">
+                       <span className={`px-2 py-1 rounded text-xs ${
+                         sub.status.toLowerCase() === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                         sub.status.toLowerCase() === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                         'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                       }`}>
+                         {sub.status.toUpperCase()}
+                       </span>
+                       {sub.status === 'failed' && sub.failureReason && (
+                         <span className="text-[10px] text-rose-400/80 max-w-xs truncate" title={sub.failureReason}>
+                           {sub.failureReason}
+                         </span>
+                       )}
+                     </div>
+                  </td>
+                  <td className="py-4">
+                    {leaderboard.find(l => l.submissionName === sub.submissionName) ? (
+                      <div className="flex flex-col">
+                        <span className="text-emerald-400 font-semibold">#{leaderboard.find(l => l.submissionName === sub.submissionName).rank}</span>
+                        <span className="text-xs text-slate-500">Score: {leaderboard.find(l => l.submissionName === sub.submissionName).finalScore.toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
+                  </td>
+                  <td className="py-4 text-slate-400 flex items-center gap-2">
+                    <Clock size={14} /> {new Date(sub.createdAt).toLocaleString()}
+                  </td>
+                  <td className="py-4 text-right">
+                    <Link to={`/submissions/${sub.id}/report`}>
+                      <Button variant="secondary" size="sm" className="bg-white/5 hover:bg-white/10 text-cyan-300 border-white/10">
+                        View Report
+                      </Button>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {submissionsHistory.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500">
+                    No submissions found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   )
 }

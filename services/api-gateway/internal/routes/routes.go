@@ -61,6 +61,8 @@ func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddlewa
 
 		protected.Any("/deployments", func(c *gin.Context) { proxyToDeployment(c) })
 		protected.Any("/deployments/*proxyPath", func(c *gin.Context) { proxyToDeployment(c) })
+
+		protected.Any("/history", func(c *gin.Context) { proxyToTelemetry(c) })
 	}
 
 	// Public or Authenticated

@@ -9,6 +9,7 @@ import (
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/submission-service/internal/server"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -32,9 +33,17 @@ func main() {
 		log.Fatalf("failed to connect db: %v", err)
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisURL,
+	})
+
 	srv := &http.Server{
 		Addr:         ":8083",
-		Handler:      server.NewServer(db, uploadDir),
+		Handler:      server.NewServer(db, rdb, uploadDir),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}

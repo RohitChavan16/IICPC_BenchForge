@@ -23,4 +23,9 @@ type UpdateStatusRequest struct {
 	P50           float64 `json:"p50"`
 	P90           float64 `json:"p90"`
 	P99           float64 `json:"p99"`
+	FailureReason string  `json:"failureReason,omitempty"`
+}
+
+type BenchmarkResponse struct {
+	// Let's check model.Benchmark first.
 }
