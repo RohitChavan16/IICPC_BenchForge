@@ -65,12 +65,12 @@ export function BenchmarkDetailPage() {
 
   if (isError || !benchmark) {
     return (
-      <div className="mx-auto max-w-4xl py-16 text-center text-white">
+      <div className="mx-auto max-w-4xl py-16 text-center text-foreground">
         <p className="text-xl">Session not found.</p>
         <button
           type="button"
           onClick={() => navigate('/benchmarks')}
-          className="mt-6 rounded-3xl border border-white/10 bg-cyan-500/10 px-6 py-3 text-sm text-cyan-300 transition hover:bg-cyan-500/20"
+          className="mt-6 rounded-3xl border border-border bg-primary px-6 py-3 text-sm text-primary transition hover:bg-primary"
         >
           Return to sessions
         </button>
@@ -82,8 +82,8 @@ export function BenchmarkDetailPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Session detail</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">{benchmark.name}</h1>
+          <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Session detail</p>
+          <h1 className="mt-2 text-3xl font-semibold text-foreground">{benchmark.name}</h1>
         </div>
         <div className="flex flex-col items-end gap-1">
           <Badge
@@ -92,7 +92,7 @@ export function BenchmarkDetailPage() {
             {benchmark.status}
           </Badge>
           {benchmark.status === 'Queued' && benchmark.queuePosition !== undefined && benchmark.queuePosition > 0 && (
-            <span className="text-sm font-medium text-slate-400">Queue Position #{benchmark.queuePosition}</span>
+            <span className="text-sm font-medium text-muted-foreground">Queue Position #{benchmark.queuePosition}</span>
           )}
         </div>
       </div>
@@ -106,8 +106,8 @@ export function BenchmarkDetailPage() {
           <Card title="Benchmark summary" description="Real-time metrics and run performance.">
             <div className="grid gap-4 sm:grid-cols-3">
               {summary?.map((item) => (
-                <div key={item.label} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-white">
-                  <p className="text-sm text-slate-400">{item.label}</p>
+                <div key={item.label} className="rounded-3xl border border-border bg-background p-5 text-foreground">
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
                   <p className="mt-3 text-3xl font-semibold">{item.value}</p>
                 </div>
               ))}
@@ -117,25 +117,25 @@ export function BenchmarkDetailPage() {
 
         <div className="space-y-6">
           <Card title="Session metadata" description="Orchestration details and run counts.">
-            <div className="space-y-4 text-sm text-slate-300">
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Started</p>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Started</p>
                 <p>{new Date(benchmark.startedAt).toLocaleString()}</p>
               </div>
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Duration</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Duration</p>
                 <p>{durationLabel}</p>
               </div>
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Worker pool</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Worker pool</p>
                 <p>{benchmark.workerCount} workers</p>
               </div>
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Total requests</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Total requests</p>
                 <p>{benchmark.totalRequests.toLocaleString()}</p>
               </div>
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Failure count</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Failure count</p>
                 <p>{benchmark.failureCount.toLocaleString()}</p>
               </div>
               {benchmark.failureReason && (
@@ -144,21 +144,21 @@ export function BenchmarkDetailPage() {
                   <p className="text-red-200">{benchmark.failureReason}</p>
                 </div>
               )}
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Wait time</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Wait time</p>
                 <p>{benchmark.waitTimeSeconds !== undefined ? `${benchmark.waitTimeSeconds}s` : '—'}</p>
               </div>
-              <div className="grid gap-2 rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-                <p className="text-slate-400">Execution time</p>
+              <div className="grid gap-2 rounded-3xl border border-border bg-background p-4">
+                <p className="text-muted-foreground">Execution time</p>
                 <p>{benchmark.executionTimeSeconds !== undefined ? `${benchmark.executionTimeSeconds}s` : '—'}</p>
               </div>
             </div>
           </Card>
 
           <Card title="Benchmark metadata" description="Stored run configuration and labels.">
-            <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-4 text-sm text-slate-300">
+            <div className="rounded-3xl border border-border bg-card p-4 text-sm text-muted-foreground">
               {benchmark.metadata && typeof benchmark.metadata === 'object' ? (
-                <pre className="whitespace-pre-wrap break-words text-xs text-slate-300">
+                <pre className="whitespace-pre-wrap break-words text-xs text-muted-foreground">
                   {JSON.stringify(benchmark.metadata, null, 2)}
                 </pre>
               ) : (

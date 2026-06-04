@@ -51,11 +51,11 @@ export function SubmissionReportPage() {
   }, [id])
 
   if (loading) {
-    return <div className="text-center py-20 text-slate-400">Loading report...</div>
+    return <div className="text-center py-20 text-muted-foreground">Loading report...</div>
   }
 
   if (!data || !data.submission) {
-    return <div className="text-center py-20 text-slate-400">Submission not found.</div>
+    return <div className="text-center py-20 text-muted-foreground">Submission not found.</div>
   }
 
   const { submission, deployment, benchmark, leaderboardEntry, history } = data
@@ -132,13 +132,13 @@ export function SubmissionReportPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <Link to="/submit" className="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-2 mb-4">
+        <Link to="/submit" className="text-primary hover:text-primary text-sm flex items-center gap-2 mb-4">
           <ArrowLeft size={16} /> Back to Submissions
         </Link>
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Submission Report</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">{submission.submissionName}</h1>
-        <div className="mt-2 flex items-center gap-4 text-sm text-slate-400">
-          <span className="px-2 py-1 bg-white/10 rounded-full">{submission.language}</span>
+        <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Submission Report</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">{submission.submissionName}</h1>
+        <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="px-2 py-1 bg-muted rounded-full">{submission.language}</span>
           <span>Created: {new Date(submission.createdAt).toLocaleString()}</span>
         </div>
       </div>
@@ -147,11 +147,11 @@ export function SubmissionReportPage() {
         <Card className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-emerald-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
                 <Trophy className="text-emerald-400" />
                 Rank #{leaderboardEntry.rank}
               </h2>
-              <p className="text-slate-300 mt-1">Final Score: <span className="text-emerald-400 font-bold">{finalScore.toFixed(2)}</span></p>
+              <p className="text-muted-foreground mt-1">Final Score: <span className="text-emerald-400 font-bold">{finalScore.toFixed(2)}</span></p>
             </div>
             <Link to={`/leaderboard/${leaderboardEntry.teamName}`}>
               <Button variant="secondary" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20">
@@ -171,17 +171,17 @@ export function SubmissionReportPage() {
             ) : buildState === 'COMPLETED' ? (
               <CheckCircle className="text-emerald-400 mt-1" size={24} />
             ) : (
-              <CheckCircle className="text-cyan-400 mt-1" size={24} />
+              <CheckCircle className="text-primary mt-1" size={24} />
             )}
             <div>
               <p className={`font-medium ${
                 buildState === 'FAILED' ? 'text-rose-400' :
                 buildState === 'COMPLETED' ? 'text-emerald-400' :
-                'text-cyan-400'
+                'text-primary'
               }`}>
                 {buildState}
               </p>
-              <p className="text-xs text-slate-400 mt-1">Image: <span className="text-slate-300">{submission.containerImage || 'N/A'}</span></p>
+              <p className="text-xs text-muted-foreground mt-1">Image: <span className="text-muted-foreground">{submission.containerImage || 'N/A'}</span></p>
             </div>
           </div>
         </Card>
@@ -199,14 +199,14 @@ export function SubmissionReportPage() {
               <p className={`font-medium ${
                 deployState === 'FAILED' || deployState === 'ABORTED' ? 'text-rose-400' :
                 deployState === 'COMPLETED' || deployState === 'RUNNING' ? 'text-emerald-400' :
-                'text-white'
+                'text-foreground'
               }`}>
                 {deployState}
               </p>
               {deployment && deployState !== 'ABORTED' && (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-slate-400">Host Port: <span className="text-slate-300">{deployment.hostPort}</span></p>
-                  <p className="text-xs text-slate-400">Internal Port: <span className="text-slate-300">{deployment.containerPort}</span></p>
+                  <p className="text-xs text-muted-foreground">Host Port: <span className="text-muted-foreground">{deployment.hostPort}</span></p>
+                  <p className="text-xs text-muted-foreground">Internal Port: <span className="text-muted-foreground">{deployment.containerPort}</span></p>
                 </div>
               )}
             </div>
@@ -220,7 +220,7 @@ export function SubmissionReportPage() {
             ) : benchState === 'COMPLETED' ? (
               <Zap className="text-emerald-400 mt-1" size={24} />
             ) : benchState !== 'PENDING' ? (
-              <Zap className="text-cyan-400 mt-1" size={24} />
+              <Zap className="text-primary mt-1" size={24} />
             ) : (
               <Zap className="text-slate-600 mt-1" size={24} />
             )}
@@ -228,16 +228,16 @@ export function SubmissionReportPage() {
               <p className={`font-medium ${
                 benchState === 'FAILED' || benchState === 'ABORTED' ? 'text-rose-400' :
                 benchState === 'COMPLETED' ? 'text-emerald-400' :
-                benchState !== 'PENDING' ? 'text-cyan-400' :
-                'text-white'
+                benchState !== 'PENDING' ? 'text-primary' :
+                'text-foreground'
               }`}>
                 {benchState}
               </p>
               {benchmark && benchState !== 'ABORTED' && (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-slate-400">Total Requests: <span className="text-slate-300">{benchmark.totalRequests}</span></p>
-                  <p className="text-xs text-slate-400">Workers: <span className="text-slate-300">{benchmark.workerCount}</span></p>
-                  <p className="text-xs text-slate-400">Duration: <span className="text-slate-300">{benchmark.duration}s</span></p>
+                  <p className="text-xs text-muted-foreground">Total Requests: <span className="text-muted-foreground">{benchmark.totalRequests}</span></p>
+                  <p className="text-xs text-muted-foreground">Workers: <span className="text-muted-foreground">{benchmark.workerCount}</span></p>
+                  <p className="text-xs text-muted-foreground">Duration: <span className="text-muted-foreground">{benchmark.duration}s</span></p>
                 </div>
               )}
             </div>
@@ -249,24 +249,24 @@ export function SubmissionReportPage() {
       {benchmark && benchmark.status === 'COMPLETED' && (
         <Card title="Detailed Execution Metrics" className="overflow-hidden">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
-              <p className="text-xs text-slate-400">Success</p>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">Success</p>
               <p className="text-lg font-mono text-emerald-400">{benchmark.successCount}</p>
             </div>
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
-              <p className="text-xs text-slate-400">Failures</p>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">Failures</p>
               <p className="text-lg font-mono text-rose-400">{benchmark.failureCount}</p>
             </div>
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
-              <p className="text-xs text-slate-400">p50 Latency</p>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">p50 Latency</p>
               <p className="text-lg font-mono text-amber-400">{(benchmark.p50 || 0).toFixed(2)}ms</p>
             </div>
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
-              <p className="text-xs text-slate-400">p90 Latency</p>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">p90 Latency</p>
               <p className="text-lg font-mono text-orange-400">{(benchmark.p90 || 0).toFixed(2)}ms</p>
             </div>
-            <div className="p-3 bg-slate-900/50 rounded-lg border border-white/5">
-              <p className="text-xs text-slate-400">p99 Latency</p>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground">p99 Latency</p>
               <p className="text-lg font-mono text-rose-400">{(benchmark.p99 || 0).toFixed(2)}ms</p>
             </div>
           </div>
@@ -278,38 +278,38 @@ export function SubmissionReportPage() {
         <Card title="Score Breakdown">
           <div className="flex flex-col md:flex-row gap-8 mt-4">
             <div className="flex-1 space-y-4">
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 The final score is calculated using the formula:
                 <br />
-                <code className="bg-black/30 p-1 rounded text-cyan-300 text-xs mt-2 inline-block">
+                <code className="bg-black/30 p-1 rounded text-primary text-xs mt-2 inline-block">
                   Final Score = Correctness (50%) + TPS (30%) + Latency p99 (20%)
                 </code>
               </p>
               
               <div className="space-y-3 mt-4">
-                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
-                  <span className="text-sm text-slate-300">Correctness Part</span>
+                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                  <span className="text-sm text-muted-foreground">Correctness Part</span>
                   <span className="font-mono text-emerald-400">+{correctnessPart.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
-                  <span className="text-sm text-slate-300">TPS Part (Max 20k)</span>
+                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                  <span className="text-sm text-muted-foreground">TPS Part (Max 20k)</span>
                   <span className="font-mono text-emerald-400">+{tpsPart.toFixed(4)}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-white/5">
-                  <span className="text-sm text-slate-300">Latency p99 Part</span>
+                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                  <span className="text-sm text-muted-foreground">Latency p99 Part</span>
                   <span className="font-mono text-emerald-400">+{p99Part.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
-                  <span className="text-sm font-semibold text-cyan-300">Total Score</span>
-                  <span className="font-mono font-bold text-cyan-400">{finalScore.toFixed(2)}</span>
+                <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-primary">
+                  <span className="text-sm font-semibold text-primary">Total Score</span>
+                  <span className="font-mono font-bold text-primary">{finalScore.toFixed(2)}</span>
                 </div>
               </div>
             </div>
             
-            <div className="flex-1 flex flex-col justify-center items-center bg-black/20 rounded-xl border border-white/5 p-6">
+            <div className="flex-1 flex flex-col justify-center items-center bg-black/20 rounded-xl border border-border p-6">
               <div className="text-center">
-                <p className="text-sm text-slate-400 mb-2">Calculated Success Rate</p>
-                <p className="text-4xl font-bold text-white">{leaderboardEntry.successRate.toFixed(1)}%</p>
+                <p className="text-sm text-muted-foreground mb-2">Calculated Success Rate</p>
+                <p className="text-4xl font-bold text-foreground">{leaderboardEntry.successRate.toFixed(1)}%</p>
                 {leaderboardEntry.successRate === 0 && (
                   <p className="text-xs text-rose-400 mt-2 max-w-xs">
                     0 successes recorded during benchmark run. This severely impacts the final score.
@@ -327,7 +327,7 @@ export function SubmissionReportPage() {
           <div className="grid md:grid-cols-2 gap-6 mt-6">
             
             <div className="h-64">
-              <p className="text-xs text-slate-400 mb-2 text-center">TPS over Time</p>
+              <p className="text-xs text-muted-foreground mb-2 text-center">TPS over Time</p>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -343,7 +343,7 @@ export function SubmissionReportPage() {
             </div>
 
             <div className="h-64">
-              <p className="text-xs text-slate-400 mb-2 text-center">Average Latency (ms)</p>
+              <p className="text-xs text-muted-foreground mb-2 text-center">Average Latency (ms)</p>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />

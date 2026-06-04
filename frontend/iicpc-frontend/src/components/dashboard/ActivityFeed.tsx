@@ -22,7 +22,7 @@ export function ActivityFeed() {
             type: 'upload',
             text: `Submission "${s.submissionName}" uploaded`,
             icon: UploadCloud,
-            color: 'text-slate-400'
+            color: 'text-muted-foreground'
           })
           if (s.status === 'BUILT') {
             events.push({
@@ -43,7 +43,7 @@ export function ActivityFeed() {
             type: 'benchmark',
             text: `Benchmark started for "${b.name}"`,
             icon: Play,
-            color: 'text-cyan-400'
+            color: 'text-primary'
           })
           if (b.status === 'COMPLETED') {
             events.push({
@@ -86,16 +86,16 @@ export function ActivityFeed() {
           <div key={activity.id} className="relative flex gap-4">
             {/* Timeline connector line */}
             {idx !== activities.length - 1 && (
-              <div className="absolute left-[19px] top-[32px] bottom-[-24px] w-px bg-white/10" />
+              <div className="absolute left-[19px] top-[32px] bottom-[-24px] w-px bg-muted" />
             )}
             
-            <div className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 ${activity.color}`}>
+            <div className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card ${activity.color}`}>
               <activity.icon size={16} />
             </div>
             
             <div className="flex flex-col pt-2">
-              <p className="text-sm font-medium text-white">{activity.text}</p>
-              <p className="mt-1 text-xs text-slate-500">{activity.time.toLocaleTimeString()}</p>
+              <p className="text-sm font-medium text-foreground">{activity.text}</p>
+              <p className="mt-1 text-xs text-foreground0">{activity.time.toLocaleTimeString()}</p>
             </div>
           </div>
         ))}

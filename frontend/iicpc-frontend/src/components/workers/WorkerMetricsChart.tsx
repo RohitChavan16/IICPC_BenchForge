@@ -7,7 +7,7 @@ function formatTick(value: string) {
 
 function EmptyChart() {
   return (
-    <div className="flex h-72 items-center justify-center rounded-3xl border border-white/10 bg-slate-950/75 text-sm text-slate-400">
+    <div className="flex h-72 items-center justify-center rounded-3xl border border-border bg-background text-sm text-muted-foreground">
       Waiting for live worker samples.
     </div>
   )
@@ -20,8 +20,8 @@ export function WorkerMetricsChart({ workerId, data }: { workerId: string; data:
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300/80">TPS trend</p>
+      <div className="rounded-3xl border border-border bg-background p-4">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">TPS trend</p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 18, left: -12, bottom: 0 }}>
@@ -35,8 +35,8 @@ export function WorkerMetricsChart({ workerId, data }: { workerId: string; data:
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300/80">Latency trend</p>
+      <div className="rounded-3xl border border-border bg-background p-4">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Latency trend</p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 18, left: -12, bottom: 0 }}>
@@ -52,8 +52,8 @@ export function WorkerMetricsChart({ workerId, data }: { workerId: string; data:
         </div>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300/80">Request volume</p>
+      <div className="rounded-3xl border border-border bg-background p-4">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Request volume</p>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 18, left: -12, bottom: 0 }}>

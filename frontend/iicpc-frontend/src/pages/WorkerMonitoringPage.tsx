@@ -86,8 +86,8 @@ export function WorkerMonitoringPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Worker observability</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Worker monitoring</h1>
+          <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Worker observability</p>
+          <h1 className="mt-2 text-3xl font-semibold text-foreground">Worker monitoring</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant={connectionVariant}>{status}</Badge>
@@ -97,7 +97,7 @@ export function WorkerMonitoringPage() {
               void refetch()
               reconnect()
             }}
-            className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white transition hover:bg-white/5"
+            className="inline-flex items-center gap-2 rounded-3xl border border-border bg-card px-4 py-3 text-sm text-foreground transition hover:bg-muted"
           >
             <RefreshCw size={16} />
             Refresh
@@ -107,15 +107,15 @@ export function WorkerMonitoringPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <p className="text-sm text-slate-400">Workers</p>
-          <p className="mt-3 text-3xl font-semibold text-white">{workers.length}</p>
+          <p className="text-sm text-muted-foreground">Workers</p>
+          <p className="mt-3 text-3xl font-semibold text-foreground">{workers.length}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400">Pool TPS</p>
-          <p className="mt-3 text-3xl font-semibold text-cyan-300">{formatNumber(totals.tps)}</p>
+          <p className="text-sm text-muted-foreground">Pool TPS</p>
+          <p className="mt-3 text-3xl font-semibold text-primary">{formatNumber(totals.tps)}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400">Total requests</p>
+          <p className="text-sm text-muted-foreground">Total requests</p>
           <p className="mt-3 text-3xl font-semibold text-emerald-300">{formatNumber(totals.total)}</p>
         </Card>
       </div>
@@ -123,11 +123,11 @@ export function WorkerMonitoringPage() {
       <div className="grid gap-6 xl:grid-cols-[1fr_0.45fr]">
         <Card title="Worker pool health" description="Real worker state from GET /workers merged with live WebSocket metrics.">
           {isLoading ? (
-            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">Loading workers from backend.</div>
+            <div className="rounded-3xl border border-border bg-background p-5 text-muted-foreground">Loading workers from backend.</div>
           ) : isError ? (
             <div className="rounded-3xl border border-rose-400/20 bg-rose-950/20 p-5 text-rose-200">Unable to load GET /workers. Live worker samples will appear when the stream publishes them.</div>
           ) : workers.length === 0 ? (
-            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">No workers reported by the backend yet.</div>
+            <div className="rounded-3xl border border-border bg-background p-5 text-muted-foreground">No workers reported by the backend yet.</div>
           ) : (
             <div className="grid gap-4">
               {workers.map((worker) => (
@@ -149,12 +149,12 @@ export function WorkerMonitoringPage() {
             <WorkerStatusPanel workers={workers} />
           </Card>
           <Card title="Stream" description="Realtime worker payload availability.">
-            <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+            <div className="rounded-3xl border border-border bg-background p-4">
               <div className="flex items-center gap-3">
-                <Wifi size={18} className="text-cyan-300" />
+                <Wifi size={18} className="text-primary" />
                 <div>
-                  <p className="font-semibold text-white">Worker samples</p>
-                  <p className="mt-1 text-sm text-slate-400">{Object.keys(liveWorkers).length} workers in latest WebSocket payload.</p>
+                  <p className="font-semibold text-foreground">Worker samples</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{Object.keys(liveWorkers).length} workers in latest WebSocket payload.</p>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export function WorkerMonitoringPage() {
         {selectedWorker ? (
           <WorkerMetricsChart workerId={selectedWorker} data={histories[selectedWorker] ?? []} />
         ) : (
-          <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-5 text-slate-400">No worker selected.</div>
+          <div className="rounded-3xl border border-border bg-background p-5 text-muted-foreground">No worker selected.</div>
         )}
       </Card>
     </div>

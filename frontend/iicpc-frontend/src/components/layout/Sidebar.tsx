@@ -24,14 +24,14 @@ export function Sidebar() {
 
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[280px] flex-col border-r border-white/10 bg-slate-950/95 px-4 py-6 backdrop-blur-xl xl:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[280px] flex-col border-r border-border bg-background/95 px-4 py-6 backdrop-blur-xl xl:flex transition-colors duration-200">
       <div className="mb-8 flex items-center gap-3 px-1">
-        <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-violet-500/15 text-violet-300 shadow-glow">
+        <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-secondary/15 text-secondary shadow-sm">
           <Sparkles size={20} />
         </div>
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">IICPC BenchForge</p>
-          <p className="text-lg font-semibold text-white">Command Center</p>
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">IICPC BenchForge</p>
+          <p className="text-lg font-semibold text-foreground">Command Center</p>
         </div>
       </div>
 
@@ -45,10 +45,10 @@ export function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition ${
+                `flex items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                   isActive
-                    ? 'bg-white/10 text-white shadow-[0_20px_60px_-48px_rgba(255,255,255,0.32)]'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 }`
               }
             >
@@ -60,8 +60,8 @@ export function Sidebar() {
       </nav>
 
       {isAdmin && (
-        <div className="mt-8 rounded-[32px] border border-white/10 bg-slate-900/70 p-5">
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Infrastructure</p>
+        <div className="mt-8 rounded-[32px] border border-border bg-card/70 p-5 transition-colors duration-200">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Infrastructure</p>
           <div className="mt-4 space-y-2">
             {infraLinks
               .filter((item) => !item.role || item.role === user?.role)
@@ -72,8 +72,8 @@ export function Sidebar() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition ${
-                      isActive ? 'bg-violet-500/10 text-violet-300' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-colors duration-200 ${
+                      isActive ? 'bg-secondary/15 text-secondary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`
                   }
                 >
@@ -87,19 +87,19 @@ export function Sidebar() {
       )}
 
       <div className="mt-auto space-y-4">
-        <div className="rounded-[32px] border border-white/10 bg-slate-900/75 p-4">
+        <div className="rounded-[32px] border border-border bg-card/75 p-4 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-cyan-500/10 text-cyan-300">
+            <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-accent/15 text-accent">
               <UserCircle size={20} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">{user?.name ?? 'Benchmark Admin'}</p>
-              <p className="text-xs text-slate-500">{user?.role ?? 'Platform Operator'}</p>
+              <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Benchmark Admin'}</p>
+              <p className="text-xs text-muted-foreground">{user?.role ?? 'Platform Operator'}</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between text-slate-400">
+          <div className="mt-4 flex items-center justify-between text-muted-foreground">
             <span>Notifications</span>
-            <span className="rounded-full bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-slate-300">5</span>
+            <span className="rounded-full bg-muted px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-foreground">5</span>
           </div>
         </div>
 
@@ -112,7 +112,7 @@ export function Sidebar() {
             useAuthStore.getState().logout()
             window.location.href = '/login'
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-3xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-400 transition hover:bg-rose-500/20 hover:text-rose-300"
+          className="flex w-full items-center justify-center gap-2 rounded-3xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20 hover:text-destructive"
         >
           Logout
         </button>

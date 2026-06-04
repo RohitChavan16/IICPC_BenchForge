@@ -3,7 +3,7 @@ import type { MetricSnapshot } from '@/types/api'
 
 export function MetricSparkline({ data, dataKey }: { data: MetricSnapshot[]; dataKey: keyof MetricSnapshot }) {
   return (
-    <div className="h-24 w-full rounded-3xl border border-white/10 bg-slate-950/75 p-3">
+    <div className="h-24 w-full rounded-3xl border border-border bg-background p-3">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>

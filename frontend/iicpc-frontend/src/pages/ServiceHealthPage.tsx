@@ -16,8 +16,8 @@ export function ServiceHealthPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Service health</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">Service health dashboard</h1>
+        <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Service health</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Service health dashboard</h1>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

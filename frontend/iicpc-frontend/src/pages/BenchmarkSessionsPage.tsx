@@ -101,7 +101,7 @@ export function BenchmarkSessionsPage() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-4xl py-20 text-center text-white">
+      <div className="mx-auto max-w-4xl py-20 text-center text-foreground">
         <p className="text-xl">Unable to load benchmark sessions.</p>
       </div>
     )
@@ -111,18 +111,18 @@ export function BenchmarkSessionsPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Benchmark orchestration</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Benchmark sessions</h1>
+          <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Benchmark orchestration</p>
+          <h1 className="mt-2 text-3xl font-semibold text-foreground">Benchmark sessions</h1>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Link
             to="/benchmarks/new"
-            className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-cyan-400"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary/90"
           >
             Start Benchmark
           </Link>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground0" />
             <input
               type="search"
               value={filter}
@@ -131,7 +131,7 @@ export function BenchmarkSessionsPage() {
                 setPage(1)
               }}
               placeholder="Search sessions"
-              className="w-full rounded-3xl border border-white/10 bg-slate-950/80 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20 sm:w-80"
+              className="w-full rounded-3xl border border-border bg-background py-3 pl-11 pr-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-cyan-300/20 sm:w-80"
             />
           </div>
         </div>
@@ -141,25 +141,25 @@ export function BenchmarkSessionsPage() {
         <Card title="Active sessions" description="Running and queued benchmarks.">
           <div className="mt-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-5xl font-semibold text-cyan-300">{summary.total}</p>
-              <p className="mt-2 text-sm text-slate-400">Total sessions</p>
+              <p className="text-5xl font-semibold text-primary">{summary.total}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Total sessions</p>
             </div>
             <div className="space-y-2 text-right">
-              <p className="text-sm text-slate-400">Running</p>
-              <p className="text-lg font-semibold text-white">{summary.running}</p>
+              <p className="text-sm text-muted-foreground">Running</p>
+              <p className="text-lg font-semibold text-foreground">{summary.running}</p>
             </div>
           </div>
         </Card>
         <Card title="Completed workflows" description="Successful benchmark reports.">
           <div className="mt-4">
             <p className="text-5xl font-semibold text-emerald-300">{summary.completed}</p>
-            <p className="mt-2 text-sm text-slate-400">Completed sessions</p>
+            <p className="mt-2 text-sm text-muted-foreground">Completed sessions</p>
           </div>
         </Card>
         <Card title="Queue pressure" description="Review throughput priority and backlog.">
           <div className="mt-4">
-            <p className="text-5xl font-semibold text-violet-300">{Math.max(0, summary.total - summary.completed)}</p>
-            <p className="mt-2 text-sm text-slate-400">Open sessions</p>
+            <p className="text-5xl font-semibold text-secondary">{Math.max(0, summary.total - summary.completed)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Open sessions</p>
           </div>
         </Card>
       </div>
@@ -183,8 +183,8 @@ export function BenchmarkSessionsPage() {
                 }}
                 className={`rounded-full border px-4 py-2 text-sm transition ${
                   statusFilter === status
-                    ? 'border-cyan-300 bg-cyan-500/10 text-white'
-                    : 'border-white/10 bg-slate-950 text-slate-400 hover:border-cyan-300 hover:text-white'
+                    ? 'border-primary bg-primary text-foreground'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground'
                 }`}
               >
                 {status}
@@ -192,11 +192,11 @@ export function BenchmarkSessionsPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-400">Sort by</label>
+            <label className="text-sm text-muted-foreground">Sort by</label>
             <select
               value={sortKey}
               onChange={(event) => setSortKey(event.target.value as SortKey)}
-              className="rounded-3xl border border-white/10 bg-slate-950/80 py-2 px-4 text-sm text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
+              className="rounded-3xl border border-border bg-background py-2 px-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-cyan-300/20"
             >
               {sortOptions.map((option) => (
                 <option key={option.key} value={option.key}>
@@ -207,9 +207,9 @@ export function BenchmarkSessionsPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-[32px] border border-white/10 bg-slate-950/80">
+        <div className="overflow-hidden rounded-[32px] border border-border bg-background">
           <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-            <thead className="bg-slate-950/90 text-slate-400">
+            <thead className="bg-background text-muted-foreground">
               <tr>
                 <th className="px-6 py-4">Session</th>
                 <th className="px-6 py-4">Status</th>
@@ -222,10 +222,10 @@ export function BenchmarkSessionsPage() {
             <tbody>
               {visibleSessions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center">
-                      <FileX className="h-12 w-12 text-slate-500 mb-3" />
-                      <p className="text-lg font-medium text-white">No sessions found</p>
+                      <FileX className="h-12 w-12 text-foreground0 mb-3" />
+                      <p className="text-lg font-medium text-foreground">No sessions found</p>
                       <p className="text-sm">We couldn't find any benchmark sessions matching your criteria.</p>
                     </div>
                   </td>
@@ -236,24 +236,24 @@ export function BenchmarkSessionsPage() {
                   const tps = session.duration ? session.totalRequests / session.duration : 0
   
                   return (
-                    <tr key={session.id} className="border-t border-white/10 hover:bg-white/5">
+                    <tr key={session.id} className="border-t border-border hover:bg-muted">
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-white">{session.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">Updated {formatRelativeDate(session.updatedAt)}</p>
+                        <p className="font-semibold text-foreground">{session.name}</p>
+                        <p className="mt-1 text-xs text-foreground0">Updated {formatRelativeDate(session.updatedAt)}</p>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1 items-start">
                           <Badge variant={statusVariants[session.status]}>{session.status}</Badge>
                           {session.status === 'Queued' && session.queuePosition !== undefined && session.queuePosition > 0 && (
-                            <span className="text-xs text-slate-400">Position #{session.queuePosition}</span>
+                            <span className="text-xs text-muted-foreground">Position #{session.queuePosition}</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-white">{tps ? formatNumber(tps) : '—'}</td>
-                      <td className="px-6 py-4 text-white">{session.p99.toFixed(0)} ms</td>
-                      <td className="px-6 py-4 text-slate-300">{durationLabel}</td>
+                      <td className="px-6 py-4 text-foreground">{tps ? formatNumber(tps) : '—'}</td>
+                      <td className="px-6 py-4 text-foreground">{session.p99.toFixed(0)} ms</td>
+                      <td className="px-6 py-4 text-muted-foreground">{durationLabel}</td>
                       <td className="px-6 py-4 text-right">
-                        <Link to={`/benchmarks/${session.id}`} className="text-cyan-300 hover:text-white">
+                        <Link to={`/benchmarks/${session.id}`} className="text-primary hover:text-foreground">
                           View
                         </Link>
                       </td>
@@ -265,7 +265,7 @@ export function BenchmarkSessionsPage() {
           </table>
         </div>
 
-        <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
           <span>
             Showing page {page} of {totalPages}
           </span>
@@ -274,7 +274,7 @@ export function BenchmarkSessionsPage() {
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={page === 1}
-              className="rounded-3xl border border-white/10 bg-slate-900/70 px-4 py-2 text-sm text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-3xl border border-border bg-card px-4 py-2 text-sm text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
@@ -282,7 +282,7 @@ export function BenchmarkSessionsPage() {
               type="button"
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
               disabled={page === totalPages}
-              className="rounded-3xl border border-white/10 bg-slate-900/70 px-4 py-2 text-sm text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-3xl border border-border bg-card px-4 py-2 text-sm text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>

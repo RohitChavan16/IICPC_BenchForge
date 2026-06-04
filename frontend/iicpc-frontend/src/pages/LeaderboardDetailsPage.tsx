@@ -36,13 +36,13 @@ export function LeaderboardDetailsPage() {
     loadData()
   }, [teamId])
 
-  if (loading) return <div className="text-center py-20 text-slate-400">Loading details...</div>
-  if (!entry) return <div className="text-center py-20 text-slate-400">Team not found on leaderboard.</div>
+  if (loading) return <div className="text-center py-20 text-muted-foreground">Loading details...</div>
+  if (!entry) return <div className="text-center py-20 text-muted-foreground">Team not found on leaderboard.</div>
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <Link to="/leaderboard" className="text-cyan-400 hover:text-cyan-300 text-sm flex items-center gap-2 mb-4">
+        <Link to="/leaderboard" className="text-primary hover:text-primary text-sm flex items-center gap-2 mb-4">
           <ArrowLeft size={16} /> Back to Leaderboard
         </Link>
         <div className="flex items-center gap-4">
@@ -51,35 +51,35 @@ export function LeaderboardDetailsPage() {
           </div>
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-emerald-400/80">Rank #{entry.rank}</p>
-            <h1 className="text-3xl font-bold text-white">{entry.teamName}</h1>
+            <h1 className="text-3xl font-bold text-foreground">{entry.teamName}</h1>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card>
-          <p className="text-sm text-slate-400 mb-1">Final Score</p>
+          <p className="text-sm text-muted-foreground mb-1">Final Score</p>
           <p className="text-3xl font-bold text-emerald-400">{entry.finalScore.toFixed(2)}</p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400 mb-1">Throughput</p>
-          <p className="text-2xl font-semibold text-cyan-400">{entry.tps.toFixed(0)} <span className="text-sm font-normal text-slate-500">TPS</span></p>
+          <p className="text-sm text-muted-foreground mb-1">Throughput</p>
+          <p className="text-2xl font-semibold text-primary">{entry.tps.toFixed(0)} <span className="text-sm font-normal text-foreground0">TPS</span></p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400 mb-1">Latency p90</p>
-          <p className="text-2xl font-semibold text-violet-400">{(entry.p90).toFixed(2)} <span className="text-sm font-normal text-slate-500">ms</span></p>
+          <p className="text-sm text-muted-foreground mb-1">Latency p90</p>
+          <p className="text-2xl font-semibold text-secondary">{(entry.p90).toFixed(2)} <span className="text-sm font-normal text-foreground0">ms</span></p>
         </Card>
         <Card>
-          <p className="text-sm text-slate-400 mb-1">Success Rate</p>
-          <p className="text-2xl font-semibold text-purple-400">{entry.successRate.toFixed(1)} <span className="text-sm font-normal text-slate-500">%</span></p>
+          <p className="text-sm text-muted-foreground mb-1">Success Rate</p>
+          <p className="text-2xl font-semibold text-purple-400">{entry.successRate.toFixed(1)} <span className="text-sm font-normal text-foreground0">%</span></p>
         </Card>
       </div>
 
       <div className="space-y-6">
-        <h3 className="text-xl font-semibold text-white">Benchmark Telemetry History</h3>
+        <h3 className="text-xl font-semibold text-foreground">Benchmark Telemetry History</h3>
         
         {history.length === 0 ? (
-          <Card className="text-center py-10 text-slate-400">
+          <Card className="text-center py-10 text-muted-foreground">
             No historical telemetry data found for this benchmark.
           </Card>
         ) : (

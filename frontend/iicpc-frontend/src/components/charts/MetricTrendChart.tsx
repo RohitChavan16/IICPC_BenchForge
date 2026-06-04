@@ -43,18 +43,18 @@ export const MetricTrendChart: React.FC<Props> = ({ promql, title, unit }) => {
   const { seriesNames, dataPoints } = useMemo(() => formatSeriesToChart(data ?? []), [data])
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+    <div className="rounded-3xl border border-border bg-background p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm text-slate-400">{title ?? promql}</p>
-          {unit ? <p className="text-xs text-slate-500">Unit: {unit}</p> : null}
+          <p className="text-sm text-muted-foreground">{title ?? promql}</p>
+          {unit ? <p className="text-xs text-foreground0">Unit: {unit}</p> : null}
         </div>
         <TimeRangeSelector value={range} onChange={setRange} />
       </div>
 
       <div style={{ width: '100%', height: 200 }}>
         {isLoading ? (
-          <div className="text-slate-400">Loading chart...</div>
+          <div className="text-muted-foreground">Loading chart...</div>
         ) : isError ? (
           <div className="text-red-400">Failed to load chart data.</div>
         ) : (

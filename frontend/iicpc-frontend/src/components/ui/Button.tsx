@@ -18,12 +18,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'inline-flex items-center justify-center gap-2 rounded-3xl border px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-50'
+    'inline-flex items-center justify-center gap-2 rounded-3xl border px-5 py-3 text-sm font-semibold transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 active:scale-95 transition-transform'
 
   const variantStyles = {
-    primary: 'border-transparent bg-cyan-400 text-slate-950 hover:bg-cyan-300',
-    secondary: 'border-white/10 bg-white/5 text-white hover:bg-white/10',
-    ghost: 'border-transparent bg-transparent text-slate-300 hover:bg-white/5',
+    primary: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/90',
+    secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/90',
+    ghost: 'border-transparent bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
   }
 
   const sizeStyles = {

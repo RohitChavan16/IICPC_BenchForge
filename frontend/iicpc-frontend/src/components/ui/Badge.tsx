@@ -8,11 +8,11 @@ export function Badge({
   className?: string
 }) {
   const classes = {
-    default: 'bg-white/5 text-slate-200',
-    success: 'bg-emerald-500/10 text-emerald-300',
-    warning: 'bg-amber-500/10 text-amber-300',
-    danger: 'bg-rose-500/10 text-rose-300',
-    info: 'bg-cyan-500/10 text-cyan-300',
+    default: 'bg-muted text-muted-foreground',
+    success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    danger: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+    info: 'bg-primary/10 text-primary',
   }
 
   return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] ${classes[variant]} ${className || ''}`}>{children}</span>

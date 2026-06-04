@@ -20,13 +20,13 @@ export function WorkerStatusPanel({ workers }: { workers: WorkerStatus[] }) {
   return (
     <div className="grid gap-4">
       {statuses.map(({ label, value, icon: Icon, variant, detail }) => (
-        <div key={label} className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+        <div key={label} className="rounded-3xl border border-border bg-background p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <Icon size={18} className="shrink-0 text-cyan-300" />
+              <Icon size={18} className="shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="font-semibold text-white">{label}</p>
-                <p className="mt-1 text-sm text-slate-400">{detail}</p>
+                <p className="font-semibold text-foreground">{label}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
               </div>
             </div>
             <Badge variant={variant}>{value}</Badge>

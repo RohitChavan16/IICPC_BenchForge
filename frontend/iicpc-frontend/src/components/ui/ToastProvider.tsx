@@ -49,20 +49,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto rounded-3xl border border-white/10 bg-slate-900/95 p-4 shadow-xl backdrop-blur-xl"
+            className="pointer-events-auto rounded-3xl border border-border bg-card p-4 shadow-xl backdrop-blur-xl"
           >
             <div className="flex items-start gap-3">
-              <div className={`mt-0.5 ${toast.variant === 'error' || toast.variant === 'destructive' ? 'text-rose-400' : toast.variant === 'warning' ? 'text-amber-400' : 'text-cyan-300'}`}>
+              <div className={`mt-0.5 ${toast.variant === 'error' || toast.variant === 'destructive' ? 'text-rose-400' : toast.variant === 'warning' ? 'text-amber-400' : 'text-primary'}`}>
                 {toast.variant === 'error' || toast.variant === 'destructive' || toast.variant === 'warning' ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-white">{toast.title}</p>
-                {toast.description ? <p className="mt-1 text-sm text-slate-400">{toast.description}</p> : null}
+                <p className="font-semibold text-foreground">{toast.title}</p>
+                {toast.description ? <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p> : null}
               </div>
               <button
                 type="button"
                 onClick={() => removeToast(toast.id)}
-                className="rounded-full p-1 text-slate-300 transition hover:text-white"
+                className="rounded-full p-1 text-muted-foreground transition hover:text-foreground"
                 aria-label="Dismiss notification"
               >
                 <X size={18} />

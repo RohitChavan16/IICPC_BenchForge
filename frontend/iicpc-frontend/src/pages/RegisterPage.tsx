@@ -59,31 +59,31 @@ export function RegisterPage() {
       <div className="w-full max-w-xl">
         <Card className="space-y-8 p-10">
           <div className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.32em] text-cyan-300/80">Enterprise onboarding</p>
-            <h1 className="text-3xl font-semibold text-white">Register your benchmark team</h1>
-            <p className="text-sm leading-6 text-slate-400">Create a secure account to manage telemetry, worker pools, and benchmark sessions.</p>
+            <p className="text-sm uppercase tracking-[0.32em] text-primary/80">Enterprise onboarding</p>
+            <h1 className="text-3xl font-semibold text-foreground">Register your benchmark team</h1>
+            <p className="text-sm leading-6 text-muted-foreground">Create a secure account to manage telemetry, worker pools, and benchmark sessions.</p>
           </div>
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="space-y-2">
-              <label htmlFor="register-name" className="block text-sm font-medium text-slate-300">Full name</label>
+              <label htmlFor="register-name" className="block text-sm font-medium text-muted-foreground">Full name</label>
               <Input id="register-name" type="text" autoComplete="name" placeholder="Avery Morgan" aria-invalid={!!errors.name} {...register('name')} />
               {errors.name ? <p className="text-sm text-rose-400" role="alert">{errors.name.message}</p> : null}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="register-team" className="block text-sm font-medium text-slate-300">Team name</label>
+              <label htmlFor="register-team" className="block text-sm font-medium text-muted-foreground">Team name</label>
               <Input id="register-team" type="text" autoComplete="organization" placeholder="Benchmark Ops" aria-invalid={!!errors.team} {...register('team')} />
               {errors.team ? <p className="text-sm text-rose-400" role="alert">{errors.team.message}</p> : null}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="register-email" className="block text-sm font-medium text-slate-300">Email</label>
+              <label htmlFor="register-email" className="block text-sm font-medium text-muted-foreground">Email</label>
               <Input id="register-email" type="email" autoComplete="email" placeholder="you@benchforge.io" aria-invalid={!!errors.email} {...register('email')} />
               {errors.email ? <p className="text-sm text-rose-400" role="alert">{errors.email.message}</p> : null}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="register-password" className="block text-sm font-medium text-slate-300">Password</label>
+              <label htmlFor="register-password" className="block text-sm font-medium text-muted-foreground">Password</label>
               <Input id="register-password" type="password" autoComplete="new-password" placeholder="Create a secure password" aria-invalid={!!errors.password} {...register('password')} />
               {errors.password ? <p className="text-sm text-rose-400" role="alert">{errors.password.message}</p> : null}
             </div>
@@ -92,9 +92,9 @@ export function RegisterPage() {
               {isSubmitting ? 'Creating account...' : 'Create account'}
             </Button>
           </form>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Already a member?{' '}
-            <Link to="/login" className="text-cyan-300 hover:text-white">
+            <Link to="/login" className="text-primary hover:text-foreground">
               Sign in
             </Link>
           </p>

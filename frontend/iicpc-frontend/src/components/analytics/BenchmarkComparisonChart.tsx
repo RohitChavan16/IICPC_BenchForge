@@ -27,7 +27,7 @@ export function BenchmarkComparisonChart({ sessions }: { sessions: BenchmarkSess
   const colors = ['#06b6d4', '#22c55e', '#f97316', '#a78bfa']
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+    <div className="rounded-3xl border border-border bg-background p-4">
       <div style={{ width: '100%', height: 360 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data.rows} margin={{ top: 20 }}>

@@ -3,10 +3,10 @@ import type { MetricSnapshot } from '@/types/api'
 
 export function LiveLineChart({ data }: { data: MetricSnapshot[] }) {
   return (
-    <div className="h-96 w-full rounded-[32px] border border-white/10 bg-slate-900/90 p-4 shadow-glow">
-      <div className="mb-4 flex items-center justify-between text-sm text-slate-400">
+    <div className="h-96 w-full rounded-[32px] border border-border bg-card p-4 shadow-glow">
+      <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
         <div>
-          <p className="font-semibold text-white">Live Telemetry Stream</p>
+          <p className="font-semibold text-foreground">Live Telemetry Stream</p>
           <p>Real-time request load and latency distribution</p>
         </div>
       </div>

@@ -52,19 +52,19 @@ export function LoginPage() {
       <div className="w-full max-w-xl">
         <Card className="space-y-8 p-10">
           <div className="space-y-3">
-            <p className="text-sm uppercase tracking-[0.32em] text-cyan-300/80">Secure login</p>
-            <h1 className="text-3xl font-semibold text-white">Access the benchmark command console</h1>
-            <p className="text-sm leading-6 text-slate-400">Sign in to monitor live telemetry, start benchmark runs, and inspect worker health.</p>
+            <p className="text-sm uppercase tracking-[0.32em] text-primary/80">Secure login</p>
+            <h1 className="text-3xl font-semibold text-foreground">Access the benchmark command console</h1>
+            <p className="text-sm leading-6 text-muted-foreground">Sign in to monitor live telemetry, start benchmark runs, and inspect worker health.</p>
           </div>
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="space-y-2">
-              <label htmlFor="login-email" className="block text-sm font-medium text-slate-300">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-muted-foreground">Email</label>
               <Input id="login-email" type="email" autoComplete="email" placeholder="you@benchforge.io" aria-invalid={!!errors.email} {...register('email')} />
               {errors.email ? <p className="text-sm text-rose-400" role="alert">{errors.email.message}</p> : null}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="login-password" className="block text-sm font-medium text-slate-300">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-muted-foreground">Password</label>
               <Input id="login-password" type="password" autoComplete="current-password" placeholder="Enter your password" aria-invalid={!!errors.password} {...register('password')} />
               {errors.password ? <p className="text-sm text-rose-400" role="alert">{errors.password.message}</p> : null}
             </div>
@@ -73,9 +73,9 @@ export function LoginPage() {
               {isSubmitting ? 'Authenticating...' : 'Sign in'}
             </Button>
           </form>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             New to BenchForge?{' '}
-            <Link to="/register" className="text-cyan-300 hover:text-white">
+            <Link to="/register" className="text-primary hover:text-foreground">
               Create an account
             </Link>
           </p>

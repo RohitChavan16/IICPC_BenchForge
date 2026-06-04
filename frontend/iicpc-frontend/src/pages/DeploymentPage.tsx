@@ -31,33 +31,33 @@ export function DeploymentPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Infrastructure</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">Deploy Engine</h1>
+        <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Infrastructure</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Deploy Engine</h1>
       </div>
 
       <Card title="Deploy Built Submission">
         <form onSubmit={handleDeploy} className="mt-4 space-y-6">
           <div>
-            <label className="text-sm text-slate-400">Submission ID</label>
+            <label className="text-sm text-muted-foreground">Submission ID</label>
             <input 
               type="text" 
               required
               value={submissionId}
               onChange={(e) => setSubmissionId(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400" 
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-foreground outline-none focus:border-primary" 
               placeholder="e.g. uuid-of-submission" 
             />
-            <p className="mt-1 text-xs text-slate-500">Provide the ID of your successfully built submission.</p>
+            <p className="mt-1 text-xs text-foreground0">Provide the ID of your successfully built submission.</p>
           </div>
 
           <div>
-            <label className="text-sm text-slate-400">Container Port</label>
+            <label className="text-sm text-muted-foreground">Container Port</label>
             <input 
               type="number" 
               required
               value={containerPort}
               onChange={(e) => setContainerPort(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/50 p-3 text-white outline-none focus:border-cyan-400" 
+              className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-foreground outline-none focus:border-primary" 
               placeholder="8080" 
             />
           </div>

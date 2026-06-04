@@ -16,7 +16,7 @@ export const TimeRangeSelector: React.FC<Props> = ({ value, onChange }) => {
           key={opt}
           type="button"
           onClick={() => onChange(opt)}
-          className={`rounded-full px-3 py-1 text-sm ${value === opt ? 'bg-cyan-500 text-slate-900' : 'bg-slate-900/60 text-white'}`}
+          className={`rounded-full px-3 py-1 text-sm ${value === opt ? 'bg-primary text-slate-900' : 'bg-card text-foreground'}`}
         >
           {opt}
         </button>

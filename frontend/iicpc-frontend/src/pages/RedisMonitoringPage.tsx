@@ -9,36 +9,36 @@ export function RedisMonitoringPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Redis observability</p>
-        <h1 className="mt-2 text-3xl font-semibold text-white">Redis monitoring</h1>
+        <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Redis observability</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Redis monitoring</h1>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Redis metrics" description="Command load, memory and client state.">
           {isLoading ? (
-            <div className="p-6 text-slate-400">Loading Redis metrics...</div>
+            <div className="p-6 text-muted-foreground">Loading Redis metrics...</div>
           ) : isError ? (
             <div className="p-6 text-red-400">Failed to load Redis metrics from Prometheus.</div>
           ) : (
             <div className="grid gap-4">
               {(metrics ?? []).map((metric) => (
-                <div key={metric.name} className="rounded-3xl border border-white/10 bg-slate-950/75 p-5">
+                <div key={metric.name} className="rounded-3xl border border-border bg-background p-5">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-400">{metric.name}</p>
+                    <p className="text-sm text-muted-foreground">{metric.name}</p>
                     <Badge variant="info">{metric.unit}</Badge>
                   </div>
-                  <p className="mt-4 text-3xl font-semibold text-white">{metric.value}</p>
-                  <p className="mt-2 text-sm text-slate-500">Trend {metric.delta}</p>
+                  <p className="mt-4 text-3xl font-semibold text-foreground">{metric.value}</p>
+                  <p className="mt-2 text-sm text-foreground0">Trend {metric.delta}</p>
                 </div>
               ))}
             </div>
           )}
         </Card>
         <Card title="Redis health" description="Sliding window and operational visibility.">
-          <div className="space-y-3 text-slate-400">
+          <div className="space-y-3 text-muted-foreground">
             <p>Redis is instrumented to export metrics for Prometheus.</p>
             <p>Live streaming dashboards should flow through the telemetry pipeline and Redis exporter.</p>
-            <p className="text-sm text-slate-500">Use Grafana for deeper PromQL queries when available.</p>
+            <p className="text-sm text-foreground0">Use Grafana for deeper PromQL queries when available.</p>
           </div>
         </Card>
       </div>

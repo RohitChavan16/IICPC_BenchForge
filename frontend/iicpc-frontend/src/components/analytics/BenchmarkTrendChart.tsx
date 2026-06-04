@@ -34,9 +34,9 @@ export function BenchmarkTrendChart({
   }, [sessions])
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-slate-950/75 p-4">
+    <div className="rounded-3xl border border-border bg-background p-4">
       <div className="mb-3">
-        <p className="text-sm text-slate-400">{title ?? 'Trend'}</p>
+        <p className="text-sm text-muted-foreground">{title ?? 'Trend'}</p>
       </div>
       <div style={{ width: '100%', height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">

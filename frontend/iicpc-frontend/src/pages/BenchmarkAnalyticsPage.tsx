@@ -22,23 +22,23 @@ export function BenchmarkAnalyticsPage() {
 
   const selectedSessions: BenchmarkSession[] = useMemo(() => selectedRuns.map((id) => sessions.find((s) => s.id === id)).filter(Boolean) as BenchmarkSession[], [selectedRuns, sessions])
 
-  if (isLoading) return <div className="mx-auto max-w-4xl py-20 text-center text-white">Loading analytics...</div>
-  if (isError) return <div className="mx-auto max-w-4xl py-20 text-center text-white">Failed to load analytics.</div>
+  if (isLoading) return <div className="mx-auto max-w-4xl py-20 text-center text-foreground">Loading analytics...</div>
+  if (isError) return <div className="mx-auto max-w-4xl py-20 text-center text-foreground">Failed to load analytics.</div>
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">Analytics</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Benchmark analytics</h1>
+          <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Analytics</p>
+          <h1 className="mt-2 text-3xl font-semibold text-foreground">Benchmark analytics</h1>
         </div>
         <div className="flex items-center gap-2">
-          <select value={windowSize} onChange={(e) => setWindowSize(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="rounded-3xl border border-white/10 bg-slate-950/80 py-2 px-4 text-sm text-white">
+          <select value={windowSize} onChange={(e) => setWindowSize(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="rounded-3xl border border-border bg-background py-2 px-4 text-sm text-foreground">
             <option value={5}>Last 5 runs</option>
             <option value={10}>Last 10 runs</option>
             <option value={'all'}>All runs</option>
           </select>
-          <select value={metric} onChange={(e) => setMetric(e.target.value as any)} className="rounded-3xl border border-white/10 bg-slate-950/80 py-2 px-4 text-sm text-white">
+          <select value={metric} onChange={(e) => setMetric(e.target.value as any)} className="rounded-3xl border border-border bg-background py-2 px-4 text-sm text-foreground">
             <option value="tps">TPS</option>
             <option value="successRate">Success rate</option>
             <option value="p50">p50</option>
@@ -63,7 +63,7 @@ export function BenchmarkAnalyticsPage() {
                     if (e.target.checked) setSelectedRuns((cur) => (cur.includes(s.id) ? cur : [...cur, s.id]))
                     else setSelectedRuns((cur) => cur.filter((id) => id !== s.id))
                   }} />
-                  <span className="text-sm text-slate-300">{s.name} — {new Date(s.startedAt).toLocaleString()}</span>
+                  <span className="text-sm text-muted-foreground">{s.name} — {new Date(s.startedAt).toLocaleString()}</span>
                 </label>
               ))}
             </div>
@@ -71,7 +71,7 @@ export function BenchmarkAnalyticsPage() {
               {selectedSessions.length >= 2 ? (
                 <BenchmarkComparisonChart sessions={selectedSessions} />
               ) : (
-                <p className="text-sm text-slate-400">Select at least two completed runs to compare.</p>
+                <p className="text-sm text-muted-foreground">Select at least two completed runs to compare.</p>
               )}
             </div>
           </div>
