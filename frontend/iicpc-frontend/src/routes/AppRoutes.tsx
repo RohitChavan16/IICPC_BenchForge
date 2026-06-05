@@ -68,6 +68,7 @@ export function AppRoutes() {
       {/* Contestant/Common Protected Routes */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardHomePage /></ProtectedRoute>} />
       <Route path="/submit" element={<ProtectedRoute><SubmissionPage /></ProtectedRoute>} />
+      <Route path="/submissions" element={<ProtectedRoute><SubmissionPage /></ProtectedRoute>} />
       <Route path="/deployments/new" element={<ProtectedRoute><DeploymentPage /></ProtectedRoute>} />
       <Route path="/benchmarks" element={<ProtectedRoute><BenchmarkSessionsPage /></ProtectedRoute>} />
       <Route path="/benchmarks/new" element={<ProtectedRoute><NewBenchmarkPage /></ProtectedRoute>} />

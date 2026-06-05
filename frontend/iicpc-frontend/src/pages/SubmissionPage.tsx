@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive } from 'lucide-react'
+import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive, ChevronDown, ChevronUp } from 'lucide-react'
 import * as submissionService from '@/services/api/submissionService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSubmissionStore } from '@/stores/useSubmissionStore'
@@ -21,12 +21,18 @@ const timelineSteps = [
 export function SubmissionPage() {
   const { user } = useAuthStore()
   const { pushToast } = useToast()
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  const isSubmitRoute = location.pathname === '/submit'
   
   const { activeSubmission, submissionsHistory, fetchSubmissions, setActiveSubmission } = useSubmissionStore()
   const [isUploading, setIsUploading] = useState(false)
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState('')
   const [leaderboard, setLeaderboard] = useState<any[]>([])
+  const [isPipelineExpanded, setIsPipelineExpanded] = useState(true)
+  const [isLogsExpanded, setIsLogsExpanded] = useState(true)
 
   const [logs, setLogs] = useState<any[]>([])
   const logsEndRef = useRef<HTMLDivElement>(null)
@@ -103,6 +109,9 @@ export function SubmissionPage() {
       setSelectedFileName('')
       setActiveSubmission(newSub)
       fetchSubmissions() // Refresh history
+      if (isSubmitRoute) {
+        navigate('/submissions')
+      }
     } catch (err: any) {
       pushToast({ title: 'Upload Failed', description: err.message || 'Unknown error', variant: 'error' })
     } finally {
@@ -141,9 +150,10 @@ export function SubmissionPage() {
   }
 
   const { stepIndex: activeStepIndex, isFailed: hasFailed } = getTimelineState()
+  const isSubmissionOver = (activeStepIndex === timelineSteps.length && !hasFailed) || hasFailed
   
-  const showActivePanel = activeSubmission != null
-  const showEmptyUpload = !showActivePanel || showUploadForm
+  const showActivePanel = activeSubmission != null && !isSubmitRoute
+  const showEmptyUpload = isSubmitRoute || activeSubmission == null || showUploadForm
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -257,7 +267,7 @@ export function SubmissionPage() {
           >
             <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border">
               <div>
-                <p className="text-sm text-muted-foreground">Active Submission</p>
+                <p className="text-sm text-muted-foreground">{isSubmissionOver ? 'Previous Submission' : 'Active Submission'}</p>
                 <p className="text-xl font-semibold text-foreground">{activeSubmission.submissionName} <span className="text-xs ml-2 px-2 py-1 bg-muted rounded-full">{activeSubmission.language}</span></p>
               </div>
               <Button onClick={() => setShowUploadForm(true)} variant="secondary" size="sm">
@@ -265,13 +275,26 @@ export function SubmissionPage() {
               </Button>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="relative overflow-hidden h-[600px] flex flex-col">
+            <div className="grid gap-6 lg:grid-cols-2 items-start">
+              <Card className={`relative overflow-hidden flex flex-col transition-all duration-300 ${isPipelineExpanded ? 'h-[600px]' : 'h-auto'}`}>
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5" />
                 <div className="relative p-6 flex-1 flex flex-col min-h-0">
-                  <h3 className="text-lg font-semibold text-foreground mb-8 shrink-0">Pipeline Timeline</h3>
+                  <div 
+                    className={`flex items-center justify-between shrink-0 ${isPipelineExpanded ? 'mb-8' : ''} ${isSubmissionOver ? 'cursor-pointer' : ''}`}
+                    onClick={() => isSubmissionOver && setIsPipelineExpanded(!isPipelineExpanded)}
+                  >
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {isSubmissionOver ? "View your previous submission execution flow" : "Pipeline Timeline"}
+                    </h3>
+                    {isSubmissionOver && (
+                      <button className="text-muted-foreground hover:text-foreground">
+                        {isPipelineExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                    )}
+                  </div>
                   
-                  <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar min-h-0">
+                  {isPipelineExpanded && (
+                  <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar min-h-0 mt-4">
                     <div className="relative">
                       <div className="absolute left-8 top-0 bottom-0 w-px bg-muted" />
 
@@ -330,26 +353,38 @@ export function SubmissionPage() {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             </Card>
 
               {/* Logs Panel */}
-              <Card className="flex flex-col h-[600px] overflow-hidden p-0 border-border bg-[#0a0a0a]">
-                <div className="bg-card p-4 border-b border-border flex items-center justify-between">
+              <Card className={`flex flex-col overflow-hidden p-0 border-border bg-[#0a0a0a] transition-all duration-300 ${isLogsExpanded ? 'h-[600px]' : 'h-auto'}`}>
+                <div 
+                  className={`bg-card p-4 flex items-center justify-between ${isLogsExpanded ? 'border-b border-border' : ''} ${isSubmissionOver ? 'cursor-pointer hover:bg-muted/50' : ''}`}
+                  onClick={() => isSubmissionOver && setIsLogsExpanded(!isLogsExpanded)}
+                >
                   <div className="flex items-center gap-3 text-muted-foreground font-semibold">
                     <TerminalSquare size={20} className="text-primary" />
-                    <span>Live Output</span>
+                    <span>{isSubmissionOver ? "View your previous submission log output" : "Live Output"}</span>
                   </div>
-                  {activeStepIndex < timelineSteps.length && !hasFailed && (
-                    <div className="flex items-center gap-2 text-xs text-primary/80">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                      </span>
-                      STREAMING
-                    </div>
-                  )}
+                  <div className="flex items-center gap-4">
+                    {activeStepIndex < timelineSteps.length && !hasFailed && (
+                      <div className="flex items-center gap-2 text-xs text-primary/80">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                        </span>
+                        STREAMING
+                      </div>
+                    )}
+                    {isSubmissionOver && (
+                      <button className="text-muted-foreground hover:text-foreground">
+                        {isLogsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
+                {isLogsExpanded && (
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed custom-scrollbar">
                   {logs.map((log, i) => (
                     <div key={i} className="mb-2 flex items-start gap-4 hover:bg-muted px-2 py-1 -mx-2 rounded transition-colors">
@@ -381,6 +416,7 @@ export function SubmissionPage() {
                     </div>
                   )}
                 </div>
+                )}
               </Card>
             </div>
           </motion.div>
