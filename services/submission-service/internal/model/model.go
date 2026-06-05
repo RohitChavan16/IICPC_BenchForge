@@ -17,6 +17,8 @@ type Submission struct {
 	BuildLog       string     `json:"buildLog,omitempty"`
 	StartedAt      *time.Time `json:"startedAt,omitempty"`
 	FinishedAt     *time.Time `json:"finishedAt,omitempty"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	UpdatedAt      time.Time  `json:"updatedAt"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	UpdatedAt          time.Time  `json:"updatedAt"`
+	CorrectnessScore   *float64   `json:"correctnessScore,omitempty"`
+	CorrectnessDetails interface{} `json:"correctnessDetails,omitempty"`
 }

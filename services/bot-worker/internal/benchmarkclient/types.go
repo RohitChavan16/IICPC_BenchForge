@@ -20,6 +20,8 @@ type UpdateStatusRequest struct {
 	P50           float64 `json:"p50,omitempty"`
 	P90           float64 `json:"p90,omitempty"`
 	P99           float64 `json:"p99,omitempty"`
+	TracerTotal   int64   `json:"tracerTotal,omitempty"`
+	TracerSuccess int64   `json:"tracerSuccess,omitempty"`
 	FailureReason string  `json:"failureReason,omitempty"`
 }
 

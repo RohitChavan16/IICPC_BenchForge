@@ -15,6 +15,8 @@ export interface Submission {
   finishedAt?: string
   createdAt: string
   updatedAt: string
+  correctnessScore?: number
+  correctnessDetails?: any
 }
 
 function computeStatus(sub: any): string {

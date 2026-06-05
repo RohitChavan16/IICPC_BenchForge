@@ -179,7 +179,7 @@ export function LandingPage() {
         </nav>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-7xl px-5 pb-28 pt-24 sm:px-8 sm:pb-40 sm:pt-28 lg:px-10">
+      <main className="relative z-10 mx-auto max-w-7xl px-5 pb-28 pt-24 sm:px-8 sm:pb-40 sm:pt-2 lg:px-10">
         <motion.section
           id="home"
           initial="hidden"

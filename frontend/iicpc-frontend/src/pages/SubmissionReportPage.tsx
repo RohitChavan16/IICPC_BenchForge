@@ -9,6 +9,7 @@ import * as deploymentService from '@/services/api/deploymentService'
 import * as benchmarkService from '@/services/api/benchmarkService'
 import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
 import { fetchBenchmarkTelemetryHistory } from '@/services/api/telemetryService'
+import { LiveLogs } from '@/components/LiveLogs'
 
 export function SubmissionReportPage() {
   const { id } = useParams<{ id: string }>()
@@ -62,23 +63,27 @@ export function SubmissionReportPage() {
 
   // Score Calculations
   let correctnessScore = 0
-  let correctnessPart = 0
-  let tpsPart = 0
-  let p99Part = 0
+  let concurrencyScore = 0
+  let effectiveTps = 0
+  let latencyFactor = 0
   let finalScore = 0
+
+  let correctnessResults: any[] = []
+  if (submission && submission.correctnessDetails) {
+    try {
+      correctnessResults = typeof submission.correctnessDetails === 'string'
+        ? JSON.parse(submission.correctnessDetails)
+        : submission.correctnessDetails
+    } catch (e) {
+      console.error('Failed to parse correctness details', e)
+    }
+  }
 
   if (leaderboardEntry) {
     correctnessScore = leaderboardEntry.correctnessScore || 0
-    correctnessPart = Math.max(0, correctnessScore) * 0.5
-    
-    let tpsS = (leaderboardEntry.tps / 20000.0) * 100.0
-    if (tpsS > 100) tpsS = 100
-    tpsPart = tpsS * 0.3
-
-    let p99S = 100.0 - (leaderboardEntry.p99 / 10.0)
-    if (p99S > 100) p99S = 100
-    if (p99S < 0) p99S = 0
-    p99Part = p99S * 0.2
+    concurrencyScore = leaderboardEntry.concurrencyScore !== undefined ? leaderboardEntry.concurrencyScore : 100.0
+    effectiveTps = leaderboardEntry.tps * (leaderboardEntry.successRate / 100.0)
+    latencyFactor = 250.0 / (250.0 + (leaderboardEntry.p99 || 0))
 
     finalScore = leaderboardEntry.finalScore
   }
@@ -163,7 +168,7 @@ export function SubmissionReportPage() {
       )}
 
       {/* Overview Details Section */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Card title="Build Status">
           <div className="mt-4 flex items-start gap-4">
             {buildState === 'FAILED' ? (
@@ -243,6 +248,28 @@ export function SubmissionReportPage() {
             </div>
           </div>
         </Card>
+
+        <Card title="Correctness (Experimental)">
+          <div className="mt-4 flex items-start gap-4">
+            {submission.correctnessScore == null && !submission.correctnessDetails ? (
+              <CheckCircle className="text-slate-600 mt-1" size={24} />
+            ) : submission.correctnessScore == null && submission.correctnessDetails ? (
+               <CheckCircle className="text-amber-400 mt-1" size={24} />
+            ) : submission.correctnessScore >= 95 ? (
+              <CheckCircle className="text-emerald-400 mt-1" size={24} />
+            ) : (
+              <XCircle className="text-rose-400 mt-1" size={24} />
+            )}
+            <div>
+              <p className={`font-medium ${submission.correctnessScore == null && submission.correctnessDetails ? 'text-amber-400' : submission.correctnessScore >= 95 ? 'text-emerald-400' : submission.correctnessScore != null ? 'text-rose-400' : 'text-foreground'}`}>
+                {submission.correctnessScore != null ? `${submission.correctnessScore.toFixed(1)}%` : submission.correctnessDetails ? 'UNKNOWN' : 'PENDING'}
+              </p>
+              {submission.correctnessDetails && submission.correctnessScore == null && (
+                 <p className="text-xs text-amber-400 mt-1 max-w-[120px]">Legacy API contract</p>
+              )}
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Full Benchmark Metrics Table */}
@@ -279,25 +306,35 @@ export function SubmissionReportPage() {
           <div className="flex flex-col md:flex-row gap-8 mt-4">
             <div className="flex-1 space-y-4">
               <p className="text-sm text-muted-foreground">
-                The final score is calculated using the formula:
+                The final score is calculated using the Phase 4 formula:
                 <br />
                 <code className="bg-black/30 p-1 rounded text-primary text-xs mt-2 inline-block">
-                  Final Score = Correctness (50%) + TPS (30%) + Latency p99 (20%)
+                  Final Score = Effective TPS * (250/(250+p99)) * (Correctness / 100)² * (Concurrency / 100)²
                 </code>
               </p>
               
               <div className="space-y-3 mt-4">
                 <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Correctness Part</span>
-                  <span className="font-mono text-emerald-400">+{correctnessPart.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">Effective TPS</span>
+                  <span className="font-mono text-emerald-400">{effectiveTps.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">TPS Part (Max 20k)</span>
-                  <span className="font-mono text-emerald-400">+{tpsPart.toFixed(4)}</span>
+                  <span className="text-sm text-muted-foreground">Latency Factor</span>
+                  <span className="font-mono text-emerald-400">
+                    x{latencyFactor.toFixed(4)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Latency p99 Part</span>
-                  <span className="font-mono text-emerald-400">+{p99Part.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">Correctness Multiplier</span>
+                  <span className="font-mono text-emerald-400">
+                    x{Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                  <span className="text-sm text-muted-foreground">Concurrency Multiplier</span>
+                  <span className="font-mono text-emerald-400">
+                    x{Math.pow(concurrencyScore / 100.0, 2).toFixed(4)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-primary">
                   <span className="text-sm font-semibold text-primary">Total Score</span>
@@ -320,6 +357,54 @@ export function SubmissionReportPage() {
           </div>
         </Card>
       )}
+
+      {/* Correctness Scenario Details */}
+      {correctnessResults.length > 0 && (
+        <Card title="Correctness Validation Scenarios" className="overflow-hidden">
+          <div className="mt-4 border border-border rounded-lg overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Scenario</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {correctnessResults.map((res: any, idx: number) => (
+                  <tr key={idx} className="bg-card/50 hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3 font-medium text-foreground">{res.name || `Scenario ${idx + 1}`}</td>
+                    <td className="px-4 py-3">
+                      {res.status === 'PASSED' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">
+                          <CheckCircle size={14} /> Passed
+                        </span>
+                      ) : res.status === 'CONTRACT_NOT_SUPPORTED' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-400 text-xs font-medium border border-amber-500/20">
+                          <Activity size={14} /> Legacy Contract
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-500/10 text-rose-400 text-xs font-medium border border-rose-500/20">
+                          <XCircle size={14} /> Failed
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {res.error_message || res.errorMessage || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Live Logs Component */}
+      <LiveLogs 
+        submissionId={submission.id} 
+        isActive={submission.status !== 'COMPLETED' && submission.status !== 'FAILED'} 
+      />
 
       {/* Historical Charts */}
       {history && history.length > 0 && (

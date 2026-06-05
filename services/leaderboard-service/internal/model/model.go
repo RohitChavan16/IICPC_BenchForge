@@ -6,6 +6,7 @@ type LeaderboardEntry struct {
 	ID             string    `json:"id"`
 	BenchmarkID    string    `json:"benchmarkId"`
 	TeamName       string    `json:"teamName"`
+	SubmissionID   string    `json:"submissionId"`
 	SubmissionName string    `json:"submissionName"`
 	DeploymentID   string    `json:"deploymentId"`
 	TPS            float64   `json:"tps"`
@@ -16,6 +17,7 @@ type LeaderboardEntry struct {
 	TotalRequests    int64     `json:"totalRequests"`
 	Duration         int       `json:"duration"`
 	CorrectnessScore float64   `json:"correctnessScore"`
+	ConcurrencyScore float64   `json:"concurrencyScore"`
 	FinalScore       float64   `json:"finalScore"`
 	Rank           int       `json:"rank"`
 	CreatedAt      time.Time `json:"createdAt"`

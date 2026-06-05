@@ -1,0 +1,2 @@
+ALTER TABLE benchmarks ADD COLUMN tracer_total BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE benchmarks ADD COLUMN tracer_success BIGINT NOT NULL DEFAULT 0;

@@ -107,7 +107,8 @@ func (h *BenchmarkHandler) ProcessQueue() {
 	}
 
 	if b.SubmissionID != "" {
-		h.publishLog(b.SubmissionID, "BENCHMARK", "log", fmt.Sprintf("Benchmark %s is now RUNNING", b.Name), "IN_PROGRESS")
+		h.publishLog(b.SubmissionID, "VALIDATING_CORRECTNESS", "log", fmt.Sprintf("Validating correctness for %s", b.Name), "IN_PROGRESS")
+		h.setStage(b.SubmissionID, "VALIDATING_CORRECTNESS", "IN_PROGRESS", "")
 	}
 
 	targetURL := "http://mock-exchange:9000"
@@ -119,24 +120,207 @@ func (h *BenchmarkHandler) ProcessQueue() {
 		}
 	}
 
+	// -- Run Correctness Validation First --
+	scenarioReqBody, _ := json.Marshal(map[string]interface{}{
+		"benchmarkId": b.ID,
+		"targetUrl":   targetURL,
+		"scenarios": []map[string]interface{}{
+			{
+				"name": "basic_resting_order",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "AAPL", "price": 150.0, "quantity": 100, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+				},
+			},
+			{
+				"name": "basic_matching_order",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "MSFT", "price": 200.0, "quantity": 50, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "MSFT", "price": 200.0, "quantity": 50, "side": "sell"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"price": 200.0, "quantity": 50},
+						},
+					},
+				},
+			},
+			{
+				"name": "partial_fill_order",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "AMZN", "price": 100.0, "quantity": 100, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "AMZN", "price": 100.0, "quantity": 50, "side": "sell"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"maker_order_ref": 0, "price": 100.0, "quantity": 50},
+						},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "AMZN", "price": 100.0, "quantity": 50, "side": "sell"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"maker_order_ref": 0, "price": 100.0, "quantity": 50},
+						},
+					},
+				},
+			},
+			{
+				"name": "price_improvement",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "TSLA", "price": 100.0, "quantity": 10, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "TSLA", "price": 90.0, "quantity": 10, "side": "sell"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"maker_order_ref": 0, "price": 100.0, "quantity": 10},
+						},
+					},
+				},
+			},
+			{
+				"name": "fifo_priority",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "GOOG", "price": 100.0, "quantity": 10, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "GOOG", "price": 100.0, "quantity": 20, "side": "buy"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "GOOG", "price": 100.0, "quantity": 15, "side": "sell"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"maker_order_ref": 0, "price": 100.0, "quantity": 10},
+							{"maker_order_ref": 1, "price": 100.0, "quantity": 5},
+						},
+					},
+				},
+			},
+			{
+				"name": "multi_level_price_sweep",
+				"steps": []map[string]interface{}{
+					{
+						"order":           map[string]interface{}{"symbol": "NVDA", "price": 100.0, "quantity": 10, "side": "sell"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "NVDA", "price": 101.0, "quantity": 10, "side": "sell"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "NVDA", "price": 102.0, "quantity": 10, "side": "sell"},
+						"expected_status": "resting",
+						"expected_trades": []interface{}{},
+					},
+					{
+						"order":           map[string]interface{}{"symbol": "NVDA", "price": 105.0, "quantity": 25, "side": "buy"},
+						"expected_status": "filled",
+						"expected_trades": []map[string]interface{}{
+							{"maker_order_ref": 0, "price": 100.0, "quantity": 10},
+							{"maker_order_ref": 1, "price": 101.0, "quantity": 10},
+							{"maker_order_ref": 2, "price": 102.0, "quantity": 5},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	scenarioResp, err := client.Post("http://bot-worker:8085/run-scenario", "application/json", bytes.NewBuffer(scenarioReqBody))
+	if err == nil && scenarioResp.StatusCode == http.StatusOK {
+		var results []map[string]interface{}
+		json.NewDecoder(scenarioResp.Body).Decode(&results)
+		scenarioResp.Body.Close()
+
+		passed := 0
+		unknown := false
+		for _, r := range results {
+			if r["status"] == "PASSED" {
+				passed++
+			} else if r["status"] == "CONTRACT_NOT_SUPPORTED" {
+				unknown = true
+			}
+		}
+		
+		var correctnessScore float64
+		if len(results) > 0 {
+			correctnessScore = float64(passed) / float64(len(results)) * 100.0
+		} else {
+			correctnessScore = 0.0
+		}
+		
+		detailsJson, _ := json.Marshal(results)
+
+		if unknown {
+			// Legacy fallback
+			if b.SubmissionID != "" {
+				_, err := h.db.Exec(`UPDATE submissions SET correctness_details=$1 WHERE id=$2`, detailsJson, b.SubmissionID)
+				if err != nil {
+					log.Printf("failed to update correctness_details: %v", err)
+				}
+				h.publishLog(b.SubmissionID, "VALIDATING_CORRECTNESS", "log", "Legacy submission detected. Correctness marked as UNKNOWN.", "SUCCESS")
+			}
+		} else {
+			if b.SubmissionID != "" {
+				_, err := h.db.Exec(`UPDATE submissions SET correctness_score=$1, correctness_details=$2 WHERE id=$3`, correctnessScore, detailsJson, b.SubmissionID)
+				if err != nil {
+					log.Printf("failed to update correctness_score: %v", err)
+				}
+				h.publishLog(b.SubmissionID, "VALIDATING_CORRECTNESS", "log", fmt.Sprintf("Correctness score: %.2f%%", correctnessScore), "SUCCESS")
+			}
+		}
+	} else {
+		log.Printf("failed to run scenario validation: %v", err)
+		if b.SubmissionID != "" {
+			h.publishLog(b.SubmissionID, "VALIDATING_CORRECTNESS", "log", "Scenario validation failed due to an internal error. Proceeding with benchmark.", "FAILED")
+		}
+	}
+	
+	if b.SubmissionID != "" {
+		h.setStage(b.SubmissionID, "BENCHMARK", "IN_PROGRESS", "")
+		h.publishLog(b.SubmissionID, "BENCHMARK", "log", fmt.Sprintf("Benchmark %s is now RUNNING", b.Name), "IN_PROGRESS")
+	}
+
 	workerReqBody, _ := json.Marshal(map[string]interface{}{
 		"benchmarkId": b.ID,
 		"targetUrl": targetURL,
 		"workerCount": b.WorkerCount,
 		"totalRequests": b.TotalJobs,
+		"submissionId": b.SubmissionID,
 	})
 	
-	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Post("http://bot-worker:8085/run", "application/json", bytes.NewBuffer(workerReqBody))
 	if err != nil || resp.StatusCode >= 400 {
 		log.Printf("failed to trigger bot-worker: %v", err)
-		repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0, "Failed to start bot-worker")
+		repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0, 0, 0, "Failed to start bot-worker")
 		if b.SubmissionID != "" {
 			h.publishLog(b.SubmissionID, "BENCHMARK", "log", "Failed to start bot-worker", "FAILED")
 			h.setStage(b.SubmissionID, "BENCHMARK", "FAILED", "Failed to contact bot-worker service")
 		}
 		
-		// Failed, so process queue again
 		go h.ProcessQueue()
 	}
 }
@@ -256,7 +440,7 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 		return
 	}
 	
-	b, err := repository.UpdateBenchmarkStatus(h.db, id, req.Status, req.TotalRequests, req.SuccessCount, req.FailureCount, req.P50, req.P90, req.P99, req.FailureReason)
+	b, err := repository.UpdateBenchmarkStatus(h.db, id, req.Status, req.TotalRequests, req.SuccessCount, req.FailureCount, req.P50, req.P90, req.P99, req.TracerTotal, req.TracerSuccess, req.FailureReason)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.NotFound(w, r)
@@ -291,8 +475,22 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 
 	if req.Status == "COMPLETED" {
 		if b.TargetType == "deployment" {
-			if err := repository.UpsertLeaderboardEntryFromBenchmark(h.db, id); err != nil {
-				log.Printf("leaderboard upsert error: %v", err)
+			// Check if correctness_score is populated before upserting leaderboard entry
+			var correctnessScore sql.NullFloat64
+			var correctnessDetails []byte
+			if b.SubmissionID != "" {
+				err := h.db.QueryRow(`SELECT correctness_score, correctness_details FROM submissions WHERE id=$1`, b.SubmissionID).Scan(&correctnessScore, &correctnessDetails)
+				if err != nil && err != sql.ErrNoRows {
+					log.Printf("error checking correctness score: %v", err)
+				}
+			}
+			
+			if correctnessScore.Valid || len(correctnessDetails) > 0 {
+				if err := repository.UpsertLeaderboardEntryFromBenchmark(h.db, id); err != nil {
+					log.Printf("leaderboard upsert error: %v", err)
+				}
+			} else {
+				log.Printf("skipping leaderboard upsert for benchmark %s because correctness validation is missing/pending", id)
 			}
 		}
 	}
@@ -331,7 +529,7 @@ func (h *BenchmarkHandler) StopBenchmark(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	repository.UpdateBenchmarkStatus(h.db, id, "CANCELLED", b.TotalRequests, b.SuccessCount, b.FailureCount, b.P50, b.P90, b.P99, "Benchmark was manually cancelled.")
+	repository.UpdateBenchmarkStatus(h.db, id, "CANCELLED", b.TotalRequests, b.SuccessCount, b.FailureCount, b.P50, b.P90, b.P99, b.TracerTotal, b.TracerSuccess, "Benchmark was manually cancelled.")
 	if b.SubmissionID != "" {
 		h.setStage(b.SubmissionID, "BENCHMARK", "FAILED", "Benchmark was manually cancelled.")
 	}

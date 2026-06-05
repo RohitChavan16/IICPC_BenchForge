@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   benchmark_id UUID UNIQUE NOT NULL,
   team_name TEXT NOT NULL,
+  submission_id UUID,
   submission_name TEXT NOT NULL,
   deployment_id UUID NOT NULL,
   tps NUMERIC NOT NULL DEFAULT 0,
@@ -48,7 +49,9 @@ SELECT
   b.duration_seconds,
   b.deployment_id,
   s.team_name,
-  s.submission_name
+  s.id as submission_id,
+  s.submission_name,
+  s.correctness_score
 FROM benchmarks b
 JOIN deployments d ON b.deployment_id = d.id
 JOIN submissions s ON d.submission_id = s.id
@@ -57,9 +60,12 @@ WHERE b.id = $1
 	var totalRequests, successCount sql.NullInt64
 	var p50, p90, p99 sql.NullFloat64
 	var duration sql.NullInt64
-	var deploymentID, teamName, submissionName string
+	var deploymentID, teamName string
+	var submissionID sql.NullString
+	var submissionName string
+	var correctnessScore sql.NullFloat64
 
-	if err := db.QueryRow(query, benchmarkID).Scan(&totalRequests, &successCount, &p50, &p90, &p99, &duration, &deploymentID, &teamName, &submissionName); err != nil {
+	if err := db.QueryRow(query, benchmarkID).Scan(&totalRequests, &successCount, &p50, &p90, &p99, &duration, &deploymentID, &teamName, &submissionID, &submissionName, &correctnessScore); err != nil {
 		return err
 	}
 
@@ -84,13 +90,21 @@ WHERE b.id = $1
 	if total > 0 {
 		computedSuccessRate = (float64(success) / float64(total)) * 100
 	}
-	finalScore := computeFinalScore(computedTps, computedSuccessRate, p99.Float64)
+	
+	// Use correctness score from submission if present, otherwise fallback to success rate
+	cScore := computedSuccessRate
+	if correctnessScore.Valid {
+		cScore = correctnessScore.Float64
+	}
+	
+	finalScore := computeFinalScore(computedTps, computedSuccessRate, p99.Float64, cScore, 100.0)
 
 	query = `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, final_score, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())
+INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())
 ON CONFLICT (benchmark_id) DO UPDATE SET
   team_name = EXCLUDED.team_name,
+  submission_id = EXCLUDED.submission_id,
   submission_name = EXCLUDED.submission_name,
   deployment_id = EXCLUDED.deployment_id,
   tps = EXCLUDED.tps,
@@ -101,38 +115,38 @@ ON CONFLICT (benchmark_id) DO UPDATE SET
   total_requests = EXCLUDED.total_requests,
   duration_seconds = EXCLUDED.duration_seconds,
   correctness_score = EXCLUDED.correctness_score,
+  concurrency_score = EXCLUDED.concurrency_score,
   final_score = EXCLUDED.final_score,
   updated_at = now()
 `
-	if _, err := db.Exec(query, benchmarkID, teamName, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, computedSuccessRate, finalScore); err != nil {
+	var dbSubID interface{} = nil
+	if submissionID.Valid {
+		dbSubID = submissionID.String
+	}
+	if _, err := db.Exec(query, benchmarkID, teamName, dbSubID, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, cScore, 100.0, finalScore); err != nil {
 		return err
 	}
 
 	return updateLeaderboardRanks(db)
 }
 
-func computeFinalScore(tps, correctnessScore, p99 float64) float64 {
+func computeFinalScore(tps, successRate, p99, correctnessScore, concurrencyScore float64) float64 {
 	if correctnessScore < 0 {
 		correctnessScore = 0
 	}
-	correctnessPart := correctnessScore * 0.5
-
-	tpsScore := (tps / 20000.0) * 100.0
-	if tpsScore > 100 {
-		tpsScore = 100
+	if concurrencyScore < 0 {
+		concurrencyScore = 0
 	}
-	tpsPart := tpsScore * 0.3
-
-	p99Score := 100.0 - (p99 / 10.0)
-	if p99Score > 100 {
-		p99Score = 100
-	}
-	if p99Score < 0 {
-		p99Score = 0
-	}
-	p99Part := p99Score * 0.2
-
-	return math.Round((correctnessPart + tpsPart + p99Part)*100) / 100
+	
+	effectiveTps := tps * (successRate / 100.0)
+	latencyFactor := 250.0 / (250.0 + p99)
+	correctnessMultiplier := math.Pow(correctnessScore/100.0, 2)
+	
+	// TEMPORARILY IGNORE CONCURRENCY until tracer metrics are verified end-to-end
+	concurrencyMultiplier := 1.0 // math.Pow(concurrencyScore/100.0, 2)
+	
+	finalScore := effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
+	return math.Round(finalScore*100) / 100
 }
 
 func updateLeaderboardRanks(db *sql.DB) error {

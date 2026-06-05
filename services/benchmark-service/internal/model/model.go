@@ -27,6 +27,8 @@ type Benchmark struct {
 	P90              float64         `json:"p90"`
 	P99              float64         `json:"p99"`
 	CorrectnessScore float64         `json:"correctnessScore"`
+	TracerTotal      int64           `json:"tracerTotal"`
+	TracerSuccess    int64           `json:"tracerSuccess"`
 	Metadata         json.RawMessage `json:"metadata,omitempty"`
 	QueuePosition    int             `json:"queuePosition,omitempty"`
 	LastHeartbeat    *time.Time      `json:"lastHeartbeat,omitempty"`

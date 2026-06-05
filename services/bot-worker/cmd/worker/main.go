@@ -12,6 +12,7 @@ import (
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/benchmarkclient"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/metrics"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/scenario"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/workers"
 	"github.com/redis/go-redis/v9"
 )
@@ -21,6 +22,7 @@ type RunRequest struct {
 	TargetURL     string `json:"targetUrl"`
 	WorkerCount   int    `json:"workerCount"`
 	TotalRequests int    `json:"totalRequests"`
+	SubmissionID  string `json:"submissionId"`
 }
 
 var (
@@ -43,6 +45,7 @@ func main() {
 	benchmarkClient = benchmarkclient.NewClient(benchmarkServiceURL, 5*time.Second)
 
 	http.HandleFunc("/run", handleRun)
+	http.HandleFunc("/run-scenario", handleRunScenario)
 	http.HandleFunc("/stop", handleStop)
 
 	log.Println("Bot worker listening on :8085")
@@ -102,8 +105,46 @@ func handleStop(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type ScenarioRequest struct {
+	BenchmarkID string              `json:"benchmarkId"`
+	TargetURL   string              `json:"targetUrl"`
+	Scenarios   []scenario.Scenario `json:"scenarios"`
+}
+
+func handleRunScenario(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req ScenarioRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	results := make([]scenario.ScenarioResult, 0, len(req.Scenarios))
+	for _, s := range req.Scenarios {
+		// Run sequentially
+		res := scenario.RunScenario(r.Context(), req.TargetURL, s)
+		results = append(results, res)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
 
 func runBenchmark(ctx context.Context, req RunRequest) {
+	defer func() {
+		activeMu.Lock()
+		if activeCancel != nil && activeBenchmarkID == req.BenchmarkID {
+			activeCancel()
+			activeCancel = nil
+			activeBenchmarkID = ""
+		}
+		activeMu.Unlock()
+	}()
+
 	log.Printf("Starting benchmark pool for %s", req.BenchmarkID)
 	
 	jobs := make(chan int, req.TotalRequests)
@@ -114,7 +155,7 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID)
+			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID, req.SubmissionID)
 		}(w)
 	}
 
@@ -161,11 +202,21 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	var metricsList []metrics.RequestMetric
 	success := 0
 	failureCount := int64(0)
+	tracerTotal := int64(0)
+	tracerSuccess := int64(0)
 	completedJobs := 0
 
 	for result := range results {
 		metricsList = append(metricsList, result)
 		completedJobs++
+		if result.BotType == "tracer" {
+			tracerTotal++
+			if result.Success {
+				tracerSuccess++
+			}
+			// Let tracers still count towards global success/failure so TPS and overall success rate accurately reflect load failures.
+		}
+
 		if result.Success {
 			success++
 		} else {
@@ -197,6 +248,8 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		P50:           p50,
 		P90:           p90,
 		P99:           p99,
+		TracerTotal:   tracerTotal,
+		TracerSuccess: tracerSuccess,
 	})
 
 	if err != nil {
@@ -207,11 +260,4 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		BotType:   "system_control",
 		WorkerID:  "STOP_STREAM",
 	})
-
-	activeMu.Lock()
-	if activeBenchmarkID == req.BenchmarkID {
-		activeCancel = nil
-		activeBenchmarkID = ""
-	}
-	activeMu.Unlock()
 }

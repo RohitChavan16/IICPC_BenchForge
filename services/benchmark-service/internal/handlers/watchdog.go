@@ -57,7 +57,7 @@ func (h *BenchmarkHandler) checkAbandonedBenchmarks() {
 		log.Printf("Watchdog detected abandoned benchmark %s (%s)", b.Name, b.ID)
 		failureReason := "Execution timed out or bot-worker crashed (missed heartbeat)"
 		
-		_, err := repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0, failureReason)
+		_, err := repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0, 0, 0, failureReason)
 		if err != nil {
 			log.Printf("watchdog failed to update benchmark status: %v", err)
 			continue

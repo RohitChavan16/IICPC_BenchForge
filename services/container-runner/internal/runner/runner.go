@@ -201,7 +201,10 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 		reqBody := fmt.Sprintf(`{"submissionId": "%s"}`, id)
 		resp, err := http.Post(deploymentURL+"/deployments", "application/json", strings.NewReader(reqBody))
 		if err != nil {
-			log.Printf("Failed to trigger deployment for submission %s: %v", id, err)
+			msg := fmt.Sprintf("Failed to trigger deployment for submission %s: %v", id, err)
+			log.Println(msg)
+			r.publishLog(id, "DEPLOYMENT", "log", msg, "FAILED")
+			r.setStage(id, "DEPLOYMENT", "FAILED", "Deployment trigger failed")
 			return
 		}
 		defer resp.Body.Close()

@@ -9,7 +9,7 @@ import (
 )
 
 func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
-	query := `SELECT id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
+	query := `SELECT id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          (CASE WHEN status = 'QUEUED' THEN (SELECT COUNT(*) + 1 FROM benchmarks b2 WHERE b2.status = 'QUEUED' AND b2.created_at < benchmarks.created_at) ELSE 0 END) as queue_position
 	          FROM benchmarks ORDER BY created_at DESC LIMIT $1`
 	rows, err := db.Query(query, limit)
@@ -26,7 +26,7 @@ func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
 		var submissionID, deploymentID, userID, teamID, teamName, targetType sql.NullString
 		var p50, p90, p99, correctnessScore sql.NullFloat64
 		
-		if err := rows.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
+		if err := rows.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &b.TracerTotal, &b.TracerSuccess, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
 			log.Printf("row scan error: %v", err)
 			continue
 		}
@@ -71,7 +71,7 @@ func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
 }
 
 func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
-	query := `SELECT id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
+	query := `SELECT id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          (CASE WHEN status = 'QUEUED' THEN (SELECT COUNT(*) + 1 FROM benchmarks b2 WHERE b2.status = 'QUEUED' AND b2.created_at < benchmarks.created_at) ELSE 0 END) as queue_position
 	          FROM benchmarks WHERE id=$1`
 	row := db.QueryRow(query, id)
@@ -82,7 +82,7 @@ func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
 	var submissionID, deploymentID, userID, teamID, teamName, targetType sql.NullString
 	var p50, p90, p99, correctnessScore sql.NullFloat64
 
-	if err := row.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
+	if err := row.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &b.TracerTotal, &b.TracerSuccess, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
 		return nil, err
 	}
 		if finished.Valid {
@@ -138,7 +138,7 @@ func CreateBenchmark(db *sql.DB, name string, userID string, teamID string, team
 
 	query := `INSERT INTO benchmarks (name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, metadata, started_at, created_at, updated_at) 
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now(), now()) 
-	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
+	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          (CASE WHEN status = 'QUEUED' THEN (SELECT COUNT(*) + 1 FROM benchmarks b2 WHERE b2.status = 'QUEUED' AND b2.created_at < benchmarks.created_at) ELSE 0 END) as queue_position`
 	
 	row := db.QueryRow(query, name, userID, teamID, teamName, dbSubID, dbDepID, targetType, "QUEUED", workerCount, totalJobs, metaVal)
@@ -148,7 +148,7 @@ func CreateBenchmark(db *sql.DB, name string, userID string, teamID string, team
 	var rSubID, rDepID, rUserID, rTeamID, rTeamName, rTargetType sql.NullString
 	var p50, p90, p99, correctnessScore sql.NullFloat64
 
-	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rTeamName, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
+	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rTeamName, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &b.TracerTotal, &b.TracerSuccess, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
 		return nil, err
 	}
 	if finished.Valid {
@@ -189,17 +189,17 @@ func CreateBenchmark(db *sql.DB, name string, userID string, teamID string, team
 	return &b, nil
 }
 
-func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests int64, successCount int64, failureCount int64, p50, p90, p99 float64, failureReason string) (*model.Benchmark, error) {
+func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests int64, successCount int64, failureCount int64, p50, p90, p99 float64, tracerTotal, tracerSuccess int64, failureReason string) (*model.Benchmark, error) {
 	query := `UPDATE benchmarks SET status=$1, total_requests=$2, success_count=$3, failure_count=$4, p50=$5, p90=$6, p99=$7, 
-	          failure_reason=COALESCE(NULLIF($8, ''), failure_reason),
+	          failure_reason=COALESCE(NULLIF($10, ''), failure_reason),
 	          finished_at=CASE WHEN $1 IN ('COMPLETED','FAILED','CANCELLED') THEN now() ELSE finished_at END, 
 	          duration_seconds=CASE WHEN $1 IN ('COMPLETED','FAILED','CANCELLED') THEN EXTRACT(EPOCH FROM (now()-created_at))::int ELSE duration_seconds END, 
 	          wait_time_seconds=CASE WHEN $1 IN ('COMPLETED','FAILED','CANCELLED') AND started_at IS NOT NULL THEN EXTRACT(EPOCH FROM (started_at-created_at))::int ELSE wait_time_seconds END,
 	          execution_time_seconds=CASE WHEN $1 IN ('COMPLETED','FAILED','CANCELLED') AND started_at IS NOT NULL THEN EXTRACT(EPOCH FROM (now()-started_at))::int ELSE execution_time_seconds END,
-	          updated_at=now() WHERE id=$9
-	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
+	          updated_at=now(), tracer_total=$8, tracer_success=$9 WHERE id=$11
+	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          (CASE WHEN status = 'QUEUED' THEN (SELECT COUNT(*) + 1 FROM benchmarks b2 WHERE b2.status = 'QUEUED' AND b2.created_at < benchmarks.created_at) ELSE 0 END) as queue_position`
-	row := db.QueryRow(query, status, totalRequests, successCount, failureCount, p50, p90, p99, failureReason, id)
+	row := db.QueryRow(query, status, totalRequests, successCount, failureCount, p50, p90, p99, tracerTotal, tracerSuccess, failureReason, id)
 	var b model.Benchmark
 	var meta, reason sql.NullString
 	var finished, lastHeartbeat sql.NullTime
@@ -207,7 +207,7 @@ func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests i
 	var rSubID, rDepID, rUserID, rTeamID, rTeamName, rTargetType sql.NullString
 	var rP50, rP90, rP99, correctnessScore sql.NullFloat64
 
-	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rTeamName, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &rP50, &rP90, &rP99, &correctnessScore, &meta, &lastHeartbeat, &reason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
+	if err := row.Scan(&b.ID, &b.Name, &rUserID, &rTeamID, &rTeamName, &rSubID, &rDepID, &rTargetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &rP50, &rP90, &rP99, &correctnessScore, &b.TracerTotal, &b.TracerSuccess, &meta, &lastHeartbeat, &reason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
 		return nil, err
 	}
 	if finished.Valid {
@@ -263,7 +263,7 @@ func DequeueNextBenchmark(db *sql.DB) (*model.Benchmark, error) {
 	              LIMIT 1 
 	              FOR UPDATE SKIP LOCKED
 	          )
-	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
+	          RETURNING id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          0 as queue_position`
 	row := db.QueryRow(query)
 	var b model.Benchmark
@@ -273,7 +273,7 @@ func DequeueNextBenchmark(db *sql.DB) (*model.Benchmark, error) {
 	var submissionID, deploymentID, userID, teamID, teamName, targetType sql.NullString
 	var p50, p90, p99, correctnessScore sql.NullFloat64
 
-	if err := row.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
+	if err := row.Scan(&b.ID, &b.Name, &userID, &teamID, &teamName, &submissionID, &deploymentID, &targetType, &b.Status, &b.WorkerCount, &b.TotalJobs, &b.StartedAt, &finished, &duration, &b.TotalRequests, &b.SuccessCount, &b.FailureCount, &p50, &p90, &p99, &correctnessScore, &b.TracerTotal, &b.TracerSuccess, &meta, &lastHeartbeat, &failureReason, &waitTime, &execTime, &b.CreatedAt, &b.UpdatedAt, &b.QueuePosition); err != nil {
 		return nil, err
 	}
 	if finished.Valid { b.FinishedAt = &finished.Time }

@@ -113,10 +113,23 @@ func StartServer(
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			// simple aggregation grouped by minute
+			// Calculate duration first
+			durationQuery := `SELECT COALESCE(EXTRACT(EPOCH FROM (max(created_at) - min(created_at))), 0) FROM telemetry_metrics WHERE benchmark_id = $1`
+			var duration float64
+			err := db.QueryRow(context.Background(), durationQuery, benchmarkID).Scan(&duration)
+			if err != nil {
+				log.Printf("failed to get duration: %v", err)
+			}
+
+			timeUnit := "minute"
+			if duration <= 300 {
+				timeUnit = "second"
+			}
+
+			// simple aggregation grouped by timeUnit
 			query := `
 			SELECT 
-				date_trunc('minute', created_at) AS time,
+				date_trunc($2, created_at) AS time,
 				count(*) AS total,
 				sum(case when success then 1 else 0 end) AS success_count,
 				avg(latency) AS avg_latency
@@ -125,7 +138,7 @@ func StartServer(
 			GROUP BY 1
 			ORDER BY 1 ASC
 			`
-			rows, err := db.Query(context.Background(), query, benchmarkID)
+			rows, err := db.Query(context.Background(), query, benchmarkID, timeUnit)
 			if err != nil {
 				log.Printf("history error: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -147,9 +160,15 @@ func StartServer(
 				if err := rows.Scan(&t, &total, &successCount, &avgLatency); err != nil {
 					continue
 				}
+				var tps float64
+				if timeUnit == "second" {
+					tps = float64(total)
+				} else {
+					tps = float64(total) / 60.0
+				}
 				results = append(results, HistoryData{
 					Time:        t.UTC().Format(time.RFC3339),
-					TPS:         float64(total) / 60.0,
+					TPS:         tps,
 					SuccessRate: (float64(successCount) / float64(total)) * 100.0,
 					Latency:     avgLatency,
 				})

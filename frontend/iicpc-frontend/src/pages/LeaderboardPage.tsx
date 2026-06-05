@@ -191,6 +191,7 @@ export function LeaderboardPage() {
                 <th className="px-6 py-4">Score</th>
                 <th className="px-6 py-4">TPS</th>
                 <th className="px-6 py-4">Success</th>
+                <th className="px-6 py-4">Concurrency</th>
                 <th className="px-6 py-4">p99</th>
                 <th className="px-6 py-4">Details</th>
               </tr>
@@ -206,6 +207,7 @@ export function LeaderboardPage() {
                   <td className="px-6 py-4 text-foreground">{formatNumber(entry.finalScore)}</td>
                   <td className="px-6 py-4 text-foreground">{formatNumber(entry.tps)}</td>
                   <td className="px-6 py-4 text-emerald-300">{formatPercent(entry.successRate)}</td>
+                  <td className="px-6 py-4 text-primary">{entry.concurrencyScore !== undefined ? formatPercent(entry.concurrencyScore) : "100.0%"}</td>
                   <td className="px-6 py-4 text-foreground">{entry.p99.toFixed(0)} ms</td>
                   <td className="px-6 py-4 text-right">
                     <Link

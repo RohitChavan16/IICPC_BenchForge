@@ -7,7 +7,7 @@ import (
 )
 
 func ListSubmissions(db *sql.DB, limit int) ([]model.Submission, error) {
-	rows, err := db.Query(`SELECT id, user_id, team_id, team_name, submission_name, language, file_path, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at FROM submissions ORDER BY created_at DESC LIMIT $1`, limit)
+	rows, err := db.Query(`SELECT id, user_id, team_id, team_name, submission_name, language, file_path, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at, correctness_score, correctness_details FROM submissions ORDER BY created_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,10 @@ func ListSubmissions(db *sql.DB, limit int) ([]model.Submission, error) {
 		var s model.Submission
 		var userID, teamID, currentStage, stageStatus, failureReason, buildLog sql.NullString
 		var startedAt, finishedAt sql.NullTime
-		if err := rows.Scan(&s.ID, &userID, &teamID, &s.TeamName, &s.SubmissionName, &s.Language, &s.FilePath, &s.Status, &currentStage, &stageStatus, &failureReason, &startedAt, &finishedAt, &buildLog, &s.CreatedAt, &s.UpdatedAt); err != nil {
+		var correctnessScore sql.NullFloat64
+		var correctnessDetailsRaw []byte
+
+		if err := rows.Scan(&s.ID, &userID, &teamID, &s.TeamName, &s.SubmissionName, &s.Language, &s.FilePath, &s.Status, &currentStage, &stageStatus, &failureReason, &startedAt, &finishedAt, &buildLog, &s.CreatedAt, &s.UpdatedAt, &correctnessScore, &correctnessDetailsRaw); err != nil {
 			return nil, err
 		}
 		s.UserID = userID.String
@@ -33,18 +36,27 @@ func ListSubmissions(db *sql.DB, limit int) ([]model.Submission, error) {
 			s.FinishedAt = &finishedAt.Time
 		}
 		s.BuildLog = buildLog.String
+		if correctnessScore.Valid {
+			score := correctnessScore.Float64
+			s.CorrectnessScore = &score
+		}
+		if len(correctnessDetailsRaw) > 0 {
+			s.CorrectnessDetails = string(correctnessDetailsRaw)
+		}
 		items = append(items, s)
 	}
 	return items, rows.Err()
 }
 
 func GetSubmissionByID(db *sql.DB, id string) (*model.Submission, error) {
-	row := db.QueryRow(`SELECT id, user_id, team_id, team_name, submission_name, language, file_path, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at FROM submissions WHERE id=$1`, id)
+	row := db.QueryRow(`SELECT id, user_id, team_id, team_name, submission_name, language, file_path, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at, correctness_score, correctness_details FROM submissions WHERE id=$1`, id)
 
 	var s model.Submission
 	var userID, teamID, currentStage, stageStatus, failureReason, buildLog sql.NullString
 	var startedAt, finishedAt sql.NullTime
-	if err := row.Scan(&s.ID, &userID, &teamID, &s.TeamName, &s.SubmissionName, &s.Language, &s.FilePath, &s.Status, &currentStage, &stageStatus, &failureReason, &startedAt, &finishedAt, &buildLog, &s.CreatedAt, &s.UpdatedAt); err != nil {
+	var correctnessScore sql.NullFloat64
+	var correctnessDetailsRaw []byte
+	if err := row.Scan(&s.ID, &userID, &teamID, &s.TeamName, &s.SubmissionName, &s.Language, &s.FilePath, &s.Status, &currentStage, &stageStatus, &failureReason, &startedAt, &finishedAt, &buildLog, &s.CreatedAt, &s.UpdatedAt, &correctnessScore, &correctnessDetailsRaw); err != nil {
 		return nil, err
 	}
 	s.UserID = userID.String
@@ -59,6 +71,13 @@ func GetSubmissionByID(db *sql.DB, id string) (*model.Submission, error) {
 		s.FinishedAt = &finishedAt.Time
 	}
 	s.BuildLog = buildLog.String
+	if correctnessScore.Valid {
+		score := correctnessScore.Float64
+		s.CorrectnessScore = &score
+	}
+	if len(correctnessDetailsRaw) > 0 {
+		s.CorrectnessDetails = string(correctnessDetailsRaw)
+	}
 	return &s, nil
 }
 
