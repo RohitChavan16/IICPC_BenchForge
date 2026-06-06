@@ -1,11 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity,
   BarChart3,
   ChevronRight,
   Clock3,
   FileInput,
-  FileSearch,
   Home,
   LogOut,
   Flame,
@@ -34,18 +32,9 @@ const navSections = [
       { label: 'Leaderboard', to: '/leaderboard', icon: Trophy },
     ],
   },
-  {
-    title: 'MONITORING',
-    items: [
-      { label: 'Live Activity', to: '/admin/telemetry', icon: Activity, admin: true },
-      { label: 'Logs & Events', to: '/admin/logs', icon: FileSearch, admin: true },
-    ],
-  },
 ]
 
 export function Sidebar() {
-  const user = useAuthStore((state) => state.user)
-  const isAdmin = user?.role === 'admin'
   const isSidebarOpen = useUiStore((state) => state.isSidebarOpen)
   const toggleSidebar = useUiStore((state) => state.toggleSidebar)
 
@@ -114,8 +103,6 @@ export function Sidebar() {
 
         <div className="flex-1 overflow-y-auto pr-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {navSections.map((section) => {
-            if (section.title === 'MONITORING' && !isAdmin) return null
-
             return (
               <div key={section.title} className="space-y-2">
                 <p className={`px-4 text-[10px] font-black uppercase tracking-[0.5em] bg-gradient-to-r from-cyan-500 to-sky-600 dark:from-cyan-400 dark:to-sky-400 bg-clip-text text-transparent ${labelVisible}`}>
@@ -123,7 +110,6 @@ export function Sidebar() {
                 </p>
                 <nav className="space-y-1.5">
                   {section.items
-                    .filter((item) => !item.admin || isAdmin)
                     .map((item) => {
                       const Icon = item.icon
                       return (
