@@ -29,3 +29,12 @@ export async function fetchBenchmarkTelemetryHistory(benchmarkId: string): Promi
     return []
   }
 }
+
+export async function fetchPersonaAnalytics(benchmarkId: string): Promise<import('@/types/api').PersonaData[]> {
+  try {
+    const response = await apiClient.get(`/personas?benchmarkId=${benchmarkId}`)
+    return response.data as import('@/types/api').PersonaData[]
+  } catch (error) {
+    return []
+  }
+}

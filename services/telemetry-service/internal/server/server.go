@@ -178,6 +178,73 @@ func StartServer(
 		},
 	)
 
+	http.HandleFunc(
+		"/personas",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			benchmarkID := r.URL.Query().Get("benchmarkId")
+			if benchmarkID == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			// Calculate duration first
+			durationQuery := `SELECT COALESCE(EXTRACT(EPOCH FROM (max(created_at) - min(created_at))), 0) FROM telemetry_metrics WHERE benchmark_id = $1`
+			var duration float64
+			db.QueryRow(context.Background(), durationQuery, benchmarkID).Scan(&duration)
+			if duration <= 0 {
+				duration = 1
+			}
+
+			query := `
+			SELECT 
+				bot_type,
+				count(*) AS total,
+				sum(case when success then 1 else 0 end) AS success_count,
+				percentile_cont(0.99) within group (order by latency) AS p99_latency
+			FROM telemetry_metrics
+			WHERE benchmark_id = $1
+			GROUP BY bot_type
+			`
+			rows, err := db.Query(context.Background(), query, benchmarkID)
+			if err != nil {
+				log.Printf("personas error: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			defer rows.Close()
+
+			type PersonaData struct {
+				BotType     string  `json:"botType"`
+				Total       int64   `json:"total"`
+				SuccessRate float64 `json:"successRate"`
+				Latency     float64 `json:"latency"`
+				TPS         float64 `json:"tps"`
+			}
+			var results []PersonaData
+			for rows.Next() {
+				var botType string
+				var total, successCount int64
+				var p99Latency float64
+				if err := rows.Scan(&botType, &total, &successCount, &p99Latency); err != nil {
+					continue
+				}
+				results = append(results, PersonaData{
+					BotType:     botType,
+					Total:       total,
+					SuccessRate: (float64(successCount) / float64(total)) * 100.0,
+					Latency:     p99Latency,
+					TPS:         float64(total) / duration,
+				})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(results)
+		},
+	)
+
 	log.Println("Telemetry Service Running :8081")
 
 	http.ListenAndServe(":8081", nil)

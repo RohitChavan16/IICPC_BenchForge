@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Server, Zap, CheckCircle, ArrowLeft, Trophy, BarChart2, Activity, Play, XCircle } from 'lucide-react'
+import { Server, Zap, CheckCircle, ArrowLeft, Trophy, Activity, XCircle } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import * as submissionService from '@/services/api/submissionService'
 import * as deploymentService from '@/services/api/deploymentService'
 import * as benchmarkService from '@/services/api/benchmarkService'
 import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
-import { fetchBenchmarkTelemetryHistory } from '@/services/api/telemetryService'
+import { fetchBenchmarkTelemetryHistory, fetchPersonaAnalytics } from '@/services/api/telemetryService'
 import { LiveLogs } from '@/components/LiveLogs'
+import { MarketSimulationAnalytics } from '@/components/analytics/MarketSimulationAnalytics'
+import { BenchmarkHealthCard } from '@/components/analytics/BenchmarkHealthCard'
+import { TimelineView } from '@/components/analytics/TimelineView'
+import { WorkerExecutionAnalysis } from '@/components/analytics/WorkerExecutionAnalysis'
 
 export function SubmissionReportPage() {
   const { id } = useParams<{ id: string }>()
@@ -35,13 +39,15 @@ export function SubmissionReportPage() {
         
         let leaderboardEntry = null
         let history = []
+        let personas = []
         if (benchmark) {
           const lb = await fetchLeaderboardEntries()
           leaderboardEntry = lb.items.find((e: any) => e.benchmarkId === benchmark.id)
           history = await fetchBenchmarkTelemetryHistory(benchmark.id)
+          personas = await fetchPersonaAnalytics(benchmark.id)
         }
 
-        setData({ submission, deployment, benchmark, leaderboardEntry, history })
+        setData({ submission, deployment, benchmark, leaderboardEntry, history, personas })
       } catch (err) {
         console.error(err)
       } finally {
@@ -59,10 +65,9 @@ export function SubmissionReportPage() {
     return <div className="text-center py-20 text-muted-foreground">Submission not found.</div>
   }
 
-  const { submission, deployment, benchmark, leaderboardEntry, history } = data
+  const { submission, deployment, benchmark, leaderboardEntry, history, personas } = data
 
   // Score Calculations
-  let correctnessScore = 0
   let concurrencyScore = 0
   let effectiveTps = 0
   let latencyFactor = 0
@@ -80,7 +85,6 @@ export function SubmissionReportPage() {
   }
 
   if (leaderboardEntry) {
-    correctnessScore = leaderboardEntry.correctnessScore || 0
     concurrencyScore = leaderboardEntry.concurrencyScore !== undefined ? leaderboardEntry.concurrencyScore : 100.0
     effectiveTps = leaderboardEntry.tps * (leaderboardEntry.successRate / 100.0)
     latencyFactor = 250.0 / (250.0 + (leaderboardEntry.p99 || 0))
@@ -165,6 +169,26 @@ export function SubmissionReportPage() {
             </Link>
           </div>
         </Card>
+      )}
+
+      {/* Evaluation Timeline */}
+      <TimelineView 
+        submission={submission} 
+        deployment={deployment} 
+        benchmark={benchmark} 
+        leaderboardEntry={leaderboardEntry} 
+      />
+
+      {/* Benchmark Health Card */}
+      <BenchmarkHealthCard 
+        submission={submission} 
+        benchmark={benchmark} 
+        leaderboardEntry={leaderboardEntry} 
+      />
+
+      {/* Worker Execution Analysis */}
+      {benchmark && (
+        <WorkerExecutionAnalysis benchmark={benchmark} />
       )}
 
       {/* Overview Details Section */}
@@ -343,14 +367,54 @@ export function SubmissionReportPage() {
               </div>
             </div>
             
-            <div className="flex-1 flex flex-col justify-center items-center bg-black/20 rounded-xl border border-border p-6">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Calculated Success Rate</p>
-                <p className="text-4xl font-bold text-foreground">{leaderboardEntry.successRate.toFixed(1)}%</p>
-                {leaderboardEntry.successRate === 0 && (
-                  <p className="text-xs text-rose-400 mt-2 max-w-xs">
-                    0 successes recorded during benchmark run. This severely impacts the final score.
-                  </p>
+            <div className="flex-1 flex flex-col bg-black/20 rounded-xl border border-border p-4">
+              <p className="text-sm font-semibold text-foreground mb-4">Detailed Persona Metrics</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(personas || []).map((p: any) => {
+                  const labels: Record<string, string> = {
+                    retail: 'Retail Trader',
+                    market_maker: 'Market Maker',
+                    scalper: 'Scalper',
+                    whale: 'Whale',
+                    hft_stressor: 'HFT Stressor',
+                  }
+                  const colors: Record<string, string> = {
+                    retail: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+                    market_maker: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+                    scalper: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+                    whale: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+                    hft_stressor: 'bg-rose-500/10 border-rose-500/20 text-rose-400',
+                  }
+                  
+                  const label = labels[p.botType] || p.botType
+                  const colorClass = colors[p.botType] || 'bg-secondary/50 border-border text-foreground'
+                  
+                  return (
+                    <div key={p.botType} className={`p-3 rounded-lg border ${colorClass} text-xs`}>
+                      <p className="font-bold mb-2 text-sm">{label}</p>
+                      <div className="flex justify-between mb-1">
+                        <span className="opacity-70">Requests</span>
+                        <span className="font-mono">{p.total}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span className="opacity-70">TPS</span>
+                        <span className="font-mono">{p.tps.toFixed(1)}</span>
+                      </div>
+                      <div className="flex justify-between mb-1">
+                        <span className="opacity-70">Latency</span>
+                        <span className="font-mono">{(p.latency / 1000000).toFixed(1)}ms</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="opacity-70">Success</span>
+                        <span className="font-mono">{p.successRate.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                {(!personas || personas.length === 0) && (
+                  <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
+                    No persona metrics available.
+                  </div>
                 )}
               </div>
             </div>
@@ -443,6 +507,15 @@ export function SubmissionReportPage() {
               </ResponsiveContainer>
             </div>
 
+          </div>
+        </Card>
+      )}
+
+      {/* Persona Analytics / Market Conditions Summary */}
+      {benchmark && benchmark.status === 'COMPLETED' && (
+        <Card title="Market Conditions Summary (v1.0 - Hackathon Mix)">
+          <div className="mt-4">
+            <MarketSimulationAnalytics benchmarkId={benchmark.id} />
           </div>
         </Card>
       )}

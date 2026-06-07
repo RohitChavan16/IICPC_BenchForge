@@ -147,6 +147,8 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 
 	log.Printf("Starting benchmark pool for %s", req.BenchmarkID)
 	
+	workers.GenerateDeterministicPersonaMix(req.TotalRequests)
+
 	jobs := make(chan int, req.TotalRequests)
 	results := make(chan metrics.RequestMetric, req.TotalRequests)
 

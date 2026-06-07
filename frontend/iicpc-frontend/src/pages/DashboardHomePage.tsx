@@ -7,6 +7,7 @@ import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
 import { Card } from '@/components/ui/Card'
 import { MetricSparkline } from '@/components/charts/MetricSparkline'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
+import { NotificationsCenter } from '@/components/dashboard/NotificationsCenter'
 import { Badge } from '@/components/ui/Badge'
 import { Info, ShieldCheck, TrendingUp, Zap, Play, Rocket } from 'lucide-react'
 

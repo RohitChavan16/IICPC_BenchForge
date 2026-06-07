@@ -1,9 +1,12 @@
-import type { MetricSnapshot, WorkerMetricMap } from '@/types/api'
+import type { MetricSnapshot, WorkerMetricMap, PersonaMetricMap, TracerStats, LiveRequest } from '@/types/api'
 
 export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
 export type WebsocketMessageHandler<T> = (data: T) => void
 export type WebsocketStatusHandler = (status: WebSocketStatus) => void
 export type WebsocketWorkerHandler = (workers: WorkerMetricMap) => void
+export type WebsocketPersonaHandler = (personas: PersonaMetricMap) => void
+export type WebsocketTracerHandler = (stats: TracerStats) => void
+export type WebsocketRequestHandler = (requests: LiveRequest[]) => void
 
 interface WebsocketClientOptions {
   heartbeatInterval?: number
@@ -27,6 +30,16 @@ type RawMetricSnapshot = {
 type RawTelemetryPayload = RawMetricSnapshot & {
   global?: RawMetricSnapshot
   workers?: Record<string, RawMetricSnapshot>
+  personas?: Record<string, RawMetricSnapshot>
+  tracer_stats?: TracerStats
+  recent_requests?: Array<{
+    request_id: string
+    bot_type: string
+    latency: number
+    success: boolean
+    worker_id: string
+    benchmark_id: string
+  }>
 }
 
 export class RingBuffer<T> {
@@ -122,6 +135,20 @@ function normalizeWorkerMetrics(payload: unknown, timestamp: string): WorkerMetr
   }, {})
 }
 
+function normalizePersonaMetrics(payload: unknown, timestamp: string): PersonaMetricMap {
+  if (!payload || typeof payload !== 'object') {
+    return {}
+  }
+
+  return Object.entries(payload as Record<string, RawMetricSnapshot>).reduce<PersonaMetricMap>((acc, [botType, snapshot]) => {
+    const metric = normalizeMetricSnapshot({ ...snapshot, timestamp })
+    if (metric) {
+      acc[botType] = metric
+    }
+    return acc
+  }, {})
+}
+
 let sharedWebsocketClient: WebsocketClient | null = null
 
 export function getSharedWebsocketClient(url: string, options: WebsocketClientOptions = {}) {
@@ -137,6 +164,9 @@ export class WebsocketClient {
   private connection: WebSocket | null = null
   private handlers = new Set<WebsocketMessageHandler<MetricSnapshot>>()
   private workerHandlers = new Set<WebsocketWorkerHandler>()
+  private personaHandlers = new Set<WebsocketPersonaHandler>()
+  private tracerHandlers = new Set<WebsocketTracerHandler>()
+  private requestHandlers = new Set<WebsocketRequestHandler>()
   private statusHandlers = new Set<WebsocketStatusHandler>()
   private reconnectTimer: number | null = null
   private heartbeatTimer: number | null = null
@@ -149,6 +179,9 @@ export class WebsocketClient {
   private manualClose = false
   private latestSnapshot: MetricSnapshot | null = null
   private latestWorkers: WorkerMetricMap = {}
+  private latestPersonas: PersonaMetricMap = {}
+  private latestTracerStats: TracerStats = { executed: 0, passed: 0, failed: 0 }
+  private latestRequests: LiveRequest[] = []
   private history: RingBuffer<MetricSnapshot>
 
   constructor(url: string, options: WebsocketClientOptions = {}) {
@@ -179,6 +212,18 @@ export class WebsocketClient {
     return this.latestWorkers
   }
 
+  getLatestPersonas() {
+    return this.latestPersonas
+  }
+
+  getLatestTracerStats() {
+    return this.latestTracerStats
+  }
+
+  getLatestRequests() {
+    return this.latestRequests
+  }
+
   addHandler(handler: WebsocketMessageHandler<MetricSnapshot>) {
     this.handlers.add(handler)
   }
@@ -193,6 +238,30 @@ export class WebsocketClient {
 
   removeWorkerHandler(handler: WebsocketWorkerHandler) {
     this.workerHandlers.delete(handler)
+  }
+
+  addPersonaHandler(handler: WebsocketPersonaHandler) {
+    this.personaHandlers.add(handler)
+  }
+
+  removePersonaHandler(handler: WebsocketPersonaHandler) {
+    this.personaHandlers.delete(handler)
+  }
+
+  addTracerHandler(handler: WebsocketTracerHandler) {
+    this.tracerHandlers.add(handler)
+  }
+
+  removeTracerHandler(handler: WebsocketTracerHandler) {
+    this.tracerHandlers.delete(handler)
+  }
+
+  addRequestHandler(handler: WebsocketRequestHandler) {
+    this.requestHandlers.add(handler)
+  }
+
+  removeRequestHandler(handler: WebsocketRequestHandler) {
+    this.requestHandlers.delete(handler)
   }
 
   addStatusHandler(handler: WebsocketStatusHandler) {
@@ -247,6 +316,30 @@ export class WebsocketClient {
         if (Object.keys(workerPayload).length > 0) {
           this.latestWorkers = workerPayload
           this.workerHandlers.forEach((handler) => handler(workerPayload))
+        }
+
+        const personaPayload = normalizePersonaMetrics(rawTelemetryPayload.personas, timestamp)
+        if (Object.keys(personaPayload).length > 0) {
+          this.latestPersonas = personaPayload
+          this.personaHandlers.forEach((handler) => handler(personaPayload))
+        }
+
+        if (rawTelemetryPayload.tracer_stats) {
+          this.latestTracerStats = rawTelemetryPayload.tracer_stats
+          this.tracerHandlers.forEach((handler) => handler(this.latestTracerStats))
+        }
+
+        if (rawTelemetryPayload.recent_requests && rawTelemetryPayload.recent_requests.length > 0) {
+          const reqs = rawTelemetryPayload.recent_requests.map(r => ({
+            requestId: r.request_id,
+            botType: r.bot_type,
+            latency: r.latency,
+            success: r.success,
+            workerId: r.worker_id,
+            benchmarkId: r.benchmark_id
+          }))
+          this.latestRequests = reqs
+          this.requestHandlers.forEach((handler) => handler(reqs))
         }
 
         const payload = normalizeMetricSnapshot(rawTelemetryPayload.global ? { ...rawTelemetryPayload.global, timestamp } : { ...rawTelemetryPayload, timestamp })

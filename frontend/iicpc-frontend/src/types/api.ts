@@ -64,6 +64,8 @@ export interface LeaderboardEntry {
   p99: number
   totalRequests: number
   duration: number
+  correctnessScore?: number
+  concurrencyScore?: number
   finalScore: number
   rank: number
   createdAt: string
@@ -114,3 +116,28 @@ export interface HealthStatus {
   status: 'Healthy' | 'Warning' | 'Critical'
   details: string
 }
+
+export interface PersonaData {
+  botType: string
+  total: number
+  successRate: number
+  latency: number
+  tps: number
+}
+
+export interface TracerStats {
+  executed: number
+  passed: number
+  failed: number
+}
+
+export interface LiveRequest {
+  requestId: string
+  botType: string
+  latency: number
+  success: boolean
+  workerId: string
+  benchmarkId: string
+}
+
+export type PersonaMetricMap = Record<string, MetricSnapshot>

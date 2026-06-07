@@ -24,6 +24,12 @@ type Metric struct {
 	BenchmarkID string `json:"benchmark_id"`
 }
 
+type TracerStats struct {
+	Executed int `json:"executed"`
+	Passed   int `json:"passed"`
+	Failed   int `json:"failed"`
+}
+
 func StartConsumer(
 	ctx context.Context,
 	rdb *redis.Client,
@@ -39,7 +45,12 @@ func StartConsumer(
 
 	stopBroadcasterCh := make(chan struct{}, 1)
 
-	go startBroadcaster(ctx, agg, hub, workerAggs, workerLastSeen, workerMu, stopBroadcasterCh)
+	// New tracking variables
+	personaAggs := make(map[string]*aggregator.Aggregator)
+	tracerStats := &TracerStats{}
+	var recentRequests []Metric
+
+	go startBroadcaster(ctx, agg, hub, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, stopBroadcasterCh)
 
 	for {
         select {
@@ -88,6 +99,9 @@ func StartConsumer(
 					workerAggs,
 					workerLastSeen,
 					workerMu,
+					personaAggs,
+					tracerStats,
+					&recentRequests,
 					message,
 					stopBroadcasterCh,
 				)
@@ -104,6 +118,9 @@ func processMessage(
 	workerAggs map[string]*aggregator.Aggregator,
 	workerLastSeen map[string]time.Time,
 	workerMu *sync.Mutex,
+	personaAggs map[string]*aggregator.Aggregator,
+	tracerStats *TracerStats,
+	recentRequests *[]Metric,
 	message redis.XMessage,
 	stopBroadcasterCh chan struct{},
 ) {
@@ -141,19 +158,42 @@ func processMessage(
 		metric.Success,
 	)
 
+	workerMu.Lock()
 	// per-worker aggregator and last seen
 	if metric.WorkerID != "" {
-		workerMu.Lock()
 		wa, ok := workerAggs[metric.WorkerID]
 		if !ok {
 			wa = aggregator.NewAggregator()
 			workerAggs[metric.WorkerID] = wa
 		}
 		workerLastSeen[metric.WorkerID] = time.Now()
-		workerMu.Unlock()
-
 		wa.AddMetric(float64(metric.Latency), metric.Success)
 	}
+
+	if metric.BotType == "tracer" {
+		tracerStats.Executed++
+		if metric.Success {
+			tracerStats.Passed++
+		} else {
+			tracerStats.Failed++
+		}
+	} else {
+		pa, ok := personaAggs[metric.BotType]
+		if !ok {
+			pa = aggregator.NewAggregator()
+			personaAggs[metric.BotType] = pa
+		}
+		pa.AddMetric(float64(metric.Latency), metric.Success)
+	}
+
+	// add to recent requests ring buffer (keep last 20)
+	*recentRequests = append(*recentRequests, metric)
+	if len(*recentRequests) > 20 {
+		*recentRequests = (*recentRequests)[1:]
+	}
+
+	workerMu.Unlock()
+
     err = database.InsertMetric(
 	db,
 	database.Metric{
@@ -196,6 +236,9 @@ func startBroadcaster(
 	workerAggs map[string]*aggregator.Aggregator,
 	workerLastSeen map[string]time.Time,
 	workerMu *sync.Mutex,
+	personaAggs map[string]*aggregator.Aggregator,
+	tracerStats *TracerStats,
+	recentRequests *[]Metric,
 	stopBroadcasterCh chan struct{},
 ) {
 
@@ -224,21 +267,35 @@ func startBroadcaster(
 			delete(workerAggs, id)
 			delete(workerLastSeen, id)
 		}
+		for id, pa := range personaAggs {
+			pa.Reset()
+			delete(personaAggs, id)
+		}
+		tracerStats.Executed = 0
+		tracerStats.Passed = 0
+		tracerStats.Failed = 0
+		*recentRequests = make([]Metric, 0)
 		workerMu.Unlock()
 		
 		finalPayload := struct {
-			TPS         float64                               `json:"tps"`
-			P50         float64                               `json:"p50"`
-			P90         float64                               `json:"p90"`
-			P99         float64                               `json:"p99"`
-			FailureRate float64                               `json:"failure_rate"`
-			Total       int                                   `json:"total"`
-			Global      aggregator.MetricsSnapshot            `json:"global"`
-			Workers     map[string]aggregator.MetricsSnapshot `json:"workers"`
+			TPS            float64                               `json:"tps"`
+			P50            float64                               `json:"p50"`
+			P90            float64                               `json:"p90"`
+			P99            float64                               `json:"p99"`
+			FailureRate    float64                               `json:"failure_rate"`
+			Total          int                                   `json:"total"`
+			Global         aggregator.MetricsSnapshot            `json:"global"`
+			Workers        map[string]aggregator.MetricsSnapshot `json:"workers"`
+			Personas       map[string]aggregator.MetricsSnapshot `json:"personas"`
+			TracerStats    TracerStats                           `json:"tracer_stats"`
+			RecentRequests []Metric                              `json:"recent_requests"`
 		}{
 			TPS: 0, P50: 0, P90: 0, P99: 0, FailureRate: 0, Total: 0,
-			Global:  aggregator.MetricsSnapshot{},
-			Workers: make(map[string]aggregator.MetricsSnapshot),
+			Global:         aggregator.MetricsSnapshot{},
+			Workers:        make(map[string]aggregator.MetricsSnapshot),
+			Personas:       make(map[string]aggregator.MetricsSnapshot),
+			TracerStats:    TracerStats{},
+			RecentRequests: make([]Metric, 0),
 		}
 		data, _ := json.Marshal(finalPayload)
 		hub.Broadcast(data)
@@ -256,33 +313,48 @@ func startBroadcaster(
 		// global snapshot
 		globalSnap := agg.Snapshot()
 
-		// build per-worker snapshots
+		// build per-worker and per-persona snapshots
 		workerMu.Lock()
 		workers := make(map[string]aggregator.MetricsSnapshot)
 		for id, wa := range workerAggs {
 			workers[id] = wa.Snapshot()
 		}
+		personas := make(map[string]aggregator.MetricsSnapshot)
+		for id, pa := range personaAggs {
+			personas[id] = pa.Snapshot()
+		}
+		tStats := *tracerStats
+		
+		// Take a copy of recent requests and clear the buffer for the next second
+		currentRecent := make([]Metric, len(*recentRequests))
+		copy(currentRecent, *recentRequests)
+		*recentRequests = make([]Metric, 0)
 		workerMu.Unlock()
 
-		// keep backward compatibility by including top-level fields
 		payload := struct {
-			TPS    float64                                  `json:"tps"`
-			P50    float64                                  `json:"p50"`
-			P90    float64                                  `json:"p90"`
-			P99    float64                                  `json:"p99"`
-			FailureRate float64                             `json:"failure_rate"`
-			Total  int                                      `json:"total"`
-			Global  aggregator.MetricsSnapshot              `json:"global"`
-			Workers map[string]aggregator.MetricsSnapshot   `json:"workers"`
+			TPS            float64                                  `json:"tps"`
+			P50            float64                                  `json:"p50"`
+			P90            float64                                  `json:"p90"`
+			P99            float64                                  `json:"p99"`
+			FailureRate    float64                                  `json:"failure_rate"`
+			Total          int                                      `json:"total"`
+			Global         aggregator.MetricsSnapshot               `json:"global"`
+			Workers        map[string]aggregator.MetricsSnapshot    `json:"workers"`
+			Personas       map[string]aggregator.MetricsSnapshot    `json:"personas"`
+			TracerStats    TracerStats                              `json:"tracer_stats"`
+			RecentRequests []Metric                                 `json:"recent_requests"`
 		}{
-			TPS:         globalSnap.TPS,
-			P50:         globalSnap.P50,
-			P90:         globalSnap.P90,
-			P99:         globalSnap.P99,
-			FailureRate: globalSnap.FailureRate,
-			Total:       globalSnap.Total,
-			Global:      globalSnap,
-			Workers:     workers,
+			TPS:            globalSnap.TPS,
+			P50:            globalSnap.P50,
+			P90:            globalSnap.P90,
+			P99:            globalSnap.P99,
+			FailureRate:    globalSnap.FailureRate,
+			Total:          globalSnap.Total,
+			Global:         globalSnap,
+			Workers:        workers,
+			Personas:       personas,
+			TracerStats:    tStats,
+			RecentRequests: currentRecent,
 		}
 
 		data, _ := json.Marshal(payload)

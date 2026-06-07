@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Order struct {
@@ -28,24 +28,16 @@ type Response struct {
 }
 
 var (
-	mu       sync.Mutex
-	buyBook  []Order
-	sellBook []Order
+	book []Order
+	mu   sync.Mutex
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ok",
-	})
+	w.Write([]byte(`{"status":"ok"}`))
 }
 
 func orderHandler(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	var incoming Order
 
@@ -57,106 +49,80 @@ func orderHandler(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	var trades []Trade
+	trades := []Trade{}
 	executed := 0
+	remaining := incoming.Quantity
 
-	if incoming.Side == "buy" {
+	newBook := make([]Order, 0)
 
-		var remaining []Order
+	for _, resting := range book {
 
-		for _, sell := range sellBook {
-
-			if incoming.Quantity == 0 {
-				remaining = append(remaining, sell)
-				continue
-			}
-
-			if sell.Symbol != incoming.Symbol {
-				remaining = append(remaining, sell)
-				continue
-			}
-
-			if incoming.Price >= sell.Price {
-
-				matchQty := min(incoming.Quantity, sell.Quantity)
-
-				trades = append(trades, Trade{
-					MakerOrderID: sell.OrderID,
-					Price:        sell.Price, // price improvement
-					Quantity:     matchQty,
-				})
-
-				incoming.Quantity -= matchQty
-				executed += matchQty
-
-				if sell.Quantity > matchQty {
-					sell.Quantity -= matchQty
-					remaining = append(remaining, sell)
-				}
-
-			} else {
-				remaining = append(remaining, sell)
-			}
+		if remaining == 0 {
+			newBook = append(newBook, resting)
+			continue
 		}
 
-		sellBook = remaining
-
-		if incoming.Quantity > 0 {
-			buyBook = append(buyBook, incoming)
+		if incoming.Symbol != resting.Symbol {
+			newBook = append(newBook, resting)
+			continue
 		}
 
-	} else {
-
-		var remaining []Order
-
-		for _, buy := range buyBook {
-
-			if incoming.Quantity == 0 {
-				remaining = append(remaining, buy)
-				continue
-			}
-
-			if buy.Symbol != incoming.Symbol {
-				remaining = append(remaining, buy)
-				continue
-			}
-
-			if incoming.Price <= buy.Price {
-
-				matchQty := min(incoming.Quantity, buy.Quantity)
-
-				trades = append(trades, Trade{
-					MakerOrderID: buy.OrderID,
-					Price:        buy.Price,
-					Quantity:     matchQty,
-				})
-
-				incoming.Quantity -= matchQty
-				executed += matchQty
-
-				if buy.Quantity > matchQty {
-					buy.Quantity -= matchQty
-					remaining = append(remaining, buy)
-				}
-
-			} else {
-				remaining = append(remaining, buy)
-			}
+		if incoming.Side == resting.Side {
+			newBook = append(newBook, resting)
+			continue
 		}
 
-		buyBook = remaining
+		canMatch := false
 
-		if incoming.Quantity > 0 {
-			sellBook = append(sellBook, incoming)
+		if incoming.Side == "buy" && incoming.Price >= resting.Price {
+			canMatch = true
+		}
+
+		if incoming.Side == "sell" && incoming.Price <= resting.Price {
+			canMatch = true
+		}
+
+		if !canMatch {
+			newBook = append(newBook, resting)
+			continue
+		}
+
+		matchQty := remaining
+
+		if resting.Quantity < matchQty {
+			matchQty = resting.Quantity
+		}
+
+		trades = append(trades, Trade{
+			MakerOrderID: resting.OrderID,
+			Price:        resting.Price, // price improvement
+			Quantity:     matchQty,
+		})
+
+		executed += matchQty
+		remaining -= matchQty
+
+		if resting.Quantity > matchQty {
+			resting.Quantity -= matchQty
+			newBook = append(newBook, resting)
 		}
 	}
 
+	if remaining > 0 {
+		incoming.Quantity = remaining
+		newBook = append(newBook, incoming)
+	}
+
+	book = newBook
+
 	status := "resting"
 
-	if executed > 0 && incoming.Quantity == 0 {
-		status = "filled"
-	} else if executed > 0 {
+	if executed > 0 && remaining > 0 {
 		status = "partial"
+	}
+
+	if remaining == 0 {
+		status = "filled"
 	}
 
 	resp := Response{
@@ -166,14 +132,8 @@ func orderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
+	json.NewEncoder(w).Encode(resp)
 }
 
 func main() {
@@ -181,9 +141,10 @@ func main() {
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/order", orderHandler)
 
-	log.Println("Exchange Engine listening on :8080")
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err)
+	server := &http.Server{
+		Addr:              ":8080",
+		ReadHeaderTimeout: 5 * time.Second,
 	}
+
+	server.ListenAndServe()
 }

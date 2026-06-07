@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -15,6 +16,37 @@ import (
 	"encoding/json"
 	"math/rand"
 )
+
+var (
+	GlobalPersonaMix []string
+	GlobalPersonaIdx int64
+)
+
+func GenerateDeterministicPersonaMix(total int) {
+	retailCount := int(float64(total) * 0.60)
+	mmCount := int(float64(total) * 0.20)
+	scalperCount := int(float64(total) * 0.10)
+	whaleCount := int(float64(total) * 0.05)
+	hftCount := int(float64(total) * 0.05)
+
+	// Adjust any rounding errors to ensure exact total
+	retailCount += total - (retailCount + mmCount + scalperCount + whaleCount + hftCount)
+
+	mix := make([]string, 0, total)
+	for i := 0; i < retailCount; i++ { mix = append(mix, "retail") }
+	for i := 0; i < mmCount; i++ { mix = append(mix, "market_maker") }
+	for i := 0; i < scalperCount; i++ { mix = append(mix, "scalper") }
+	for i := 0; i < whaleCount; i++ { mix = append(mix, "whale") }
+	for i := 0; i < hftCount; i++ { mix = append(mix, "hft_stressor") }
+
+	// Shuffle
+	rand.Shuffle(len(mix), func(i, j int) {
+		mix[i], mix[j] = mix[j], mix[i]
+	})
+
+	GlobalPersonaMix = mix
+	GlobalPersonaIdx = 0
+}
 
 func Worker(
 	ctx context.Context,
@@ -70,14 +102,37 @@ func Worker(
 					StatusCode:  200,
 				}
 			} else {
-				order := bots.RetailTrader()
+				// Deterministic Persona Router
+				var botType string
+				if len(GlobalPersonaMix) > 0 {
+					idx := atomic.AddInt64(&GlobalPersonaIdx, 1) - 1
+					botType = GlobalPersonaMix[idx%int64(len(GlobalPersonaMix))]
+				} else {
+					botType = "retail"
+				}
+
+				var order bots.Order
+				switch botType {
+				case "market_maker":
+					order = bots.MarketMaker()
+				case "scalper":
+					order = bots.Scalper()
+				case "whale":
+					order = bots.Whale()
+				case "hft_stressor":
+					order = bots.HFTStressor()
+				default:
+					order = bots.RetailTrader()
+					botType = "retail" // ensure fallback is explicitly labeled
+				}
+
 				start := time.Now()
 				resp, err := bots.SendOrder(ctx, exchangeURL, order)
 				latency := time.Since(start)
 
 				metric = metrics.RequestMetric{
 					RequestID:   uuid.NewString(),
-					BotType:     "retail",
+					BotType:     botType,
 					WorkerID:    fmt.Sprintf("worker-%02d", id),
 					BenchmarkID: benchmarkID,
 					Latency:     latency,

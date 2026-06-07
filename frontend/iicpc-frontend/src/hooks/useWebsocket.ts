@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSharedWebsocketClient, type WebSocketStatus } from '@/services/websocket/websocketClient'
-import type { MetricSnapshot, WorkerMetricMap } from '@/types/api'
+import type { MetricSnapshot, WorkerMetricMap, PersonaMetricMap, TracerStats, LiveRequest } from '@/types/api'
 
 export function useWebsocket() {
   const defaultUrl = typeof window !== 'undefined'
@@ -14,6 +14,9 @@ export function useWebsocket() {
   const [latest, setLatest] = useState<MetricSnapshot | null>(() => client.getLatestSnapshot())
   const [history, setHistory] = useState<MetricSnapshot[]>(() => client.getHistory())
   const [workers, setWorkers] = useState<WorkerMetricMap>(() => client.getLatestWorkers())
+  const [personas, setPersonas] = useState<PersonaMetricMap>(() => client.getLatestPersonas())
+  const [tracerStats, setTracerStats] = useState<TracerStats>(() => client.getLatestTracerStats())
+  const [requests, setRequests] = useState<LiveRequest[]>(() => client.getLatestRequests())
 
   useEffect(() => {
     const statusHandler = (nextStatus: WebSocketStatus) => setStatus(nextStatus)
@@ -24,15 +27,33 @@ export function useWebsocket() {
     const workerHandler = (payload: WorkerMetricMap) => {
       setWorkers(payload)
     }
+    const personaHandler = (payload: PersonaMetricMap) => {
+      setPersonas(payload)
+    }
+    const tracerHandler = (payload: TracerStats) => {
+      setTracerStats(payload)
+    }
+    const requestHandler = (payload: LiveRequest[]) => {
+      // Append requests to previous array up to a certain limit if needed
+      // Actually, since this is a sampled stream, we'll just expose the latest batch 
+      // and let the component handle accumulation.
+      setRequests(payload)
+    }
 
     client.addStatusHandler(statusHandler)
     client.addHandler(messageHandler)
     client.addWorkerHandler(workerHandler)
+    client.addPersonaHandler(personaHandler)
+    client.addTracerHandler(tracerHandler)
+    client.addRequestHandler(requestHandler)
     client.connect()
 
     return () => {
       client.removeHandler(messageHandler)
       client.removeWorkerHandler(workerHandler)
+      client.removePersonaHandler(personaHandler)
+      client.removeTracerHandler(tracerHandler)
+      client.removeRequestHandler(requestHandler)
       client.removeStatusHandler(statusHandler)
     }
   }, [client])
@@ -42,6 +63,9 @@ export function useWebsocket() {
     latest,
     history,
     workers,
+    personas,
+    tracerStats,
+    requests,
     reconnect: () => client.reconnect(),
   }
 }
