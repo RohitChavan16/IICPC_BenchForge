@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { PageHero } from '@/components/layout/PageHero'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive, ChevronDown, ChevronUp } from 'lucide-react'
+import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive, ChevronDown, ChevronUp, Trophy, Activity } from 'lucide-react'
 import * as submissionService from '@/services/api/submissionService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSubmissionStore } from '@/stores/useSubmissionStore'
@@ -30,6 +31,7 @@ export function SubmissionPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [showUploadForm, setShowUploadForm] = useState(false)
   const [selectedFileName, setSelectedFileName] = useState('')
+  const [selectedLanguage, setSelectedLanguage] = useState('go')
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [isPipelineExpanded, setIsPipelineExpanded] = useState(true)
   const [isLogsExpanded, setIsLogsExpanded] = useState(true)
@@ -155,12 +157,39 @@ export function SubmissionPage() {
   const showActivePanel = activeSubmission != null && !isSubmitRoute
   const showEmptyUpload = isSubmitRoute || activeSubmission == null || showUploadForm
 
+  const totalSubmissions = submissionsHistory.length;
+  const totalCompleted = submissionsHistory.filter(s => s.status.toLowerCase() === 'completed').length;
+  const totalFailed = submissionsHistory.filter(s => s.status.toLowerCase() === 'failed').length;
+  const currentRunning = submissionsHistory.filter(s => !['completed', 'failed'].includes(s.status.toLowerCase())).length;
+  const bestScore = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.finalScore)).toFixed(2) : 'N/A';
+  const worstScore = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.finalScore)).toFixed(2) : 'N/A';
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-primary/80">Command Center</p>
-        <h1 className="mt-2 text-3xl font-semibold text-foreground">Submission Management</h1>
-      </div>
+      <PageHero 
+        theme={isSubmitRoute ? "dashboard" : "history"}
+        icon={<TerminalSquare size={40} />}
+        title={isSubmitRoute ? "Submit Code" : "Submission History"}
+        subtitle={isSubmitRoute 
+          ? "Upload your engine source code and deploy to the cluster for correctness validation and high-frequency benchmarking."
+          : "Command Center for Code Execution, Verification, and Historical Analytics. Review your past deployments, monitor active builds, and confidently deploy new engine iterations to the evaluation cluster."}
+        statusPills={[
+          { label: activeSubmission ? 'Active' : 'Awaiting', variant: activeSubmission ? 'success' : 'info' }
+        ]}
+        metadata={isSubmitRoute ? [
+          { label: 'Instruction', value: '3 Steps', icon: <Box size={14} /> },
+          { label: 'History', value: totalSubmissions, icon: <FileArchive size={14} /> },
+          { label: 'Current Running', value: currentRunning, icon: <Zap size={14} /> },
+          { label: 'Success', value: totalCompleted, icon: <CheckCircle size={14} /> },
+          { label: 'Failed', value: totalFailed, icon: <XCircle size={14} /> }
+        ] : [
+          { label: 'Total Entries', value: totalSubmissions, icon: <FileArchive size={14} /> },
+          { label: 'Completed', value: totalCompleted, icon: <CheckCircle size={14} /> },
+          { label: 'Failed', value: totalFailed, icon: <XCircle size={14} /> },
+          { label: 'Best Score', value: bestScore, icon: <Trophy size={14} /> },
+          { label: 'Worst Score', value: worstScore, icon: <Activity size={14} /> }
+        ]}
+      />
 
       <AnimatePresence mode="wait">
         {showEmptyUpload && (
@@ -179,11 +208,23 @@ export function SubmissionPage() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Language</label>
-                  <select name="language" required className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-foreground outline-none focus:border-primary">
-                    <option value="go">Go</option>
-                    <option value="rust">Rust</option>
-                    <option value="cpp">C++</option>
-                  </select>
+                  <div className="flex gap-3 mt-1">
+                    {['go', 'rust', 'cpp'].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => setSelectedLanguage(lang)}
+                        className={`px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                          selectedLanguage === lang
+                            ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                            : 'bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground'
+                        }`}
+                      >
+                        {lang === 'go' ? 'Go' : lang === 'rust' ? 'Rust' : 'C++'}
+                      </button>
+                    ))}
+                    <input type="hidden" name="language" value={selectedLanguage} />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Source (.zip)</label>
@@ -220,7 +261,7 @@ export function SubmissionPage() {
                     {isUploading ? <Loader2 className="animate-spin mx-auto" /> : 'Upload Submission'}
                   </Button>
                   {showActivePanel && (
-                    <Button type="button" variant="secondary" onClick={() => setShowUploadForm(false)}>
+                    <Button type="button" variant="secondary" onClick={() => navigate('/submissions')}>
                       Cancel
                     </Button>
                   )}
@@ -265,35 +306,66 @@ export function SubmissionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-8"
           >
-            <div className="flex justify-between items-center bg-card p-4 rounded-2xl border border-border">
-              <div>
-                <p className="text-sm text-muted-foreground">{isSubmissionOver ? 'Previous Submission' : 'Active Submission'}</p>
-                <p className="text-xl font-semibold text-foreground">{activeSubmission.submissionName} <span className="text-xs ml-2 px-2 py-1 bg-muted rounded-full">{activeSubmission.language}</span></p>
+            <div 
+              className={`flex flex-col md:flex-row justify-between items-start md:items-center bg-card p-4 rounded-2xl border ${isSubmissionOver ? (activeSubmission.status.toLowerCase() === 'completed' ? 'border-emerald-500/30 bg-emerald-500/5' : activeSubmission.status.toLowerCase() === 'failed' ? 'border-rose-500/30 bg-rose-500/5' : 'border-border') : 'border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]'} ${isSubmissionOver ? 'cursor-pointer hover:bg-muted/30 transition-colors' : ''}`}
+              onClick={() => isSubmissionOver && setIsPipelineExpanded(!isPipelineExpanded)}
+            >
+              <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">{isSubmissionOver ? 'Previous Submission' : 'Active Submission'}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xl font-bold text-foreground">{activeSubmission.submissionName}</p>
+                    <span className="text-xs px-2 py-1 bg-muted rounded-full font-medium border border-border">{activeSubmission.language}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase border ${
+                      activeSubmission.status.toLowerCase() === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
+                      activeSubmission.status.toLowerCase() === 'failed' ? 'bg-rose-500/10 text-rose-500 border-rose-500/30' :
+                      'bg-primary/10 text-primary border-primary/30'
+                    }`}>
+                      {activeSubmission.status}
+                    </span>
+                  </div>
+                </div>
+                {isSubmissionOver && leaderboard.find(l => l.submissionId === activeSubmission.id) && (
+                  <div className="hidden md:flex items-center gap-4 border-l border-border pl-6">
+                    <div className="flex flex-col items-center justify-center px-4 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 min-w-[70px] shadow-sm">
+                      <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase tracking-wider font-bold mb-0.5">Rank</p>
+                      <p className="text-lg leading-none font-bold text-amber-800 dark:text-amber-300">#{leaderboard.find(l => l.submissionId === activeSubmission.id)?.rank}</p>
+                    </div>
+                    <div className="flex flex-col items-center justify-center px-4 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 min-w-[70px] shadow-sm">
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase tracking-wider font-bold mb-0.5">Score</p>
+                      <p className="text-lg leading-none font-bold text-emerald-800 dark:text-emerald-300">{leaderboard.find(l => l.submissionId === activeSubmission.id)?.finalScore.toFixed(2)}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Button onClick={() => setShowUploadForm(true)} variant="secondary" size="sm">
-                New Submission
-              </Button>
+              <div className="flex items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
+                <Button onClick={(e) => { e.stopPropagation(); navigate('/submit'); }} variant="secondary" size="sm" className="w-full md:w-auto">
+                  New Submission
+                </Button>
+                {isSubmissionOver && (
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted/50 text-sm font-semibold text-muted-foreground transition-colors shadow-sm">
+                    {isPipelineExpanded ? 'Hide Details' : 'View Details'}
+                    {isPipelineExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2 items-start">
-              <Card className={`relative overflow-hidden flex flex-col transition-all duration-300 ${isPipelineExpanded ? 'h-[600px]' : 'h-auto'}`}>
+            <AnimatePresence>
+              {(!isSubmissionOver || isPipelineExpanded) && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="grid gap-6 lg:grid-cols-2 items-start overflow-hidden"
+                >
+              <Card className="relative overflow-hidden flex flex-col transition-all duration-300 h-[600px]">
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-violet-500/5" />
                 <div className="relative p-6 flex-1 flex flex-col min-h-0">
-                  <div 
-                    className={`flex items-center justify-between shrink-0 ${isPipelineExpanded ? 'mb-8' : ''} ${isSubmissionOver ? 'cursor-pointer' : ''}`}
-                    onClick={() => isSubmissionOver && setIsPipelineExpanded(!isPipelineExpanded)}
-                  >
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {isSubmissionOver ? "View your previous submission execution flow" : "Pipeline Timeline"}
-                    </h3>
-                    {isSubmissionOver && (
-                      <button className="text-muted-foreground hover:text-foreground">
-                        {isPipelineExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                      </button>
-                    )}
+                  <div className="flex items-center justify-between shrink-0 mb-8">
+                    <h3 className="text-lg font-semibold text-foreground">Pipeline Timeline</h3>
                   </div>
                   
-                  {isPipelineExpanded && (
                   <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar min-h-0 mt-4">
                     <div className="relative">
                       <div className="absolute left-8 top-0 bottom-0 w-px bg-muted" />
@@ -303,7 +375,7 @@ export function SubmissionPage() {
                         <div className="flex flex-col items-center justify-center p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
                           <CheckCircle className="text-emerald-400 mb-4" size={48} />
                           <h3 className="text-2xl font-bold text-foreground mb-2">Pipeline Completed ✓</h3>
-                          <p className="text-emerald-200/80 mb-8 text-center max-w-md">Your submission has been successfully built, deployed, validated, and benchmarked.</p>
+                          <p className="text-emerald-700 dark:text-emerald-200/80 mb-8 text-center max-w-md">Your submission has been successfully built, deployed, validated, and benchmarked.</p>
                           
                           <div className="flex gap-4">
                             <Link to={`/submissions/${activeSubmission?.id}/report`}>
@@ -353,19 +425,15 @@ export function SubmissionPage() {
                     </div>
                   </div>
                 </div>
-                )}
               </div>
             </Card>
 
               {/* Logs Panel */}
-              <Card className={`flex flex-col overflow-hidden p-0 border-border bg-[#0a0a0a] transition-all duration-300 ${isLogsExpanded ? 'h-[600px]' : 'h-auto'}`}>
-                <div 
-                  className={`bg-card p-4 flex items-center justify-between ${isLogsExpanded ? 'border-b border-border' : ''} ${isSubmissionOver ? 'cursor-pointer hover:bg-muted/50' : ''}`}
-                  onClick={() => isSubmissionOver && setIsLogsExpanded(!isLogsExpanded)}
-                >
+              <Card className="flex flex-col overflow-hidden p-0 border-border bg-[#0a0a0a] transition-all duration-300 h-[600px]">
+                <div className="bg-card p-4 flex items-center justify-between border-b border-border">
                   <div className="flex items-center gap-3 text-muted-foreground font-semibold">
                     <TerminalSquare size={20} className="text-primary" />
-                    <span>{isSubmissionOver ? "View your previous submission log output" : "Live Output"}</span>
+                    <span>Live Output</span>
                   </div>
                   <div className="flex items-center gap-4">
                     {activeStepIndex < timelineSteps.length && !hasFailed && (
@@ -377,14 +445,8 @@ export function SubmissionPage() {
                         STREAMING
                       </div>
                     )}
-                    {isSubmissionOver && (
-                      <button className="text-muted-foreground hover:text-foreground">
-                        {isLogsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                      </button>
-                    )}
                   </div>
                 </div>
-                {isLogsExpanded && (
                 <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed custom-scrollbar">
                   {logs.map((log, i) => (
                     <div key={i} className="mb-2 flex items-start gap-4 hover:bg-muted px-2 py-1 -mx-2 rounded transition-colors">
@@ -416,9 +478,10 @@ export function SubmissionPage() {
                     </div>
                   )}
                 </div>
-                )}
               </Card>
-            </div>
+              </motion.div>
+            )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
+import { PageHero } from '@/components/layout/PageHero'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { BenchmarkSessionCard } from '@/components/benchmark/BenchmarkSessionCard'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { Search, FileX } from 'lucide-react'
+import { Search, FileX, Zap, Activity, Clock, Database } from 'lucide-react'
 import { formatDuration, formatNumber, formatRelativeDate } from '@/utils/formatters'
 
 const statusVariants = {
@@ -77,19 +78,54 @@ export function BenchmarkSessionsPage() {
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <Skeleton className="h-4 w-40 mb-3" />
-            <Skeleton className="h-8 w-64" />
-          </div>
-          <Skeleton className="h-12 w-80 rounded-3xl" />
+        <PageHero 
+        theme="benchmark"
+        icon={<Zap size={40} />}
+        title="Benchmark Sessions"
+        subtitle="Active load testing and historical execution logs"
+        statusPills={[
+          { label: summary.running > 0 ? 'Active Load' : 'Idle', variant: summary.running > 0 ? 'success' : 'accent' }
+        ]}
+        metadata={[
+          { label: 'Total Sessions', value: summary.total },
+          { label: 'Completed', value: summary.completed },
+          { label: 'Active', value: summary.running }
+        ]}
+        quickLinks={[
+          { label: 'Analytics', targetId: 'analytics', icon: <Activity size={16} /> },
+          { label: 'Live Sessions', targetId: 'live-sessions', icon: <Clock size={16} /> },
+          { label: 'History', targetId: 'history', icon: <Database size={16} /> }
+        ]}
+      />
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <Link
+          to="/benchmarks/new"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary/90"
+        >
+          Start Benchmark
+        </Link>
+        <div className="relative flex-grow max-w-md">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground0" />
+          <input
+            type="search"
+            value={filter}
+            onChange={(event) => {
+              setFilter(event.target.value)
+              setPage(1)
+            }}
+            placeholder="Search sessions"
+            className="w-full rounded-3xl border border-border bg-background py-3 pl-11 pr-4 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-cyan-300/20"
+          />
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+      </div>
+
+      <div id="analytics" className="grid gap-4 md:grid-cols-3 scroll-mt-32">
           <Skeleton className="h-32 w-full rounded-3xl" />
           <Skeleton className="h-32 w-full rounded-3xl" />
           <Skeleton className="h-32 w-full rounded-3xl" />
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div id="live-sessions" className="grid gap-4 lg:grid-cols-3 scroll-mt-32">
           <Skeleton className="h-40 w-full rounded-3xl" />
           <Skeleton className="h-40 w-full rounded-3xl" />
           <Skeleton className="h-40 w-full rounded-3xl" />
@@ -170,7 +206,7 @@ export function BenchmarkSessionsPage() {
         ))}
       </div>
 
-      <Card title="Benchmark sessions table" description="Search, filter, and inspect benchmark runs.">
+      <div id="history" className="scroll-mt-32"><Card title="Benchmark sessions table" description="Search, filter, and inspect benchmark runs.">
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {statusOptions.map((status) => (
@@ -289,6 +325,7 @@ export function BenchmarkSessionsPage() {
           </div>
         </div>
       </Card>
+      </div>
     </div>
   )
 }

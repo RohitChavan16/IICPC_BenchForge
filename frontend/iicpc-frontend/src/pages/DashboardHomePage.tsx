@@ -7,9 +7,9 @@ import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
 import { Card } from '@/components/ui/Card'
 import { MetricSparkline } from '@/components/charts/MetricSparkline'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
-import { NotificationsCenter } from '@/components/dashboard/NotificationsCenter'
 import { Badge } from '@/components/ui/Badge'
-import { Info, ShieldCheck, TrendingUp, Zap, Play, Rocket } from 'lucide-react'
+import { Info, ShieldCheck, TrendingUp, Zap, Play, Rocket, LayoutDashboard, Activity, Database, Server } from 'lucide-react'
+import { PageHero } from '@/components/layout/PageHero'
 
 export function DashboardHomePage() {
   const { data: summary } = useQuery({ queryKey: ['telemetrySummary'], queryFn: fetchTelemetrySummary })
@@ -28,8 +28,29 @@ export function DashboardHomePage() {
   const hasActiveBenchmark = activeBenchmarks.length > 0
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+    <div className="space-y-8 pb-10">
+      <PageHero 
+        theme="dashboard"
+        icon={<LayoutDashboard size={40} />}
+        title="Command Center"
+        subtitle="Global platform orchestration and real-time telemetry"
+        statusPills={[
+          { label: hasActiveBenchmark ? 'Benchmark Active' : 'System Idle', variant: hasActiveBenchmark ? 'success' : 'accent' }
+        ]}
+        metadata={[
+          { label: 'Current Season', value: 'Phase 4' },
+          { label: 'Total Requests', value: summary ? formatNumber(summary.total) : '--' },
+          { label: 'Success Rate', value: summary ? formatPercent(summary.failureRate ? 100 - summary.failureRate : 99.9) : '--' }
+        ]}
+        quickLinks={[
+          { label: 'Overview', targetId: 'overview', icon: <Activity size={16} /> },
+          { label: 'Health', targetId: 'health', icon: <Server size={16} /> },
+          { label: 'Performance', targetId: 'performance', icon: <TrendingUp size={16} /> },
+          { label: 'Activity Feed', targetId: 'activity', icon: <Database size={16} /> }
+        ]}
+      />
+
+      <section id="overview" className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] scroll-mt-32">
         <Card className="space-y-6" title="Overview" description="Active telemetry, throughput, and platform health." >
           {hasActiveBenchmark ? (
             <>
@@ -98,7 +119,7 @@ export function DashboardHomePage() {
           )}
         </Card>
 
-        <div className="space-y-4">
+        <div id="health" className="space-y-4 scroll-mt-32">
           <Card title="Platform health" description="Critical subsystem status across telemetry, Redis, and PostgreSQL.">
             <div className="space-y-3">
               {(healthStatus ?? []).map((item) => (
@@ -122,7 +143,7 @@ export function DashboardHomePage() {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section id="performance" className="grid gap-6 lg:grid-cols-3 scroll-mt-32">
         <Card title="Request distribution" description="Latency distribution trend in the last 20 intervals.">
           <div className="mt-4">
             <MetricSparkline data={summary ? [
@@ -141,7 +162,9 @@ export function DashboardHomePage() {
             ))}
           </div>
         </Card>
-        <ActivityFeed />
+        <div id="activity" className="scroll-mt-32">
+          <ActivityFeed />
+        </div>
       </section>
     </div>
   )

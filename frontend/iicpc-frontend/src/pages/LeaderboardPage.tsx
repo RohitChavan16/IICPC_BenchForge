@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Trophy, Search, ChevronRight } from 'lucide-react'
+import { Trophy, Search, ChevronRight, Activity, TrendingUp, Users } from 'lucide-react'
 import { fetchLeaderboardEntries, fetchTopLeaderboardEntries } from '@/services/api/leaderboardService'
 import type { LeaderboardEntry } from '@/types/api'
+import { PageHero } from '@/components/layout/PageHero'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { formatNumber, formatPercent, formatDuration, formatRelativeDate } from '@/utils/formatters'
@@ -99,7 +100,7 @@ export function LeaderboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+      <div id="top-teams" className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] scroll-mt-32">
         <Card className="space-y-6" title="Top competitors" description="Leading benchmark runs from active teams.">
           <div className="grid gap-4 sm:grid-cols-3">
             {topEntries.slice(0, 3).map((entry, index) => (
@@ -158,7 +159,7 @@ export function LeaderboardPage() {
         </Card>
       </div>
 
-      <Card title="Leaderboard table" description="Full ranking from benchmark runs, updated live.">
+      <div id="standings" className="scroll-mt-32"><Card title="Leaderboard table" description="Full ranking from benchmark runs, updated live.">
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <Badge variant="info">Live</Badge>
@@ -225,6 +226,7 @@ export function LeaderboardPage() {
         </div>
       </Card>
 
+      </div>
       {/* Inline details removed in favor of LeaderboardDetailsPage */}
     </div>
   )
