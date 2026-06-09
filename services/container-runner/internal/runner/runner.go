@@ -155,7 +155,9 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 	imageTag := fmt.Sprintf("submission-%s:latest", id)
 	r.publishLog(id, "BUILD", "log", "Starting docker build", "IN_PROGRESS")
 
-	cmd := exec.Command("docker", "build", "-t", imageTag, tmpDir)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "docker", "build", "-t", imageTag, tmpDir)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	
@@ -180,7 +182,11 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 
 	err = cmd.Wait()
 	if err != nil {
-		r.failSubmission(id, "Docker build failed. Check build logs for details.")
+		if ctx.Err() == context.DeadlineExceeded {
+			r.failSubmission(id, "Docker build failed: Timed out after 5 minutes.")
+			return
+		}
+		r.failSubmission(id, fmt.Sprintf("Docker build failed: %v. Check build logs for details.", err))
 		return
 	}
 

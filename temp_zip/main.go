@@ -28,101 +28,109 @@ type Response struct {
 }
 
 var (
-	book []Order
-	mu   sync.Mutex
+	mu        sync.Mutex
+	orderBook []Order
+	reqCount  int
 )
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
-}
-
 func orderHandler(w http.ResponseWriter, r *http.Request) {
+	reqCount++
 
-	var incoming Order
+	var o Order
 
-	if err := json.NewDecoder(r.Body).Decode(&incoming); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Simulate benchmark phases
+
+	switch {
+	case reqCount < 300:
+		// normal
+
+	case reqCount < 500:
+		// whale phase
+		time.Sleep(10 * time.Millisecond)
+
+	case reqCount < 700:
+		// latency spike
+		time.Sleep(80 * time.Millisecond)
+
+	default:
+		// recovery
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	var trades []Trade
+	executed := 0
+	remaining := o.Quantity
+
 	mu.Lock()
 	defer mu.Unlock()
 
-	trades := []Trade{}
-	executed := 0
-	remaining := incoming.Quantity
+	var nextBook []Order
 
-	newBook := make([]Order, 0)
-
-	for _, resting := range book {
+	for _, resting := range orderBook {
 
 		if remaining == 0 {
-			newBook = append(newBook, resting)
+			nextBook = append(nextBook, resting)
 			continue
 		}
 
-		if incoming.Symbol != resting.Symbol {
-			newBook = append(newBook, resting)
+		match := false
+
+		if resting.Symbol == o.Symbol &&
+			resting.Side != o.Side {
+
+			if o.Side == "buy" && o.Price >= resting.Price {
+				match = true
+			}
+
+			if o.Side == "sell" && o.Price <= resting.Price {
+				match = true
+			}
+		}
+
+		if !match {
+			nextBook = append(nextBook, resting)
 			continue
 		}
 
-		if incoming.Side == resting.Side {
-			newBook = append(newBook, resting)
-			continue
-		}
+		qty := remaining
 
-		canMatch := false
-
-		if incoming.Side == "buy" && incoming.Price >= resting.Price {
-			canMatch = true
-		}
-
-		if incoming.Side == "sell" && incoming.Price <= resting.Price {
-			canMatch = true
-		}
-
-		if !canMatch {
-			newBook = append(newBook, resting)
-			continue
-		}
-
-		matchQty := remaining
-
-		if resting.Quantity < matchQty {
-			matchQty = resting.Quantity
+		if resting.Quantity < qty {
+			qty = resting.Quantity
 		}
 
 		trades = append(trades, Trade{
 			MakerOrderID: resting.OrderID,
-			Price:        resting.Price, // price improvement
-			Quantity:     matchQty,
+			Price:        resting.Price,
+			Quantity:     qty,
 		})
 
-		executed += matchQty
-		remaining -= matchQty
+		executed += qty
+		remaining -= qty
 
-		if resting.Quantity > matchQty {
-			resting.Quantity -= matchQty
-			newBook = append(newBook, resting)
+		if resting.Quantity > qty {
+			resting.Quantity -= qty
+			nextBook = append(nextBook, resting)
 		}
 	}
 
 	if remaining > 0 {
-		incoming.Quantity = remaining
-		newBook = append(newBook, incoming)
+		o.Quantity = remaining
+		nextBook = append(nextBook, o)
 	}
 
-	book = newBook
+	orderBook = nextBook
 
 	status := "resting"
 
-	if executed > 0 && remaining > 0 {
-		status = "partial"
-	}
-
 	if remaining == 0 {
 		status = "filled"
+	} else if executed > 0 {
+		status = "partial"
 	}
 
 	resp := Response{
@@ -132,19 +140,17 @@ func orderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
 	json.NewEncoder(w).Encode(resp)
 }
 
-func main() {
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
 
+func main() {
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/order", orderHandler)
 
-	server := &http.Server{
-		Addr:              ":8080",
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	server.ListenAndServe()
+	http.ListenAndServe(":8080", nil)
 }

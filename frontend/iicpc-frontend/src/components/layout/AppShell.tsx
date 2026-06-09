@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!isAdminRoute && <div className="fixed inset-x-0 top-0 h-[420px] bg-radial-glow opacity-80 blur-3xl pointer-events-none" />}
       <div className="relative mx-auto flex min-h-screen max-w-full overflow-clip">
         {hasAppNavigation ? (isAdminRoute ? <AdminSidebar /> : <Sidebar />) : null}
-        <div className={`flex min-h-screen flex-1 flex-col ${hasAppNavigation ? (isSidebarOpen ? 'xl:pl-[280px]' : 'xl:pl-[96px]') : ''}`}>
+        <div className={`flex min-w-0 min-h-screen flex-1 flex-col ${hasAppNavigation ? (isSidebarOpen ? 'xl:pl-[280px]' : 'xl:pl-[96px]') : ''}`}>
           {hasAppNavigation && !isAdminRoute ? <Topbar /> : null}
           <main className="relative flex-1 px-4 py-6 sm:px-6 xl:px-10 min-h-screen bg-slate-50 dark:bg-slate-950">
             <div className="mx-auto w-full max-w-[1440px]">{children}</div>

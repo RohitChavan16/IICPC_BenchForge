@@ -61,6 +61,9 @@ func main() {
 		hub,
 	)
 
+	// START REPLAY PROCESSOR WORKER
+	go aggregator.StartReplayProcessorWorker(ctx, db)
+
 	// START HTTP SERVER
 	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu, db)
 

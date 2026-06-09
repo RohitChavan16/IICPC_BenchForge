@@ -18,6 +18,7 @@ export interface QuickLink {
   label: string;
   targetId: string;
   icon?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export interface PageHeroProps {
@@ -33,22 +34,23 @@ export interface PageHeroProps {
 
 const themeConfig = {
   dashboard: {
-    gradient: 'from-indigo-500/20 via-blue-500/5 to-background',
-    orb: 'bg-indigo-500/20',
-    border: 'border-indigo-500/20',
-    accentText: 'text-indigo-400',
-    accentBg: 'bg-indigo-500/10',
-    lightBg: 'bg-indigo-50/50 dark:bg-card',
-    activeTab: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+    gradient: 'bg-gradient-to-br from-fuchsia-600/30 via-indigo-600/20 to-background dark:from-fuchsia-900/40 dark:via-indigo-900/20 dark:to-background',
+    orb: 'bg-fuchsia-500/40',
+    border: 'border-fuchsia-500/30',
+    accentText: 'text-fuchsia-700 dark:text-fuchsia-400',
+    accentBg: 'bg-fuchsia-500/20',
+    lightBg: 'bg-fuchsia-50/50 dark:bg-card/80',
+    activeTab: 'bg-fuchsia-500 text-white border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.5)]',
+    inactiveTab: 'bg-background/80 text-muted-foreground border-border hover:bg-background hover:border-fuchsia-500/50 hover:text-foreground'
   },
   submission: {
-    gradient: 'from-violet-500/20 via-cyan-500/5 to-background',
-    orb: 'bg-violet-500/20',
-    border: 'border-violet-500/20',
-    accentText: 'text-violet-400',
-    accentBg: 'bg-violet-500/10',
-    lightBg: 'bg-violet-50/50 dark:bg-card',
-    activeTab: 'bg-violet-500/20 text-violet-300 border-violet-500/30'
+    gradient: 'from-blue-500/20 via-cyan-500/5 to-background',
+    orb: 'bg-green-500/60',
+    border: 'border-blue-500/20',
+    accentText: 'text-blue-400',
+    accentBg: 'bg-blue-500/10',
+    lightBg: 'bg-blue-50/50 dark:bg-card',
+    activeTab: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
   },
   leaderboard: {
     gradient: 'from-amber-400/20 via-orange-500/5 to-background',
@@ -145,12 +147,12 @@ export function PageHero({ theme, backLink, statusPills, icon, title, subtitle, 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`relative overflow-hidden rounded-2xl border border-border ${t.lightBg || 'bg-card'} p-6 xl:p-8 min-h-[160px] shadow-sm mb-6 group`}
+      className={`relative overflow-hidden rounded-2xl border ${t.border} ${t.lightBg || 'bg-card'} ${t.gradient} p-6 xl:p-8 min-h-[160px] shadow-sm mb-6 group`}
     >
       {/* Background Decor */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
-        <div className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-[100px] ${t.orb} opacity-20 dark:opacity-40`} />
-        <div className={`absolute top-1/2 -right-32 w-80 h-80 rounded-full blur-[80px] ${t.orb} opacity-10 dark:opacity-20`} />
+        <div className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-[100px] ${t.orb} opacity-40 dark:opacity-60`} />
+        <div className={`absolute top-1/2 -right-32 w-80 h-80 rounded-full blur-[80px] ${t.orb} opacity-30 dark:opacity-40`} />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjA0KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiAvPjwvc3ZnPg==')] opacity-50 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
       </div>
 
@@ -159,7 +161,7 @@ export function PageHero({ theme, backLink, statusPills, icon, title, subtitle, 
         <div className="flex items-center justify-between mb-4">
           <div>
             {backLink && (
-              <Link to={backLink.to} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/30 hover:bg-secondary/60 border border-border/50 text-sm font-medium text-foreground transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+              <Link to={backLink.to} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md ${t.accentBg} hover:bg-background border ${t.border} text-sm font-medium ${t.accentText} transition-all shadow-sm hover:shadow-md`}>
                 <ArrowLeft size={16} />
                 {backLink.label}
               </Link>
@@ -223,11 +225,14 @@ export function PageHero({ theme, backLink, statusPills, icon, title, subtitle, 
                     key={i}
                     whileHover={{ scale: 1.04, y: -2 }}
                     whileTap={{ scale: 0.96 }}
-                    onClick={() => scrollTo(ql.targetId)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
-                      isActive 
-                        ? 'bg-primary text-primary-foreground border-primary shadow-md'
-                        : 'bg-muted text-muted-foreground border-border hover:bg-muted/80 hover:text-foreground'
+                    onClick={() => {
+                      if (ql.onClick) {
+                        ql.onClick();
+                      }
+                      scrollTo(ql.targetId);
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 ${
+                      isActive ? t.activeTab || 'bg-primary text-primary-foreground border-primary' : (t as any).inactiveTab || 'bg-background/80 text-muted-foreground border-border'
                     }`}
                   >
                     {ql.icon}

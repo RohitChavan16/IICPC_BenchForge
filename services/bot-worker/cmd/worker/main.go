@@ -259,7 +259,8 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	}
 
 	metrics.PublishMetric(context.Background(), rdb, metrics.RequestMetric{
-		BotType:   "system_control",
-		WorkerID:  "STOP_STREAM",
+		BotType:     "system_control",
+		WorkerID:    "STOP_STREAM",
+		BenchmarkID: req.BenchmarkID,
 	})
 }

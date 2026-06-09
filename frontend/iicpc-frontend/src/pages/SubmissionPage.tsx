@@ -4,12 +4,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { PageHero } from '@/components/layout/PageHero'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive, ChevronDown, ChevronUp, Trophy, Activity } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
+import { UploadCloud, Box, Server, Zap, CheckCircle, Loader2, XCircle, Clock, ShieldCheck, TerminalSquare, FileArchive, ChevronDown, ChevronUp, Trophy, Activity, Check } from 'lucide-react'
 import * as submissionService from '@/services/api/submissionService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSubmissionStore } from '@/stores/useSubmissionStore'
 import { useToast } from '@/components/ui/ToastProvider'
 import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
+import { DeploymentControlHeader } from '@/components/submission/DeploymentControlHeader'
+import { SubmissionFiltersBar } from '@/components/submission/SubmissionFiltersBar'
+import type { FilterState } from '@/components/submission/SubmissionFiltersBar'
+import { SubmissionHistoryGrid } from '@/components/submission/SubmissionHistoryGrid'
 
 const timelineSteps = [
   { id: 'UPLOAD', label: 'Upload', icon: UploadCloud, desc: 'Securely transferring submission.' },
@@ -27,10 +32,17 @@ export function SubmissionPage() {
   
   const isSubmitRoute = location.pathname === '/submit'
   
-  const { activeSubmission, submissionsHistory, fetchSubmissions, setActiveSubmission } = useSubmissionStore()
+  const { activeSubmission, submissionsHistory, fetchSubmissions, setActiveSubmission, isLoading } = useSubmissionStore()
   const [isUploading, setIsUploading] = useState(false)
   const [showUploadForm, setShowUploadForm] = useState(false)
+  const [filters, setFilters] = useState<FilterState>({ search: '', language: 'all', status: 'all', date: 'all' })
+  
+  // Drag and drop states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedFileName, setSelectedFileName] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<'idle' | 'preparing' | 'uploading' | 'processing'>('idle')
+
   const [selectedLanguage, setSelectedLanguage] = useState('go')
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [isPipelineExpanded, setIsPipelineExpanded] = useState(true)
@@ -49,9 +61,6 @@ export function SubmissionPage() {
     if (!activeSubmission?.id) return
 
     setLogs([])
-    // We should construct the correct WS URL based on API Gateway config or direct submission-service URL
-    // API Gateway proxies WebSockets, so we can use wss://<domain>/submissions/{id}/stream
-    // Since we're using Vite proxy, we might connect to ws://localhost:8080/submissions/{id}/stream
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
     const wsBaseUrl = apiBaseUrl.replace(/^http/, 'ws')
     const token = useAuthStore.getState().token
@@ -64,7 +73,6 @@ export function SubmissionPage() {
       if (data.type === 'log') {
         setLogs(prev => [...prev, data])
       } else if (data.type === 'state_change') {
-        // Optimistically update the activeSubmission state in memory
         setActiveSubmission({
           ...activeSubmission,
           currentStage: data.stage,
@@ -75,9 +83,58 @@ export function SubmissionPage() {
         })
         fetchSubmissions()
         if (data.stage_status === 'FAILED') {
-          pushToast({ title: 'Pipeline Failed', description: data.message || 'Error occurred', variant: 'error' })
+          pushToast({ 
+            title: 'Pipeline Failed', 
+            variant: 'error',
+            description: (
+              <div className="mt-2 space-y-2">
+                <p className="text-sm font-medium text-foreground">Submission <span className="font-bold text-rose-400">{activeSubmission.submissionName}</span> encountered an error.</p>
+                <p className="text-xs p-2 bg-rose-500/10 rounded border border-rose-500/20 text-rose-300">{data.message || 'Unknown error'}</p>
+                <button 
+                  onClick={() => navigate(`/submissions/${activeSubmission.id}/report`)}
+                  className="w-full mt-2 py-1.5 px-4 bg-secondary hover:bg-secondary/80 text-foreground rounded text-sm font-semibold transition-colors"
+                >
+                  View Logs
+                </button>
+              </div>
+            )
+          })
         } else if (data.stage === 'BENCHMARK' && data.stage_status === 'SUCCESS') {
-          pushToast({ title: 'Success', description: 'Pipeline completed successfully!', variant: 'success' })
+          fetchLeaderboardEntries().then(res => {
+            const items = res.items || [];
+            setLeaderboard(items);
+            const entry = items.find((l: any) => l.submissionId === activeSubmission.id);
+            pushToast({ 
+              title: 'Benchmark Completed', 
+              variant: 'success',
+              description: (
+                <div className="mt-2 space-y-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Submission <span className="text-emerald-400 font-bold">{activeSubmission.submissionName}</span> has finished processing.
+                  </p>
+                  {entry && (
+                    <div className="flex gap-6 p-3 bg-secondary/30 rounded-xl border border-border/50 shadow-inner">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">Rank</p>
+                        <p className="text-2xl font-black text-amber-400 drop-shadow-sm">#{entry.rank}</p>
+                      </div>
+                      <div className="w-px bg-border/50 self-stretch"></div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-0.5">Score</p>
+                        <p className="text-2xl font-black text-emerald-400 drop-shadow-sm">{entry.finalScore.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => navigate(`/submissions/${activeSubmission.id}/report`)}
+                    className="w-full mt-1 py-2 px-4 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-sm font-bold transition-colors shadow-sm"
+                  >
+                    View Full Report
+                  </button>
+                </div>
+              )
+            });
+          }).catch(console.error);
         }
       }
     }
@@ -90,32 +147,82 @@ export function SubmissionPage() {
   }, [activeSubmission?.id])
 
   useEffect(() => {
-    // Auto-scroll logs
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [logs])
 
+  // Drag and drop handlers
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+  
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+  
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    handleFileSelection(file)
+  }
+  
+  const handleFileSelection = (file?: File) => {
+    if (!file) return
+    if (!file.name.endsWith('.zip') && file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') {
+      pushToast({ title: 'Invalid Format', description: 'Please upload a .zip package.', variant: 'error' })
+      return
+    }
+    setSelectedFile(file)
+    setSelectedFileName(file.name)
+  }
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!user) return
+    if (!user || !selectedFile) return
 
     const formData = new FormData(e.currentTarget)
     formData.append('teamName', user.team || user.name)
+    formData.set('file', selectedFile) // Ensure D&D file is attached securely
 
     try {
       setIsUploading(true)
+      setUploadProgress('preparing')
+      // Simulate preparing state
+      await new Promise(r => setTimeout(r, 400))
+      
+      setUploadProgress('uploading')
       const newSub = await submissionService.createSubmission(formData)
-      pushToast({ title: 'Success', description: 'Submission uploaded.', variant: 'success' })
+      
+      setUploadProgress('processing')
+      // Simulate processing state
+      await new Promise(r => setTimeout(r, 400))
+
+      pushToast({ title: 'Success', description: 'Package deployed successfully.', variant: 'success' })
       setShowUploadForm(false)
+      setSelectedFile(null)
       setSelectedFileName('')
+      setUploadProgress('idle')
       setActiveSubmission(newSub)
-      fetchSubmissions() // Refresh history
+      fetchSubmissions() 
       if (isSubmitRoute) {
         navigate('/submissions')
       }
     } catch (err: any) {
-      pushToast({ title: 'Upload Failed', description: err.message || 'Unknown error', variant: 'error' })
+      pushToast({ title: 'Deploy Failed', description: err.message || 'Unknown error', variant: 'error' })
+      setUploadProgress('idle')
     } finally {
       setIsUploading(false)
     }
@@ -130,18 +237,10 @@ export function SubmissionPage() {
       const status = activeSubmission.stageStatus || 'SUCCESS'
       
       stepIndex = timelineSteps.findIndex(s => s.id === stage)
-      if (stepIndex === -1) stepIndex = 0 // Default to first
+      if (stepIndex === -1) stepIndex = 0 
 
-      if (status === 'SUCCESS') {
-        // If success on current stage, visually we are waiting for next or currently on next
-        stepIndex += 1
-      }
-      
-      if (status === 'FAILED') {
-        isFailed = true
-      }
-      
-      // Safety catch if backend explicitly marks as completed
+      if (status === 'SUCCESS') stepIndex += 1
+      if (status === 'FAILED') isFailed = true
       if (activeSubmission.status === 'completed' || activeSubmission.status === 'COMPLETED') {
         stepIndex = timelineSteps.length
         isFailed = false
@@ -159,35 +258,50 @@ export function SubmissionPage() {
 
   const totalSubmissions = submissionsHistory.length;
   const totalCompleted = submissionsHistory.filter(s => s.status.toLowerCase() === 'completed').length;
-  const totalFailed = submissionsHistory.filter(s => s.status.toLowerCase() === 'failed').length;
-  const currentRunning = submissionsHistory.filter(s => !['completed', 'failed'].includes(s.status.toLowerCase())).length;
-  const bestScore = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.finalScore)).toFixed(2) : 'N/A';
-  const worstScore = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.finalScore)).toFixed(2) : 'N/A';
+  const successRate = totalSubmissions > 0 ? ((totalCompleted / totalSubmissions) * 100).toFixed(1) + '%' : '0%';
+  const currentRunning = submissionsHistory.filter(s => !['completed', 'failed', 'cancelled'].includes(s.status.toLowerCase())).length;
+
+  const bestRankNum = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.rank)) : null
+  const bestScoreNum = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.finalScore)) : null
+  const worstScoreNum = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.finalScore)) : null
+  const failedCount = submissionsHistory.filter(s => s.status.toLowerCase() === 'failed').length;
+  const correctnessScores = leaderboard.filter(l => l.correctnessScore !== undefined).map(l => l.correctnessScore as number)
+  const avgCorrectnessNum = correctnessScores.length > 0 ? correctnessScores.reduce((a,b)=>a+b,0)/correctnessScores.length : null
+
+  const filteredHistory = submissionsHistory.filter(sub => {
+    if (filters.search && !sub.submissionName.toLowerCase().includes(filters.search.toLowerCase()) && !sub.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.language !== 'all' && sub.language !== filters.language) return false;
+    if (filters.status !== 'all' && sub.status.toLowerCase() !== filters.status) return false;
+    if (filters.date !== 'all') {
+      const date = new Date(sub.createdAt)
+      const now = new Date()
+      const diffTime = Math.abs(now.getTime() - date.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      if (filters.date === 'today' && diffDays > 1) return false;
+      if (filters.date === 'week' && diffDays > 7) return false;
+      if (filters.date === 'month' && diffDays > 30) return false;
+    }
+    return true;
+  })
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6 pb-2 overflow-x-hidden">
       <PageHero 
-        theme={isSubmitRoute ? "dashboard" : "history"}
+        theme={isSubmitRoute ? "dashboard" : "submission"}
         icon={<TerminalSquare size={40} />}
-        title={isSubmitRoute ? "Submit Code" : "Submission History"}
+        title={isSubmitRoute ? "Deploy Engine" : "Deployment History"}
         subtitle={isSubmitRoute 
-          ? "Upload your engine source code and deploy to the cluster for correctness validation and high-frequency benchmarking."
-          : "Command Center for Code Execution, Verification, and Historical Analytics. Review your past deployments, monitor active builds, and confidently deploy new engine iterations to the evaluation cluster."}
+          ? "Upload your engine package and deploy it for high-frequency benchmarking on the evaluation cluster."
+          : "Command Center for your deployments. Review past runs, analyze validation logs, and push new iterations to the leaderboard."}
         statusPills={[
-          { label: activeSubmission ? 'Active' : 'Awaiting', variant: activeSubmission ? 'success' : 'info' }
+          { label: activeSubmission ? 'Deployment Active' : 'Awaiting Deployment', variant: activeSubmission ? 'success' : 'info' }
         ]}
-        metadata={isSubmitRoute ? [
-          { label: 'Instruction', value: '3 Steps', icon: <Box size={14} /> },
-          { label: 'History', value: totalSubmissions, icon: <FileArchive size={14} /> },
-          { label: 'Current Running', value: currentRunning, icon: <Zap size={14} /> },
-          { label: 'Success', value: totalCompleted, icon: <CheckCircle size={14} /> },
-          { label: 'Failed', value: totalFailed, icon: <XCircle size={14} /> }
-        ] : [
-          { label: 'Total Entries', value: totalSubmissions, icon: <FileArchive size={14} /> },
-          { label: 'Completed', value: totalCompleted, icon: <CheckCircle size={14} /> },
-          { label: 'Failed', value: totalFailed, icon: <XCircle size={14} /> },
-          { label: 'Best Score', value: bestScore, icon: <Trophy size={14} /> },
-          { label: 'Worst Score', value: worstScore, icon: <Activity size={14} /> }
+        metadata={[
+          { label: 'Total Deployments', value: totalSubmissions, icon: <FileArchive size={14} /> },
+          { label: 'Success Rate', value: successRate, icon: <CheckCircle size={14} /> },
+          { label: 'Active Jobs', value: currentRunning, icon: <Zap size={14} /> },
+          { label: 'Best Rank', value: bestRankNum !== null ? `#${bestRankNum}` : 'Unranked', icon: <Trophy size={14} /> },
+          { label: 'Supported Runtimes', value: 'Go, Rust, C++', icon: <Box size={14} /> }
         ]}
       />
 
@@ -198,70 +312,131 @@ export function SubmissionPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="grid gap-6 md:grid-cols-2"
+            className="grid gap-6 md:grid-cols-2 items-stretch"
           >
-            <Card title="Upload New Submission">
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">Submission Name</label>
-                  <input type="text" name="submissionName" required className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-foreground outline-none focus:border-primary" placeholder="e.g. baseline-engine" />
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Language</label>
-                  <div className="flex gap-3 mt-1">
-                    {['go', 'rust', 'cpp'].map((lang) => (
-                      <button
-                        key={lang}
-                        type="button"
-                        onClick={() => setSelectedLanguage(lang)}
-                        className={`px-4 py-2 rounded-xl border text-sm font-semibold transition-all ${
-                          selectedLanguage === lang
-                            ? 'bg-primary text-primary-foreground border-primary shadow-md'
-                            : 'bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground'
-                        }`}
-                      >
-                        {lang === 'go' ? 'Go' : lang === 'rust' ? 'Rust' : 'C++'}
-                      </button>
-                    ))}
-                    <input type="hidden" name="language" value={selectedLanguage} />
+            <Card title="Upload Engine Package" className="h-full flex flex-col">
+              <form onSubmit={handleUpload} className="space-y-6 flex-1 flex flex-col">
+                <div className="space-y-4 flex-1">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Deployment Name</label>
+                    <input type="text" name="submissionName" required className="mt-1.5 w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-sm" placeholder="e.g. baseline-engine-v2" />
                   </div>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Source (.zip)</label>
-                  <div className="mt-1 flex flex-col gap-3 rounded-xl border border-border bg-background p-3 sm:flex-row sm:items-center">
-                    <input
-                      id="submission-source-file"
-                      type="file"
-                      name="file"
-                      accept=".zip"
-                      required
-                      className="sr-only"
-                      onChange={(event) => setSelectedFileName(event.target.files?.[0]?.name ?? '')}
-                    />
-                    <label
-                      htmlFor="submission-source-file"
-                      className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+                  
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Language Runtime</label>
+                    <div className="flex gap-2 mt-1.5">
+                      {['go', 'rust', 'cpp'].map((lang) => (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => setSelectedLanguage(lang)}
+                          className={`flex-1 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                            selectedLanguage === lang
+                              ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.2)]'
+                              : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:bg-muted/50'
+                          }`}
+                        >
+                          {lang === 'go' ? 'Go' : lang === 'rust' ? 'Rust' : 'C++'}
+                        </button>
+                      ))}
+                      <input type="hidden" name="language" value={selectedLanguage} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Source Package (.zip)</label>
+                    <div 
+                      className={`mt-1.5 relative group overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ${
+                        isDragging ? 'border-primary bg-primary/10 scale-[1.02] shadow-[0_0_30px_rgba(var(--primary),0.15)]' : 
+                        selectedFile ? 'border-emerald-500/50 bg-emerald-500/5' : 
+                        'border-border bg-muted/20 hover:bg-muted/40 hover:border-primary/50'
+                      }`}
+                      onDragOver={onDragOver}
+                      onDragLeave={onDragLeave}
+                      onDrop={onDrop}
                     >
-                      <UploadCloud size={18} />
-                      Choose File
-                    </label>
-                    <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
-                      <FileArchive size={18} className="shrink-0 text-muted-foreground" />
-                      <span
-                        className={selectedFileName ? 'truncate font-medium text-foreground' : 'text-muted-foreground'}
-                        title={selectedFileName || 'No file chosen'}
-                      >
-                        {selectedFileName || 'No file chosen'}
-                      </span>
+                      <input
+                        id="submission-source-file"
+                        type="file"
+                        accept=".zip"
+                        className="sr-only"
+                        onChange={(e) => handleFileSelection(e.target.files?.[0])}
+                      />
+                      
+                      <label htmlFor="submission-source-file" className={`flex flex-col items-center justify-center w-full p-8 ${selectedFile ? 'cursor-default' : 'cursor-pointer'} min-h-[220px]`}>
+                        {!selectedFile ? (
+                          <>
+                            <div className={`p-4 rounded-full mb-4 transition-all duration-300 ${isDragging ? 'bg-primary text-primary-foreground scale-110 shadow-lg' : 'bg-background border border-border text-muted-foreground group-hover:text-primary group-hover:scale-105 group-hover:shadow-sm'}`}>
+                              <UploadCloud size={32} />
+                            </div>
+                            <h4 className={`text-lg font-bold mb-1 transition-colors ${isDragging ? 'text-primary' : 'text-foreground'}`}>
+                              {isDragging ? 'Release to Upload Package' : 'Drag & Drop Engine Package'}
+                            </h4>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {isDragging ? 'Drop your .zip file here' : 'or click to browse files'}
+                            </p>
+                            <div className="flex gap-4 text-xs font-semibold text-muted-foreground">
+                              <span className="flex items-center gap-1 bg-background px-2 py-1 rounded border border-border shadow-sm"><FileArchive size={12}/> .ZIP Package</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full flex flex-col items-center">
+                             <div className="p-3 rounded-full bg-emerald-500/20 text-emerald-500 mb-3 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                               <CheckCircle size={32} />
+                             </div>
+                             <h4 className="text-lg font-bold text-foreground mb-1">{selectedFile.name}</h4>
+                             <p className="text-sm text-muted-foreground font-mono mb-4">{formatBytes(selectedFile.size)} • ZIP Archive</p>
+                             <Badge variant="success" className="uppercase tracking-widest text-[10px] px-3 py-1 shadow-sm">
+                               READY FOR SUBMISSION
+                             </Badge>
+                             <button 
+                               type="button" 
+                               onClick={(e) => { e.preventDefault(); setSelectedFile(null); setSelectedFileName(''); }}
+                               className="mt-6 text-xs text-muted-foreground hover:text-rose-500 font-semibold underline underline-offset-2 transition-colors"
+                             >
+                               Remove package
+                             </button>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-4 rounded-xl border border-border bg-card shadow-sm">
+                    <h5 className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-3">Pre-Flight Checklist</h5>
+                    <div className="space-y-2.5">
+                       <ValidationItem label="Language runtime selected" isValid={selectedLanguage !== ''} />
+                       <ValidationItem label="ZIP package attached" isValid={selectedFile !== null} />
+                       <ValidationItem label="Package size accepted" isValid={selectedFile !== null && selectedFile.size <= 20 * 1024 * 1024} />
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 mt-4">
-                  <Button type="submit" className="w-full" disabled={isUploading}>
-                    {isUploading ? <Loader2 className="animate-spin mx-auto" /> : 'Upload Submission'}
-                  </Button>
+
+                <div className="mt-6 shrink-0">
+                  <button 
+                    type="submit" 
+                    disabled={isUploading || !selectedFile || !selectedLanguage || selectedFile.size > 20 * 1024 * 1024}
+                    className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 relative overflow-hidden ${
+                      (!selectedFile || !selectedLanguage || selectedFile.size > 20 * 1024 * 1024) 
+                        ? 'bg-muted text-muted-foreground border border-border cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] hover:-translate-y-0.5'
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={18} />
+                        {uploadProgress === 'preparing' ? 'Preparing Package...' : 
+                         uploadProgress === 'uploading' ? 'Uploading to Hub...' : 'Processing Pipeline...'}
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud size={18} />
+                        Deploy Engine
+                      </>
+                    )}
+                  </button>
                   {showActivePanel && (
-                    <Button type="button" variant="secondary" onClick={() => navigate('/submissions')}>
+                    <Button type="button" variant="secondary" onClick={() => navigate('/submissions')} className="w-full mt-3">
                       Cancel
                     </Button>
                   )}
@@ -269,33 +444,68 @@ export function SubmissionPage() {
               </form>
             </Card>
 
-            <div className="space-y-6">
-              <Card title="Exchange Contract v1 Requirements" description="Your engine MUST implement the following endpoints to pass validation.">
-                <ul className="mt-4 space-y-4 text-sm text-muted-foreground">
-                  <li className="flex gap-3">
-                    <ShieldCheck className="text-emerald-400 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="font-semibold text-emerald-300">GET /health</p>
-                      <p className="text-muted-foreground mt-1">Return HTTP 200 OK. Used by the validation stage to ensure your container is fully booted.</p>
+            <Card title="Benchmarking Contract" description="Engine specifications and evaluation criteria." className="h-full flex flex-col">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 mt-4 space-y-8">
+                
+                <div className="space-y-4">
+                  <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground border-b border-border pb-2">Network & Endpoints</h4>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li className="flex gap-4 items-start p-3 rounded-xl border border-border bg-muted/20">
+                      <ShieldCheck className="text-emerald-500 shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">GET /health</p>
+                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">Return HTTP 200 OK. Used by the validation stage to ensure your container is fully booted.</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-4 items-start p-3 rounded-xl border border-border bg-muted/20">
+                      <Zap className="text-purple-500 shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="font-bold text-purple-600 dark:text-purple-400">POST /order</p>
+                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">Accepts JSON: <code className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px]">{"{ symbol, price, quantity, side }"}</code>. Must return HTTP 2xx on successful matching. Up to 100k TPS.</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-4 items-start p-3 rounded-xl border border-border bg-muted/20">
+                      <Server className="text-primary shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="font-bold text-primary">Port 8080</p>
+                        <p className="text-muted-foreground mt-1 text-xs leading-relaxed">Your web server MUST listen on port 8080, binding to <code className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px]">0.0.0.0</code>.</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xs uppercase tracking-widest font-bold text-muted-foreground border-b border-border pb-2">Traffic Personas</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5">
+                      <p className="font-bold text-cyan-600 dark:text-cyan-400 text-sm mb-1">HFT Bots</p>
+                      <p className="text-xs text-muted-foreground">High burst rates, massive concurrency.</p>
                     </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <Zap className="text-purple-400 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="font-semibold text-purple-300">POST /order</p>
-                      <p className="text-muted-foreground mt-1">Accepts JSON: <code className="bg-muted px-1 py-0.5 rounded">{"{ symbol, price, quantity, side }"}</code>. Must return HTTP 2xx on successful matching/logging. Bots will generate up to 20k TPS to this endpoint.</p>
+                    <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                      <p className="font-bold text-amber-600 dark:text-amber-400 text-sm mb-1">Retail Users</p>
+                      <p className="text-xs text-muted-foreground">Slow, sustained, predictable traffic.</p>
                     </div>
-                  </li>
-                  <li className="flex gap-3">
-                    <Server className="text-primary flex-shrink-0" size={20} />
-                    <div>
-                      <p className="font-semibold text-primary">Port 8080</p>
-                      <p className="text-muted-foreground mt-1">Your web server MUST listen on port 8080, binding to 0.0.0.0.</p>
+                    <div className="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                      <p className="font-bold text-purple-600 dark:text-purple-400 text-sm mb-1">Whales</p>
+                      <p className="text-xs text-muted-foreground">Massive isolated order quantities.</p>
                     </div>
-                  </li>
-                </ul>
-              </Card>
-            </div>
+                    <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                      <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1">Market Makers</p>
+                      <p className="text-xs text-muted-foreground">Constant two-sided quote updates.</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/5">
+                      <p className="font-bold text-rose-600 dark:text-rose-400 text-sm mb-1">Sniper Bots</p>
+                      <p className="text-xs text-muted-foreground">Latency-sensitive aggressive orders.</p>
+                    </div>
+                    <div className="p-3 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+                      <p className="font-bold text-indigo-600 dark:text-indigo-400 text-sm mb-1">Institutions</p>
+                      <p className="text-xs text-muted-foreground">Large block trades parsed over time.</p>
+                    </div>
+                  </div>
+                </div>
+                
+              </div>
+            </Card>
           </motion.div>
         )}
 
@@ -312,7 +522,7 @@ export function SubmissionPage() {
             >
               <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
                 <div>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">{isSubmissionOver ? 'Previous Submission' : 'Active Submission'}</p>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold mb-1">{isSubmissionOver ? 'Previous Deployment' : 'Active Deployment'}</p>
                   <div className="flex items-center gap-3">
                     <p className="text-xl font-bold text-foreground">{activeSubmission.submissionName}</p>
                     <span className="text-xs px-2 py-1 bg-muted rounded-full font-medium border border-border">{activeSubmission.language}</span>
@@ -340,7 +550,7 @@ export function SubmissionPage() {
               </div>
               <div className="flex items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
                 <Button onClick={(e) => { e.stopPropagation(); navigate('/submit'); }} variant="secondary" size="sm" className="w-full md:w-auto">
-                  New Submission
+                  New Deployment
                 </Button>
                 {isSubmissionOver && (
                   <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-muted/50 text-sm font-semibold text-muted-foreground transition-colors shadow-sm">
@@ -375,7 +585,7 @@ export function SubmissionPage() {
                         <div className="flex flex-col items-center justify-center p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
                           <CheckCircle className="text-emerald-400 mb-4" size={48} />
                           <h3 className="text-2xl font-bold text-foreground mb-2">Pipeline Completed ✓</h3>
-                          <p className="text-emerald-700 dark:text-emerald-200/80 mb-8 text-center max-w-md">Your submission has been successfully built, deployed, validated, and benchmarked.</p>
+                          <p className="text-emerald-700 dark:text-emerald-200/80 mb-8 text-center max-w-md">Your engine has been successfully built, deployed, validated, and benchmarked.</p>
                           
                           <div className="flex gap-4">
                             <Link to={`/submissions/${activeSubmission?.id}/report`}>
@@ -486,75 +696,43 @@ export function SubmissionPage() {
         )}
       </AnimatePresence>
 
-      <Card title="Submission History" className="mt-8">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-muted-foreground">
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="pb-3 font-medium">Name</th>
-                <th className="pb-3 font-medium">Language</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Rank / Score</th>
-                <th className="pb-3 font-medium">Created At</th>
-                <th className="pb-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {submissionsHistory.map((sub) => (
-                <tr key={sub.id} className="border-b border-border last:border-0 hover:bg-muted transition-colors">
-                  <td className="py-4 text-foreground font-medium">{sub.submissionName}</td>
-                  <td className="py-4">
-                    <span className="px-2 py-1 bg-muted border border-border rounded text-xs">{sub.language}</span>
-                  </td>
-                  <td className="py-4">
-                     <div className="flex flex-col gap-1 items-start">
-                       <span className={`px-2 py-1 rounded text-xs ${
-                         sub.status.toLowerCase() === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                         sub.status.toLowerCase() === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                         'bg-primary/10 text-primary border border-primary/20'
-                       }`}>
-                         {sub.status.toUpperCase()}
-                       </span>
-                       {sub.status === 'failed' && sub.failureReason && (
-                         <span className="text-[10px] text-rose-400/80 max-w-xs truncate" title={sub.failureReason}>
-                           {sub.failureReason}
-                         </span>
-                       )}
-                     </div>
-                  </td>
-                  <td className="py-4">
-                    {leaderboard.find(l => l.submissionId === sub.id) ? (
-                      <div className="flex flex-col">
-                        <span className="text-emerald-400 font-semibold">#{leaderboard.find(l => l.submissionId === sub.id).rank}</span>
-                        <span className="text-xs text-foreground0">Score: {leaderboard.find(l => l.submissionId === sub.id).finalScore.toFixed(2)}</span>
-                      </div>
-                    ) : (
-                      <span className="text-foreground0">-</span>
-                    )}
-                  </td>
-                  <td className="py-4 text-muted-foreground flex items-center gap-2">
-                    <Clock size={14} /> {new Date(sub.createdAt).toLocaleString()}
-                  </td>
-                  <td className="py-4 text-right">
-                    <Link to={`/submissions/${sub.id}/report`}>
-                      <Button variant="secondary" size="sm" className="bg-muted hover:bg-muted text-primary border-border">
-                        View Report
-                      </Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {submissionsHistory.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-foreground0">
-                    No submissions found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {!isSubmitRoute && (
+        <div className="space-y-0 mt-4 bg-card dark:bg-[#0b0e14] p-4 md:p-6 rounded-2xl border border-border w-full overflow-hidden shadow-sm">
+          <DeploymentControlHeader 
+            totalDeployments={totalSubmissions}
+            successfulSubmissions={totalCompleted}
+            failedSubmissions={failedCount}
+            activeJobs={currentRunning}
+            bestRank={bestRankNum}
+            bestScore={bestScoreNum}
+            worstScore={worstScoreNum}
+          />
+
+          <SubmissionFiltersBar 
+            filters={filters}
+            setFilters={setFilters}
+            onRefresh={fetchSubmissions}
+            isRefreshing={isLoading}
+          />
+
+          <SubmissionHistoryGrid 
+            submissions={filteredHistory}
+            leaderboard={leaderboard}
+            isLoading={isLoading}
+          />
         </div>
-      </Card>
+      )}
     </div>
   )
+}
+
+function ValidationItem({ label, isValid }: { label: string, isValid: boolean }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <div className={`p-1 rounded-full ${isValid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500/50'}`}>
+        {isValid ? <Check size={14} strokeWidth={3} /> : <XCircle size={14} />}
+      </div>
+      <span className={isValid ? 'text-foreground font-medium' : 'text-muted-foreground'}>{label}</span>
+    </div>
+  );
 }

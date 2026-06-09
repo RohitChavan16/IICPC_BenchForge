@@ -1,171 +1,114 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { formatNumber, formatPercent } from '@/utils/formatters'
-import { fetchHealthStatus, fetchInfrastructureMetrics } from '@/services/api/infraService'
-import { fetchTelemetrySummary } from '@/services/api/telemetryService'
-import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
-import { Card } from '@/components/ui/Card'
-import { MetricSparkline } from '@/components/charts/MetricSparkline'
-import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
-import { Badge } from '@/components/ui/Badge'
-import { Info, ShieldCheck, TrendingUp, Zap, Play, Rocket, LayoutDashboard, Activity, Database, Server } from 'lucide-react'
-import { PageHero } from '@/components/layout/PageHero'
+import React from 'react';
+import { motion } from 'framer-motion';
+import { PageHero } from '@/components/layout/PageHero';
+import { ExecutiveKPIStrip } from '@/components/dashboard/ExecutiveKPIStrip';
+import { DashboardLiveCommandCenter } from '@/components/dashboard/DashboardLiveCommandCenter';
+import { PerformanceAnalyticsTabs } from '@/components/dashboard/PerformanceAnalyticsTabs';
+import { ReplayHighlightsSnapshot } from '@/components/dashboard/ReplayHighlightsSnapshot';
+import { LeaderboardSnapshot } from '@/components/dashboard/LeaderboardSnapshot';
+import { RecentSubmissionsTable } from '@/components/dashboard/RecentSubmissionsTable';
+import { BenchmarkSessionsTimeline } from '@/components/dashboard/BenchmarkSessionsTimeline';
+import { LiveActivityFeed } from '@/components/dashboard/LiveActivityFeed';
+import { LearningGuidanceCenter } from '@/components/dashboard/LearningGuidanceCenter';
+import { LayoutDashboard, Activity, Database, Server, Trophy } from 'lucide-react';
 
 export function DashboardHomePage() {
-  const { data: summary } = useQuery({ queryKey: ['telemetrySummary'], queryFn: fetchTelemetrySummary })
-  const { data: healthStatus } = useQuery({ queryKey: ['healthStatus'], queryFn: fetchHealthStatus })
-  const { data: infrastructure } = useQuery({ queryKey: ['infrastructureMetrics'], queryFn: fetchInfrastructureMetrics })
-  const { data: benchmarksData } = useQuery({ 
-    queryKey: ['benchmarks'], 
-    queryFn: fetchBenchmarkSessions,
-    refetchInterval: (query) => {
-      const active = (query.state.data as any)?.items?.filter((b: any) => b.status === 'Running' || b.status === 'Queued' || b.status === 'Created').length
-      return active ? 3000 : 15000
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
     }
-  })
+  };
 
-  const activeBenchmarks = benchmarksData?.items.filter(b => b.status === 'Running' || (b.status as string) === 'Created' || b.status === 'Queued') || []
-  const hasActiveBenchmark = activeBenchmarks.length > 0
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    show: { 
+      opacity: 1, 
+      y: 0,
+      transition: { type: 'spring', stiffness: 300, damping: 24 }
+    }
+  };
 
   return (
-    <div className="space-y-8 pb-10">
-      <PageHero 
-        theme="dashboard"
-        icon={<LayoutDashboard size={40} />}
-        title="Command Center"
-        subtitle="Global platform orchestration and real-time telemetry"
-        statusPills={[
-          { label: hasActiveBenchmark ? 'Benchmark Active' : 'System Idle', variant: hasActiveBenchmark ? 'success' : 'accent' }
-        ]}
-        metadata={[
-          { label: 'Current Season', value: 'Phase 4' },
-          { label: 'Total Requests', value: summary ? formatNumber(summary.total) : '--' },
-          { label: 'Success Rate', value: summary ? formatPercent(summary.failureRate ? 100 - summary.failureRate : 99.9) : '--' }
-        ]}
-        quickLinks={[
-          { label: 'Overview', targetId: 'overview', icon: <Activity size={16} /> },
-          { label: 'Health', targetId: 'health', icon: <Server size={16} /> },
-          { label: 'Performance', targetId: 'performance', icon: <TrendingUp size={16} /> },
-          { label: 'Activity Feed', targetId: 'activity', icon: <Database size={16} /> }
-        ]}
-      />
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="pb-10 max-w-7xl mx-auto"
+    >
+      <motion.div variants={itemVariants}>
+        <PageHero 
+          theme="dashboard"
+          icon={<LayoutDashboard size={40} />}
+          title="Command Center"
+          subtitle="Gain unparalleled visibility into your global platform orchestration. Monitor real-time telemetry, track your competitive ranking, analyze throughput bottlenecks, and continuously optimize your execution strategies to dominate the global leaderboard."
+          statusPills={[
+            { label: 'System Online', variant: 'success' },
+            { label: 'High Traffic', variant: 'warning' },
+            { label: 'Auto-Scaling Active', variant: 'info' }
+          ]}
+          metadata={[
+            { label: 'Current Season', value: 'Phase 4 - The Reckoning' },
+            { label: 'Current Rank', value: '#12' },
+            { label: 'Best Score', value: '84,291' },
+            { label: 'Benchmarks Run', value: '142' },
+            { label: 'Global Uptime', value: '99.99%' },
+            { label: 'Active Region', value: 'US-East-1' }
+          ]}
+          quickLinks={[
+            { label: 'Overview', targetId: 'overview', icon: <Activity size={16} /> },
+            { label: 'Live Operations', targetId: 'live', icon: <Server size={16} /> },
+            { label: 'Historical Data', targetId: 'historical', icon: <Database size={16} /> },
+            { label: 'Learning & Guidance', targetId: 'guidance', icon: <Trophy size={16} /> }
+          ]}
+        />
+      </motion.div>
 
-      <section id="overview" className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] scroll-mt-32">
-        <Card className="space-y-6" title="Overview" description="Active telemetry, throughput, and platform health." >
-          {hasActiveBenchmark ? (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[28px] border border-border bg-background p-6">
-                  <p className="text-sm text-muted-foreground">Throughput</p>
-                  <div className="mt-4 flex items-end gap-3">
-                    <span className="text-5xl font-semibold text-primary">{summary ? formatNumber(summary.tps) : '--'}</span>
-                    <span className="rounded-3xl bg-muted px-3 py-1 text-xs uppercase tracking-[0.24em] text-muted-foreground">TPS</span>
-                  </div>
-                  <p className="mt-3 text-sm text-foreground0">Real-time request volume across the benchmark fleet.</p>
-                </div>
-                <div className="rounded-[28px] border border-border bg-background p-6">
-                  <p className="text-sm text-muted-foreground">Latency p99</p>
-                  <div className="mt-4 flex items-end gap-3">
-                    <span className="text-5xl font-semibold text-secondary">{summary ? `${formatNumber(summary.p99)} ms` : '--'}</span>
-                    <span className="rounded-3xl bg-muted px-3 py-1 text-xs uppercase tracking-[0.24em] text-muted-foreground">Fast</span>
-                  </div>
-                  <p className="mt-3 text-sm text-foreground0">High percentile latency gives you early warning of tail performance.</p>
-                </div>
-              </div>
+      <motion.div variants={itemVariants} id="overview" className="scroll-mt-32">
+        <ExecutiveKPIStrip />
+      </motion.div>
 
-              <div className="grid gap-4 lg:grid-cols-3">
-                <div className="rounded-[28px] border border-border bg-background p-6">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <TrendingUp size={18} />
-                    <p className="text-sm uppercase tracking-[0.24em]">Success rate</p>
-                  </div>
-                  <p className="mt-4 text-4xl font-semibold text-emerald-300">{summary ? formatPercent(summary.failureRate ? 100 - summary.failureRate : 99.9) : '--'}</p>
-                </div>
-                <div className="rounded-[28px] border border-border bg-background p-6">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <ShieldCheck size={18} />
-                    <p className="text-sm uppercase tracking-[0.24em]">Failure rate</p>
-                  </div>
-                  <p className="mt-4 text-4xl font-semibold text-rose-300">{summary ? formatPercent(summary.failureRate) : '--'}</p>
-                </div>
-                <div className="rounded-[28px] border border-border bg-background p-6">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <Zap size={18} />
-                    <p className="text-sm uppercase tracking-[0.24em]">Total Requests</p>
-                  </div>
-                  <p className="mt-4 text-4xl font-semibold text-foreground">{summary ? formatNumber(summary.total) : '--'}</p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-[28px] border border-border bg-background p-12 text-center">
-              <div className="mb-4 rounded-full bg-primary p-4 text-primary">
-                <Rocket size={32} />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground">System Idle</h3>
-              <p className="mt-2 max-w-md text-muted-foreground">
-                There are no active benchmarks currently running. You can initiate a new benchmark against a mock target or a live deployment to generate load.
-              </p>
-              <div className="mt-6 flex gap-4">
-                <Link to="/benchmarks/new" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-primary/90 transition-colors">
-                  <Play size={16} />
-                  Run Benchmark
-                </Link>
-                <Link to="/deployments/new" className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors">
-                  Deploy Engine
-                </Link>
-              </div>
-            </div>
-          )}
-        </Card>
+      <motion.div variants={itemVariants} id="live" className="scroll-mt-32">
+        <DashboardLiveCommandCenter />
+      </motion.div>
 
-        <div id="health" className="space-y-4 scroll-mt-32">
-          <Card title="Platform health" description="Critical subsystem status across telemetry, Redis, and PostgreSQL.">
-            <div className="space-y-3">
-              {(healthStatus ?? []).map((item) => (
-                <div key={item.label} className="flex items-center justify-between rounded-3xl border border-border bg-background p-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className="mt-1 text-base font-semibold text-foreground">{item.status}</p>
-                  </div>
-                  <Badge variant={item.status === 'Healthy' ? 'success' : item.status === 'Warning' ? 'warning' : 'danger'}>{item.status}</Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 flex flex-col">
+          <motion.div variants={itemVariants} id="historical" className="scroll-mt-32">
+            <PerformanceAnalyticsTabs />
+          </motion.div>
 
-          <Card title="Operational insight" description="Live monitoring recommendations and platform state.">
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Info size={18} />
-              <p className="text-sm">High-fidelity stream updates are active. No critical degradations detected.</p>
-            </div>
-          </Card>
+          <motion.div variants={itemVariants}>
+            <ReplayHighlightsSnapshot />
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <LeaderboardSnapshot />
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <RecentSubmissionsTable />
+          </motion.div>
+          
+          <motion.div variants={itemVariants}>
+            <BenchmarkSessionsTimeline />
+          </motion.div>
         </div>
-      </section>
 
-      <section id="performance" className="grid gap-6 lg:grid-cols-3 scroll-mt-32">
-        <Card title="Request distribution" description="Latency distribution trend in the last 20 intervals.">
-          <div className="mt-4">
-            <MetricSparkline data={summary ? [
-              { timestamp: new Date().toISOString(), tps: summary.tps, p50: summary.p50, p90: summary.p90, p99: summary.p99, failureRate: summary.failureRate, total: summary.total },
-            ] : []} dataKey="p90" />
-          </div>
-        </Card>
-        <Card title="Resource contour" description="CPU and memory pressure indicators.">
-          <div className="mt-4 grid gap-4">
-            {infrastructure?.slice(0, 2).map((metric) => (
-              <div key={metric.label} className="rounded-3xl border border-border bg-background p-4">
-                <p className="text-sm text-muted-foreground">{metric.label}</p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">{metric.value}</p>
-                <p className="mt-1 text-sm text-foreground0">{metric.detail}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-        <div id="activity" className="scroll-mt-32">
-          <ActivityFeed />
+        <div className="lg:col-span-1 flex flex-col">
+          <motion.div variants={itemVariants} className="sticky top-24">
+            <LiveActivityFeed />
+            
+            <div id="guidance" className="scroll-mt-32">
+              <LearningGuidanceCenter />
+            </div>
+          </motion.div>
         </div>
-      </section>
-    </div>
-  )
+      </div>
+      
+    </motion.div>
+  );
 }

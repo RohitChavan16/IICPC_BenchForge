@@ -16,9 +16,13 @@ import { MarketSimulationAnalytics } from '@/components/analytics/MarketSimulati
 import { BenchmarkHealthCard } from '@/components/analytics/BenchmarkHealthCard'
 import { TimelineView } from '@/components/analytics/TimelineView'
 import { WorkerExecutionAnalysis } from '@/components/analytics/WorkerExecutionAnalysis'
+import { ReplayContainer } from '@/components/replay/ReplayContainer'
+import { LifecycleTrack } from '@/components/replay/LifecycleTrack'
+import { useToast } from '@/components/ui/ToastProvider'
 
 export function SubmissionReportPage() {
   const { id } = useParams<{ id: string }>()
+  const { pushToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
   
@@ -48,8 +52,15 @@ export function SubmissionReportPage() {
           history = await fetchBenchmarkTelemetryHistory(benchmark.id)
           personas = await fetchPersonaAnalytics(benchmark.id)
         }
+        
+        let replay = null
+        if (benchmark) {
+          try {
+             replay = await benchmarkService.fetchBenchmarkReplay(benchmark.id)
+          } catch(e) { console.error("Replay fetch failed", e) }
+        }
 
-        setData({ submission, deployment, benchmark, leaderboardEntry, history, personas })
+        setData({ submission, deployment, benchmark, leaderboardEntry, history, personas, replay })
       } catch (err) {
         console.error(err)
       } finally {
@@ -67,7 +78,7 @@ export function SubmissionReportPage() {
     return <div className="text-center py-20 text-muted-foreground">Submission not found.</div>
   }
 
-  const { submission, deployment, benchmark, leaderboardEntry, history, personas } = data
+  const { submission, deployment, benchmark, leaderboardEntry, history, personas, replay } = data
 
   const botLabels: Record<string, string> = {
     retail: 'Retail Trader',
@@ -249,6 +260,11 @@ export function SubmissionReportPage() {
           { label: 'Verdict', targetId: 'verdict' },
           { label: 'Health', targetId: 'health' },
           { label: 'Metrics', targetId: 'metrics' },
+          { 
+            label: 'Replay', 
+            targetId: 'replay',
+            onClick: !replay ? () => pushToast({ variant: 'warning', title: 'Replay Unavailable', description: 'No replay data was found for this session.' }) : undefined
+          },
           { label: 'Personas', targetId: 'personas' },
           { label: 'Correctness', targetId: 'correctness' },
           { label: 'Telemetry', targetId: 'telemetry' },
@@ -462,6 +478,26 @@ export function SubmissionReportPage() {
         </Card>
       )}
 
+      {/* Replay Engine */}
+      <div id="replay" className="scroll-mt-32">
+        <Card title="Benchmark Replay Engine">
+          {replay ? (
+            <div className="mt-6">
+              <LifecycleTrack events={replay.lifecycle_events} currentStatus={benchState} />
+              <ReplayContainer replay={replay} />
+            </div>
+          ) : (
+            <div className="mt-6 flex flex-col items-center justify-center py-12 px-4 bg-secondary/10 rounded-xl border border-border/50">
+              <Activity className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
+              <p className="text-lg font-medium text-foreground mb-2">Replay Unavailable</p>
+              <p className="text-sm text-muted-foreground text-center max-w-md">
+                No replay data could be found for this benchmark session. The replay may have failed to generate, or the session might not have completed successfully.
+              </p>
+            </div>
+          )}
+        </Card>
+      </div>
+
       {/* 3. Executive KPI Row */}
       {benchmark && benchmark.status === 'COMPLETED' && marketPersonas.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -492,8 +528,8 @@ export function SubmissionReportPage() {
       {leaderboardEntry && (
         <div id="personas" className="scroll-mt-32">
         <Card title="Score Analysis">
-          <div className="flex flex-col md:flex-row gap-8 mt-4">
-            <div className="flex-1 space-y-4">
+          <div className="mt-4">
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 The final score is calculated using the Phase 4 formula:
                 <br />
@@ -529,67 +565,6 @@ export function SubmissionReportPage() {
                   <span className="text-sm font-semibold text-primary">Total Score</span>
                   <span className="font-mono font-bold text-primary">{finalScore.toFixed(2)}</span>
                 </div>
-              </div>
-            </div>
-            
-            <div className="flex-1 flex flex-col bg-black/20 rounded-xl border border-border p-4 relative">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-semibold text-foreground">Persona Performance Impact</p>
-                <div className="group relative">
-                  <Info size={14} className="text-muted-foreground cursor-help" />
-                  <div className="absolute right-0 w-48 bottom-full mb-2 bg-popover text-popover-foreground text-xs p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    * Derived Insight: Derived from normalized TPS, latency, and success-rate analysis.
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="grid grid-cols-[140px_1fr_60px] gap-4 px-2 pb-2 border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  <div>Persona</div>
-                  <div className="text-center">Impact</div>
-                  <div className="text-right">Value</div>
-                </div>
-                {marketPersonas.map((p: any) => {
-                  const label = botLabels[p.botType] || p.botType;
-                  let impact = (p.successRate - 98) * 0.5;
-                  if (p.botType === 'scalper') impact -= 12;
-                  if (p.botType === 'hft_stressor') impact -= 4;
-                  if (p.botType === 'market_maker') impact += 2;
-                  impact = Math.max(-25, Math.min(15, impact));
-                  
-                  const isPositive = impact >= 0;
-                  const absImpact = Math.abs(impact);
-                  const barWidth = `${Math.min(100, (absImpact / 25) * 100)}%`;
-
-                  return (
-                    <div key={p.botType} className="grid grid-cols-[140px_1fr_60px] items-center gap-4 px-2 py-1">
-                      <div className="font-medium text-foreground text-sm">{label}</div>
-                      
-                      <div className="flex items-center h-5 relative bg-secondary/20 rounded overflow-hidden">
-                        <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-border z-0 -translate-x-1/2"></div>
-                        <div className="w-1/2 flex justify-end h-full relative z-10">
-                          {!isPositive && (
-                            <div 
-                              className="h-full bg-rose-500/80 rounded-l shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all duration-500" 
-                              style={{ width: barWidth }}
-                            />
-                          )}
-                        </div>
-                        <div className="w-1/2 flex justify-start h-full relative z-10">
-                          {isPositive && (
-                            <div 
-                              className="h-full bg-emerald-500/80 rounded-r shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all duration-500" 
-                              style={{ width: barWidth }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className={`font-mono text-sm text-right font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {isPositive ? '+' : ''}{impact.toFixed(1)}%
-                      </div>
-                    </div>
-                  )
-                })}
               </div>
             </div>
           </div>
@@ -816,8 +791,7 @@ export function SubmissionReportPage() {
                   <th className="px-4 py-3">TPS</th>
                   <th className="px-4 py-3">P99 Latency</th>
                   <th className="px-4 py-3">Success Rate</th>
-                  <th className="px-4 py-3">Requests</th>
-                  <th className="px-4 py-3 rounded-tr-lg">Grade*</th>
+                  <th className="px-4 py-3 rounded-tr-lg">Requests</th>
                 </tr>
               </thead>
               <tbody>
@@ -829,12 +803,6 @@ export function SubmissionReportPage() {
                   })
                   .map((p: any, idx: number) => {
                     const rank = idx + 1;
-                    let grade = "A+";
-                    if (rank === 2) grade = "A";
-                    if (rank === 3) grade = "A-";
-                    if (rank === 4) grade = "B+";
-                    if (rank === 5) grade = "B";
-
                     return (
                       <tr key={p.botType} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-muted-foreground">#{rank}</td>
@@ -843,14 +811,12 @@ export function SubmissionReportPage() {
                         <td className="px-4 py-3 font-mono">{(p.latency/1000000).toFixed(1)}ms</td>
                         <td className="px-4 py-3 font-mono">{p.successRate.toFixed(1)}%</td>
                         <td className="px-4 py-3 font-mono">{p.total}</td>
-                        <td className="px-4 py-3 font-bold text-primary">Grade {grade}</td>
                       </tr>
                     );
                   })}
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-muted-foreground mt-3 italic">* Derived Insight: Rankings calculated via frontend heuristics combining TPS, Latency, and Success Rate.</p>
         </Card>
       )}
 
@@ -865,16 +831,17 @@ export function SubmissionReportPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {marketPersonas.map((p: any, idx: number) => {
-              const isPass = p.successRate >= 99 && p.latency < 100000000;
-              const isWarn = p.successRate >= 90 && !isPass;
+              const isHealthy = p.successRate >= 99 && p.latency < 500000000;
+              const isDegraded = p.successRate >= 95 && p.latency < 2000000000 && !isHealthy;
               
-              let stateText = "PASS";
+              let stateText = "HEALTHY";
               let stateColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
-              if (!isPass && !isWarn) {
-                stateText = "FAIL";
+              
+              if (!isHealthy && !isDegraded) {
+                stateText = "CRITICAL";
                 stateColor = "text-rose-400 bg-rose-500/10 border-rose-500/30";
-              } else if (isWarn) {
-                stateText = "WARN";
+              } else if (isDegraded) {
+                stateText = "DEGRADED";
                 stateColor = "text-amber-400 bg-amber-500/10 border-amber-500/30";
               }
 

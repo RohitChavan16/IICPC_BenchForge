@@ -147,7 +147,11 @@ func processMessage(
 		case stopBroadcasterCh <- struct{}{}:
 		default:
 		}
-		// Acknowledge and return
+		
+		// Insert PENDING status idempotently
+		database.InsertReplayStatus(db, metric.BenchmarkID, "PENDING")
+
+		// Acknowledge stream message immediately to prevent reprocessing on crash
 		rdb.XAck(ctx, StreamName, GroupName, message.ID)
 		return
 	}

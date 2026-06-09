@@ -6,6 +6,7 @@ export const endpoints = {
   authProfile: '/auth/me',
   benchmarkSessions: '/benchmarks',
   benchmarkDetail: (id: string) => `/benchmarks/${id}`,
+  benchmarkReplay: (id: string) => `/replay?benchmarkId=${id}`,
   leaderboard: '/leaderboard',
   leaderboardTop: '/leaderboard/top',
   leaderboardTeam: (team: string) => `/leaderboard/team/${encodeURIComponent(team)}`,

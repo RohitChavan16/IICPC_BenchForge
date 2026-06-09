@@ -6,7 +6,7 @@ export type ToastVariant = 'success' | 'error' | 'info' | 'warning' | 'destructi
 export interface ToastMessage {
   id: string
   title: string
-  description?: string
+  description?: React.ReactNode
   variant?: ToastVariant
 }
 
@@ -57,7 +57,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-foreground">{toast.title}</p>
-                {toast.description ? <p className="mt-1 text-sm text-muted-foreground">{toast.description}</p> : null}
+                {toast.description ? <div className="mt-1 text-sm text-muted-foreground">{toast.description}</div> : null}
               </div>
               <button
                 type="button"

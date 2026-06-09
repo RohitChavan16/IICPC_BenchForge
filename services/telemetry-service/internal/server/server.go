@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/aggregator"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
 
@@ -242,6 +243,39 @@ func StartServer(
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(results)
+		},
+	)
+
+	http.HandleFunc(
+		"/replay",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			benchmarkID := r.URL.Query().Get("benchmarkId")
+			if benchmarkID == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			replay, err := database.GetReplay(db, benchmarkID)
+			if err != nil {
+				http.Error(w, "Replay not found", http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			
+			if replay.Status == "PENDING" || replay.Status == "PROCESSING" {
+				json.NewEncoder(w).Encode(map[string]string{
+					"benchmark_id": benchmarkID,
+					"status":       replay.Status,
+				})
+				return
+			}
+			w.Write(replay.ReplayData)
 		},
 	)
 
