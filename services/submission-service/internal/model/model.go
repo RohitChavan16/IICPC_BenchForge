@@ -10,6 +10,7 @@ type Submission struct {
 	SubmissionName string     `json:"submissionName"`
 	Language       string     `json:"language"`
 	FilePath       string     `json:"filePath"`
+	FileSizeBytes  *int64     `json:"fileSizeBytes,omitempty"`
 	Status         string     `json:"status"`
 	CurrentStage   string     `json:"currentStage,omitempty"`
 	StageStatus    string     `json:"stageStatus,omitempty"`

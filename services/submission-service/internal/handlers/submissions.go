@@ -102,8 +102,9 @@ func (h *SubmissionHandler) CreateSubmission(w http.ResponseWriter, r *http.Requ
 
 	userID := r.Header.Get("X-User-Id")
 	teamID := r.Header.Get("X-Team-Id")
+	fileSizeBytes := header.Size
 
-	submission, err := repository.CreateSubmission(h.db, teamName, submissionName, language, storedPath, userID, teamID)
+	submission, err := repository.CreateSubmission(h.db, teamName, submissionName, language, storedPath, fileSizeBytes, userID, teamID)
 	if err != nil {
 		log.Printf("create submission error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)

@@ -28,6 +28,9 @@ import { AdminSubmissionsPage } from '@/pages/admin/AdminSubmissionsPage'
 import { AdminQueuePage } from '@/pages/admin/AdminQueuePage'
 import { AdminWorkersPage } from '@/pages/admin/AdminWorkersPage'
 import { AdminDeploymentsPage } from '@/pages/admin/AdminDeploymentsPage'
+import { AdminTeamsPage } from '@/pages/admin/AdminTeamsPage'
+import { AdminLeaderboardPage } from '@/pages/admin/AdminLeaderboardPage'
+import { AdminPipelinesPage } from '@/pages/admin/AdminPipelinesPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -102,10 +105,10 @@ export function AppRoutes() {
 
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-      <Route path="/admin/teams" element={<AdminRoute><ComingSoonAdminPage /></AdminRoute>} />
-      <Route path="/admin/submissions" element={<AdminRoute><ComingSoonAdminPage /></AdminRoute>} />
-      <Route path="/admin/leaderboard" element={<AdminRoute><ComingSoonAdminPage /></AdminRoute>} />
-      <Route path="/admin/pipeline" element={<AdminRoute><AdminSubmissionsPage /></AdminRoute>} />
+      <Route path="/admin/teams" element={<AdminRoute><AdminTeamsPage /></AdminRoute>} />
+      <Route path="/admin/submissions" element={<AdminRoute><AdminSubmissionsPage /></AdminRoute>} />
+      <Route path="/admin/leaderboard" element={<AdminRoute><AdminLeaderboardPage /></AdminRoute>} />
+      <Route path="/admin/pipeline" element={<AdminRoute><AdminPipelinesPage /></AdminRoute>} />
       <Route path="/admin/queue" element={<AdminRoute><AdminQueuePage /></AdminRoute>} />
       <Route path="/admin/workers" element={<AdminRoute><AdminWorkersPage /></AdminRoute>} />
       <Route path="/admin/deployments" element={<AdminRoute><AdminDeploymentsPage /></AdminRoute>} />

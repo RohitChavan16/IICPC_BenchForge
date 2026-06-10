@@ -6,6 +6,7 @@ export interface Submission {
   teamName: string
   submissionName: string
   language: string
+  filePath?: string
   status: string
   currentStage?: string
   stageStatus?: string

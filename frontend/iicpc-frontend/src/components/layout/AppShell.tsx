@@ -15,7 +15,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   
   const isAdminRoute = location.pathname.startsWith('/admin')
 
-  if (isLandingPage) {
+  const isMinimalRoute = minimalRoutes.includes(location.pathname)
+
+  if (isMinimalRoute) {
     return (
       <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
         {children}

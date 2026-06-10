@@ -287,7 +287,7 @@ export function SubmissionPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6 pb-2 overflow-x-hidden">
       <PageHero 
-        theme={isSubmitRoute ? "dashboard" : "submission"}
+        theme={isSubmitRoute ? "dashboard" : "history"}
         icon={<TerminalSquare size={40} />}
         title={isSubmitRoute ? "Deploy Engine" : "Deployment History"}
         subtitle={isSubmitRoute 
@@ -697,7 +697,7 @@ export function SubmissionPage() {
       </AnimatePresence>
 
       {!isSubmitRoute && (
-        <div className="space-y-0 mt-4 bg-card dark:bg-[#0b0e14] p-4 md:p-6 rounded-2xl border border-border w-full overflow-hidden shadow-sm">
+        <div className="space-y-6 mt-4 bg-card dark:bg-[#0b0e14] p-4 md:p-6 rounded-2xl border border-border w-full overflow-hidden shadow-sm">
           <DeploymentControlHeader 
             totalDeployments={totalSubmissions}
             successfulSubmissions={totalCompleted}

@@ -1,100 +1,135 @@
-import { PlayCircle, Server, BarChart3, FileCode } from 'lucide-react'
-import { OperationsPageContainer } from '../../components/admin/operations/OperationsPageContainer'
-import { OperationsHero } from '../../components/admin/operations/OperationsHero'
-import { OperationsSection } from '../../components/admin/operations/OperationsSection'
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchLeaderboardEntries } from '@/services/api/leaderboardService';
+import { useLeaderboardLiveState } from '@/hooks/useLeaderboardLiveState';
+import type { LeaderboardEntry } from '@/types/api';
 
-import { SubmissionKPICards } from './submissions/SubmissionKPICards'
-import { SubmissionFilters } from './submissions/SubmissionFilters'
-import { SubmissionTable } from './submissions/SubmissionTable'
-import { PipelineHealthCard } from './submissions/PipelineHealthCard'
-import { LiveSubmissionActivity } from './submissions/LiveSubmissionActivity'
-import { TopPerformersCard } from './submissions/TopPerformersCard'
+import { SubmissionsTopStatusBar } from '@/components/admin/submissions/SubmissionsTopStatusBar';
+import { SubmissionsHero } from '@/components/admin/submissions/SubmissionsHero';
+import { SubmissionsKPIStrip } from '@/components/admin/submissions/SubmissionsKPIStrip';
+import { SubmissionCommandCenter } from '@/components/admin/submissions/SubmissionCommandCenter';
+import { PipelineHealthCenter } from '@/components/admin/submissions/PipelineHealthCenter';
+import { SubmissionPerformanceSnapshot } from '@/components/admin/submissions/SubmissionPerformanceSnapshot';
+import { PlatformHealthOverview } from '@/components/admin/submissions/PlatformHealthOverview';
+import { SubmissionDirectory } from '@/components/admin/submissions/SubmissionDirectory';
+import { ReplayOperationsOverview } from '@/components/admin/submissions/ReplayOperationsOverview';
+import { CompetitionSubmissionAnalytics } from '@/components/admin/submissions/CompetitionSubmissionAnalytics';
+import { SubmissionActivityCenter } from '@/components/admin/submissions/SubmissionActivityCenter';
+import { AdminSubmissionActionCenter } from '@/components/admin/submissions/AdminSubmissionActionCenter';
 
 export function AdminSubmissionsPage() {
+  const [filterText, setFilterText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedSubmission, setSelectedSubmission] = useState<LeaderboardEntry | null>(null);
+
+  const { data: leaderboardData } = useQuery({
+    queryKey: ['leaderboardEntries'],
+    queryFn: fetchLeaderboardEntries,
+    refetchInterval: 10000,
+  });
+
+  const rawEntries = leaderboardData?.items ?? [];
+  const { liveEntries, activityFeed } = useLeaderboardLiveState(rawEntries);
+
+  // Derive global metrics safely
+  const totalSubmissions = liveEntries.length;
+  const successfulDeployments = totalSubmissions; // Proxied based on entry presence
+  const failedDeployments = 0; // Proxied based on current api limits
+  const runningPipelines = liveEntries.filter(e => e.finalScore === 0).length;
+  const completedBenchmarks = liveEntries.filter(e => e.finalScore > 0).length;
+  const replayReadyCount = completedBenchmarks; 
+  const averageScore = totalSubmissions > 0 ? liveEntries.reduce((acc, curr) => acc + curr.finalScore, 0) / totalSubmissions : 0;
+  const bestScore = totalSubmissions > 0 ? Math.max(...liveEntries.map(e => e.finalScore)) : 0;
+
+  // Apply filters for the main directory
+  const filteredEntries = liveEntries.filter(e => {
+    // Text search
+    const textMatch = !filterText || 
+      e.submissionName.toLowerCase().includes(filterText.toLowerCase()) ||
+      e.teamName.toLowerCase().includes(filterText.toLowerCase()) ||
+      e.id.toLowerCase().includes(filterText.toLowerCase());
+
+    if (!textMatch) return false;
+
+    // Status filter
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'evaluating') return e.finalScore === 0;
+    if (statusFilter === 'completed') return e.finalScore > 0 && e.successRate >= 99.5;
+    if (statusFilter === 'failed') return e.successRate < 99.5;
+
+    return true;
+  }).sort((a, b) => b.finalScore - a.finalScore); // Default sort by score
+
   return (
-    <OperationsPageContainer>
-      {/* 1. Hero Section */}
-      <OperationsHero
-        title="Submission Operations Center"
-        description="Monitor, inspect, troubleshoot and manage every submission across the platform."
-        icon={<FileCode size={36} />}
-        accentColor="indigo"
-        badges={[
-          { label: 'Total', value: '12,450', color: 'slate' },
-          { label: 'Running', value: '42', color: 'cyan' },
-          { label: 'Queued', value: '105', color: 'amber' },
-          { label: 'Failed', value: '12', color: 'rose' }
-        ]}
-        actions={
-          <>
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors border border-slate-200 dark:border-slate-700 font-medium text-sm w-full sm:w-auto justify-center shadow-sm">
-              <Server size={16} className="text-amber-500" />
-              View Queue
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors border border-slate-200 dark:border-slate-700 font-medium text-sm w-full sm:w-auto justify-center shadow-sm">
-              <PlayCircle size={16} className="text-cyan-500" />
-              Open Pipeline
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors border border-indigo-500 font-medium text-sm w-full sm:w-auto justify-center shadow-[0_0_15px_rgba(79,70,229,0.3)]">
-              <BarChart3 size={16} />
-              Open Leaderboard
-            </button>
-          </>
-        }
+    <div className="flex min-h-screen flex-col bg-background pb-24">
+      {/* Top operational strip */}
+      <SubmissionsTopStatusBar 
+        totalSubmissions={totalSubmissions}
+        runningPipelines={runningPipelines}
+        completedBenchmarks={completedBenchmarks}
+        failedSubmissions={liveEntries.filter(e => e.successRate < 99.5).length}
       />
 
-      {/* 2. KPI Section */}
-      <OperationsSection
-        title="Global Submission KPIs"
-        description="High level platform submission metrics and volume indicators."
-        tooltipContent="Provides real-time aggregated metrics for all submission traffic on the platform."
-        lastUpdated="Just now"
-        alternateBg={false}
-      >
-        <SubmissionKPICards />
-      </OperationsSection>
+      {/* Hero Section */}
+      <SubmissionsHero 
+        totalSubmissions={totalSubmissions}
+        runningPipelines={runningPipelines}
+        completedBenchmarks={completedBenchmarks}
+        failedSubmissions={liveEntries.filter(e => e.successRate < 99.5).length}
+        replayReady={replayReadyCount}
+        bestScore={bestScore}
+      />
 
-      {/* 3. Main Operations Section */}
-      <OperationsSection
-        title="Submission Control Center"
-        description="Search, filter, and drill down into individual workloads."
-        tooltipContent="The primary interface for locating and managing specific submissions based on multiple filter criteria."
-        lastUpdated="1m ago"
-        alternateBg={true}
-      >
-        <div className="flex flex-col gap-6">
-          <SubmissionFilters />
-          <SubmissionTable />
-        </div>
-      </OperationsSection>
+      <div className="mx-auto mt-8 w-full max-w-7xl flex-1 space-y-12 px-4 sm:px-6 lg:px-8">
+        {/* SECTION 1: Executive Summary */}
+      <SubmissionsKPIStrip 
+        totalSubmissions={totalSubmissions}
+        successfulDeployments={successfulDeployments}
+        failedDeployments={failedDeployments}
+        runningPipelines={runningPipelines}
+        completedBenchmarks={completedBenchmarks}
+        replayReadyCount={replayReadyCount}
+        averageScore={averageScore}
+        bestSubmissionScore={bestScore}
+      />
 
-      {/* 4. Analytics Section */}
-      <OperationsSection
-        title="Pipeline & Performance Analytics"
-        description="Health metrics across the evaluation lifecycle and top performing teams."
-        tooltipContent="Monitors stage-by-stage pipeline health and highlights current benchmark leaders."
-        alternateBg={false}
-      >
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
-          <div className="xl:col-span-2 h-full">
-            <PipelineHealthCard />
-          </div>
-          <div className="xl:col-span-1 h-full">
-            <TopPerformersCard />
-          </div>
-        </div>
-      </OperationsSection>
+      {/* SECTION 12: Platform Health */}
+      <PlatformHealthOverview entries={liveEntries} />
 
-      {/* 5. Activity Section */}
-      <OperationsSection
-        title="Live Submission Activity"
-        description="Real-time operational events across the benchmarking platform."
-        tooltipContent="A chronological feed of events, state transitions, and anomalies across the cluster."
-        alternateBg={true}
-      >
-        <LiveSubmissionActivity />
-      </OperationsSection>
-    </OperationsPageContainer>
-  )
+      {/* SECTION 4: Pipeline Health Center */}
+      <PipelineHealthCenter entries={liveEntries} />
+
+      {/* SECTION 5: Performance Snapshot */}
+      <SubmissionPerformanceSnapshot entries={liveEntries} />
+
+      {/* SECTION 2: Command Center */}
+      <SubmissionCommandCenter 
+        filterText={filterText}
+        setFilterText={setFilterText}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        totalResults={filteredEntries.length}
+      />
+
+      {/* SECTION 3 & 6 & 7: Directory & Drawer & Pipeline Timeline */}
+      <SubmissionDirectory 
+        entries={filteredEntries} 
+        selectedSubmission={selectedSubmission}
+        setSelectedSubmission={setSelectedSubmission}
+      />
+
+      {/* SECTION 8: Replay Operations */}
+      <ReplayOperationsOverview entries={liveEntries} />
+
+      {/* SECTION 9: Submission Analytics */}
+      <CompetitionSubmissionAnalytics entries={liveEntries} />
+
+      {/* SECTION 10: Activity Center */}
+      <SubmissionActivityCenter activityFeed={activityFeed} />
+
+      {/* SECTION 11: Admin Action Center */}
+      <AdminSubmissionActionCenter />
+      </div>
+    </div>
+  );
 }
-

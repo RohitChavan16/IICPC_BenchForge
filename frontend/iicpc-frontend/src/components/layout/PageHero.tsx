@@ -44,49 +44,49 @@ const themeConfig = {
     inactiveTab: 'bg-background/80 text-muted-foreground border-border hover:bg-background hover:border-fuchsia-500/50 hover:text-foreground'
   },
   submission: {
-    gradient: 'from-blue-500/20 via-cyan-500/5 to-background',
-    orb: 'bg-green-500/60',
+    gradient: 'from-blue-500/20 via-indigo-500/5 to-background',
+    orb: 'bg-blue-500/50',
     border: 'border-blue-500/20',
-    accentText: 'text-blue-400',
+    accentText: 'text-blue-600 dark:text-blue-400',
     accentBg: 'bg-blue-500/10',
     lightBg: 'bg-blue-50/50 dark:bg-card',
-    activeTab: 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+    activeTab: 'bg-blue-600 text-white border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
   },
   leaderboard: {
     gradient: 'from-amber-400/20 via-orange-500/5 to-background',
     orb: 'bg-amber-500/20',
     border: 'border-amber-500/20',
-    accentText: 'text-amber-400',
+    accentText: 'text-amber-600 dark:text-amber-400',
     accentBg: 'bg-amber-500/10',
     lightBg: 'bg-amber-50/50 dark:bg-card',
-    activeTab: 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    activeTab: 'bg-amber-500 text-white border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
   },
   benchmark: {
     gradient: 'from-emerald-500/20 via-teal-500/5 to-background',
     orb: 'bg-emerald-500/20',
     border: 'border-emerald-500/20',
-    accentText: 'text-emerald-400',
+    accentText: 'text-emerald-600 dark:text-emerald-400',
     accentBg: 'bg-emerald-500/10',
     lightBg: 'bg-emerald-50/50 dark:bg-card',
-    activeTab: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    activeTab: 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
   },
   history: {
-    gradient: 'from-cyan-500/20 via-blue-500/5 to-background',
-    orb: 'bg-cyan-500/20',
-    border: 'border-cyan-500/20',
-    accentText: 'text-cyan-600 dark:text-cyan-400',
-    accentBg: 'bg-cyan-500/10',
-    lightBg: 'bg-cyan-50/50 dark:bg-card',
-    activeTab: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+    gradient: 'from-blue-500/20 via-cyan-500/5 to-background',
+    orb: 'bg-green-500/60',
+    border: 'border-blue-500/20',
+    accentText: 'text-blue-600 dark:text-blue-400',
+    accentBg: 'bg-blue-500/10',
+    lightBg: 'bg-blue-50/50 dark:bg-card',
+    activeTab: 'bg-blue-600 text-white border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
   },
   team: {
     gradient: 'from-rose-500/20 via-purple-500/5 to-background',
     orb: 'bg-rose-500/20',
     border: 'border-rose-500/20',
-    accentText: 'text-rose-400',
+    accentText: 'text-rose-600 dark:text-rose-400',
     accentBg: 'bg-rose-500/10',
     lightBg: 'bg-rose-50/50 dark:bg-card',
-    activeTab: 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+    activeTab: 'bg-rose-500 text-white border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)]'
   }
 };
 

@@ -8,7 +8,15 @@ interface ThemeState {
   toggleTheme: () => void
 }
 
-const defaultTheme = (typeof window !== 'undefined' && window.localStorage.getItem('benchforge_theme')) as ThemeMode | null || import.meta.env.VITE_DEFAULT_THEME === 'light' ? 'light' : 'dark'
+const getInitialTheme = (): ThemeMode => {
+  if (typeof window !== 'undefined') {
+    const stored = window.localStorage.getItem('benchforge_theme') as ThemeMode | null
+    if (stored === 'dark' || stored === 'light') return stored
+  }
+  return import.meta.env.VITE_DEFAULT_THEME === 'light' ? 'light' : 'dark'
+}
+
+const defaultTheme = getInitialTheme()
 
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: defaultTheme,

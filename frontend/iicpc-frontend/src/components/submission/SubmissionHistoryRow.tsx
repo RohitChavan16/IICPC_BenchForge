@@ -52,8 +52,29 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
   const concurrency = (Math.random() * 20000 + 5000).toLocaleString(undefined, { maximumFractionDigits: 0 })
   const correctness = leaderboardEntry?.correctnessScore || (Math.random() * 5 + 95).toFixed(1)
 
+  let displayFileName = `${submission.submissionName}.zip`
+  if (submission.filePath) {
+    const baseName = submission.filePath.split(/[\\/]/).pop() || ''
+    // Backend formats it as: team_sub_timestamp_originalName
+    const match = baseName.match(/_\d{13,20}_(.+)$/)
+    if (match && match[1]) {
+      displayFileName = match[1]
+    } else if (baseName) {
+      displayFileName = baseName
+    }
+  }
+
+  const formatBytes = (bytes?: number) => {
+    if (bytes === undefined || bytes === null) return 'Unknown Size'
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
   return (
-    <tr className="border-b border-border/40 hover:bg-muted/50 dark:hover:bg-[#1a1f2c] transition-colors group">
+    <tr className="border-b border-border/40 even:bg-muted/30 odd:bg-transparent dark:even:bg-[#1a1f2c] dark:odd:bg-transparent hover:bg-indigo-50/60 dark:hover:bg-indigo-500/10 transition-colors group">
       {/* Engine / Submission */}
       <td className="px-2 lg:px-4 py-2 lg:py-2.5">
         <div className="flex items-center gap-2">
@@ -72,8 +93,8 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
         <div className="flex items-center gap-1.5">
           <File size={14} className="text-indigo-400 shrink-0" />
           <div className="flex flex-col min-w-0">
-            <span className="text-sm text-foreground truncate max-w-[100px] lg:max-w-[120px]" title={`${submission.submissionName}.zip`}>{`${submission.submissionName}.zip`}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">{(Math.random() * 15 + 5).toFixed(2)} MB</span>
+            <span className="text-sm text-foreground truncate max-w-[100px] lg:max-w-[120px]" title={displayFileName}>{displayFileName}</span>
+            <span className="text-[11px] text-muted-foreground mt-0.5">{formatBytes(submission.fileSizeBytes)}</span>
           </div>
         </div>
       </td>

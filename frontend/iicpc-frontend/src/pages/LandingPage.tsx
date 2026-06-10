@@ -122,12 +122,8 @@ export function LandingPage() {
   const theme = useThemeStore((state) => state.theme)
   const toggleTheme = useThemeStore((state) => state.toggleTheme)
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
-
   return (
-    <div className={`relative min-h-screen w-screen overflow-x-hidden bg-[#f7fbff] text-slate-950 transition-colors duration-300 dark:bg-slate-950 dark:text-white ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`relative min-h-screen w-screen overflow-x-hidden bg-[#f7fbff] text-slate-950 transition-colors duration-300 dark:bg-slate-950 dark:text-white`}>
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#f8fbff_0%,#eef8ff_32%,#fff7ed_68%,#f6f3ff_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.24),transparent_34%),linear-gradient(135deg,#020617_0%,#0f172a_46%,#111827_100%)]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-400/60 to-transparent" />

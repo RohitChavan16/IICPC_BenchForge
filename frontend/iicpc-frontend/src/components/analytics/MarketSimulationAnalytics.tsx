@@ -47,14 +47,14 @@ export const MarketSimulationAnalytics: React.FC<Props> = ({ benchmarkId }) => {
   }, [benchmarkId]);
 
   if (loading) {
-    return <div className="animate-pulse bg-gray-800 rounded-xl h-64 border border-gray-700"></div>;
+    return <div className="animate-pulse bg-card rounded-xl h-64 border border-border"></div>;
   }
 
   if (data.length === 0) {
     return (
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 backdrop-blur-sm text-center">
-        <Activity className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-        <p className="text-gray-400">No market simulation analytics available.</p>
+      <div className="bg-card rounded-xl p-6 border border-border text-center">
+        <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <p className="text-muted-foreground">No market simulation analytics available.</p>
       </div>
     );
   }
@@ -70,17 +70,17 @@ export const MarketSimulationAnalytics: React.FC<Props> = ({ benchmarkId }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 backdrop-blur-sm shadow-xl">
-        <h3 className="text-xl font-bold text-white mb-4">Requests by Persona</h3>
+      <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
+        <h3 className="text-xl font-bold text-foreground mb-4">Requests by Persona</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={true} vertical={false} />
-              <XAxis type="number" stroke="#9ca3af" />
-              <YAxis dataKey="name" type="category" stroke="#9ca3af" width={100} />
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} horizontal={true} vertical={false} />
+              <XAxis type="number" stroke="currentColor" opacity={0.5} />
+              <YAxis dataKey="name" type="category" stroke="currentColor" opacity={0.5} width={100} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
-                itemStyle={{ color: '#fff' }}
+                contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '8px' }}
+                itemStyle={{ color: 'var(--foreground)' }}
               />
               <Bar dataKey="Requests" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry, index) => (
@@ -93,16 +93,16 @@ export const MarketSimulationAnalytics: React.FC<Props> = ({ benchmarkId }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 backdrop-blur-sm shadow-xl">
-          <h3 className="text-xl font-bold text-white mb-4">P99 Latency by Persona (ms)</h3>
+        <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
+          <h3 className="text-xl font-bold text-foreground mb-4">P99 Latency by Persona (ms)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" angle={-45} textAnchor="end" height={60} />
-                <YAxis stroke="#9ca3af" />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
+                <XAxis dataKey="name" stroke="currentColor" opacity={0.5} angle={-45} textAnchor="end" height={60} />
+                <YAxis stroke="currentColor" opacity={0.5} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '8px' }}
                 />
                 <Bar dataKey="Latency" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => (
@@ -114,16 +114,16 @@ export const MarketSimulationAnalytics: React.FC<Props> = ({ benchmarkId }) => {
           </div>
         </div>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 backdrop-blur-sm shadow-xl">
-          <h3 className="text-xl font-bold text-white mb-4">TPS by Persona</h3>
+        <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
+          <h3 className="text-xl font-bold text-foreground mb-4">TPS by Persona</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" angle={-45} textAnchor="end" height={60} />
-                <YAxis stroke="#9ca3af" />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
+                <XAxis dataKey="name" stroke="currentColor" opacity={0.5} angle={-45} textAnchor="end" height={60} />
+                <YAxis stroke="currentColor" opacity={0.5} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '8px' }}
                 />
                 <Bar dataKey="TPS" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => (
@@ -135,16 +135,16 @@ export const MarketSimulationAnalytics: React.FC<Props> = ({ benchmarkId }) => {
           </div>
         </div>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 backdrop-blur-sm shadow-xl">
-          <h3 className="text-xl font-bold text-white mb-4">Success Rate (%)</h3>
+        <div className="bg-card rounded-xl p-6 border border-border shadow-xl">
+          <h3 className="text-xl font-bold text-foreground mb-4">Success Rate (%)</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" angle={-45} textAnchor="end" height={60} />
-                <YAxis stroke="#9ca3af" domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
+                <XAxis dataKey="name" stroke="currentColor" opacity={0.5} angle={-45} textAnchor="end" height={60} />
+                <YAxis stroke="currentColor" opacity={0.5} domain={[0, 100]} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '8px' }}
                 />
                 <Bar dataKey="SuccessRate" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => (

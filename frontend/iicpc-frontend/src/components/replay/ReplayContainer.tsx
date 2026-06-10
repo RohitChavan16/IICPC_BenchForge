@@ -38,10 +38,10 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
 
   if (replay.status === 'PENDING' || replay.status === 'PROCESSING') {
     return (
-      <Card className="w-full h-64 flex items-center justify-center animate-pulse bg-slate-900 border-slate-800">
+      <Card className="w-full h-64 flex items-center justify-center animate-pulse bg-card border-border">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-t-blue-500 border-slate-700 rounded-full animate-spin mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-300">Finalizing Telemetry & Generating Replay...</h3>
+          <div className="w-12 h-12 border-4 border-t-blue-500 border-muted rounded-full animate-spin mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground">Finalizing Telemetry & Generating Replay...</h3>
         </div>
       </Card>
     );
@@ -49,8 +49,8 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
 
   if (replay.status === 'FAILED' && !replay.snapshots?.length) {
     return (
-      <Card className="w-full bg-slate-900 border-slate-800">
-        <CardContent className="p-6 text-center text-slate-400">
+      <Card className="w-full bg-card border-border">
+        <CardContent className="p-6 text-center text-muted-foreground">
           Replay visualization could not be generated for this run.
         </CardContent>
       </Card>
@@ -85,12 +85,12 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <MetricCard title="Peak TPS" value={peakTps.toLocaleString()} />
-        <MetricCard title="Worst P99" value={`${worstP99.toFixed(1)} ms`} />
-        <MetricCard title="Avg Success" value={`${avgSuccessRate.toFixed(1)}%`} />
-        <MetricCard title="Progress" value={`${currentSnapshot.progress_percent}%`} />
-        <MetricCard title="Duration" value={`${(replay.snapshots.length * 5)}% Timeline`} />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <MetricCard title="Peak TPS" value={peakTps.toLocaleString()} variant="blue" />
+        <MetricCard title="Worst P99" value={`${worstP99.toFixed(1)} ms`} variant="rose" />
+        <MetricCard title="Avg Success" value={`${avgSuccessRate.toFixed(1)}%`} variant="emerald" />
+        <MetricCard title="Progress" value={`${currentSnapshot.progress_percent}%`} variant="violet" />
+        <MetricCard title="Duration" value={`${(replay.snapshots.length * 5)}% Timeline`} variant="amber" />
       </div>
 
       {activeInsights.length > 0 && (
@@ -113,9 +113,9 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
         </div>
       )}
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-slate-400">Persona Traffic Distribution</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">Persona Traffic Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 w-full">
@@ -131,12 +131,12 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
                     <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="progress" stroke="#475569" tickFormatter={(v) => `${v}%`} domain={[0, 100]} type="number" />
-                <YAxis stroke="#475569" />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                <XAxis dataKey="progress" stroke="currentColor" opacity={0.5} tickFormatter={(v) => `${v}%`} domain={[0, 100]} type="number" />
+                <YAxis stroke="currentColor" opacity={0.5} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}
-                  itemStyle={{ color: '#e2e8f0' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--foreground)' }}
                 />
                 <Area type="monotone" dataKey="retail" name="Retail Trader" stackId="1" stroke="#3b82f6" fill="url(#colorRetail)" isAnimationActive={false} />
                 <Area type="monotone" dataKey="whale" stackId="1" stroke="#ec4899" fill="url(#colorWhale)" isAnimationActive={false} />
@@ -149,21 +149,21 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-900 border-slate-800">
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-slate-400">System Response Timeline</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">System Response Timeline</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="progress" stroke="#475569" tickFormatter={(v) => `${v}%`} domain={[0, 100]} type="number" />
-                <YAxis yAxisId="left" stroke="#475569" />
-                <YAxis yAxisId="right" orientation="right" stroke="#475569" />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                <XAxis dataKey="progress" stroke="currentColor" opacity={0.5} tickFormatter={(v) => `${v}%`} domain={[0, 100]} type="number" />
+                <YAxis yAxisId="left" stroke="currentColor" opacity={0.5} />
+                <YAxis yAxisId="right" orientation="right" stroke="currentColor" opacity={0.5} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}
-                  itemStyle={{ color: '#e2e8f0' }}
+                  contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--foreground)' }}
                 />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="tps" name="TPS" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -175,7 +175,7 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-900 border-slate-800 p-4">
+      <Card className="bg-card border-border p-4">
         <div className="flex items-center space-x-4">
           <button 
             onClick={() => setIsPlaying(!isPlaying)}
@@ -186,26 +186,26 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
           
           <button 
             onClick={() => setSpeed(speed === 1 ? 2 : 1)}
-            className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors flex items-center"
+            className="px-3 py-1 rounded bg-secondary/20 hover:bg-secondary/40 text-muted-foreground text-sm font-medium transition-colors flex items-center border border-border"
           >
             <FastForward size={14} className="mr-1" />
             {speed}x
           </button>
 
           <div className="flex-1 relative">
-            <div className="absolute w-full h-2 bg-slate-800 rounded-full top-1/2 -translate-y-1/2" />
+            <div className="absolute w-full h-2 bg-secondary/50 rounded-full top-1/2 -translate-y-1/2 border border-border/50" />
             {/* Timeline markers for insights */}
             {replay.insights.map((insight, idx) => {
                const percentage = replay.snapshots[insight.bucket_index]?.progress_percent || 0;
                return (
                  <div 
                    key={idx}
-                   className="absolute w-3 h-3 bg-yellow-500 rounded-full top-1/2 -translate-y-1/2 z-10 -ml-1.5 cursor-help group"
+                   className="absolute w-3 h-3 bg-yellow-500 rounded-full top-1/2 -translate-y-1/2 z-10 -ml-1.5 cursor-help group shadow-[0_0_8px_rgba(234,179,8,0.5)]"
                    style={{ left: `${percentage}%` }}
                  >
-                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-800 text-slate-200 text-xs p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                     <div className="font-bold text-yellow-400 mb-1">{percentage}% - {insight.type.replace('_', ' ')}</div>
-                     <div>{insight.message}</div>
+                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-card border border-border text-foreground text-xs p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                     <div className="font-bold text-yellow-500 mb-1">{percentage}% - {insight.type.replace('_', ' ')}</div>
+                     <div className="text-muted-foreground">{insight.message}</div>
                    </div>
                  </div>
                );
@@ -240,7 +240,7 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
               style={{ left: `${(currentIndex / 19) * 100}%` }}
             />
           </div>
-          <div className="text-slate-400 text-sm font-medium w-12 text-right">
+          <div className="text-muted-foreground text-sm font-medium w-12 text-right">
             {currentSnapshot.progress_percent}%
           </div>
         </div>
@@ -249,13 +249,21 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
   );
 }
 
-function MetricCard({ title, value }: { title: string, value: string | number }) {
+function MetricCard({ title, value, variant = 'blue' }: { title: string, value: string | number, variant?: 'blue' | 'rose' | 'emerald' | 'violet' | 'amber' }) {
+  const styles = {
+    blue: { bg: 'bg-blue-500/10 border-blue-500/20', label: 'text-blue-600 dark:text-blue-400', value: 'text-blue-700 dark:text-blue-300' },
+    rose: { bg: 'bg-rose-500/10 border-rose-500/20', label: 'text-rose-600 dark:text-rose-400', value: 'text-rose-700 dark:text-rose-300' },
+    emerald: { bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'text-emerald-600 dark:text-emerald-400', value: 'text-emerald-700 dark:text-emerald-300' },
+    violet: { bg: 'bg-violet-500/10 border-violet-500/20', label: 'text-violet-600 dark:text-violet-400', value: 'text-violet-700 dark:text-violet-300' },
+    amber: { bg: 'bg-amber-500/10 border-amber-500/20', label: 'text-amber-600 dark:text-amber-400', value: 'text-amber-700 dark:text-amber-300' },
+  }
+
+  const s = styles[variant]
+
   return (
-    <Card className="bg-slate-900 border-slate-800">
-      <CardContent className="p-6">
-        <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
-        <p className="text-2xl font-bold text-slate-100">{value}</p>
-      </CardContent>
-    </Card>
+    <div className={`${s.bg} border rounded-xl px-4 py-2.5 flex flex-col justify-center`}>
+      <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 opacity-80 ${s.label}`}>{title}</p>
+      <p className={`text-lg font-bold leading-tight ${s.value}`}>{value}</p>
+    </div>
   );
 }

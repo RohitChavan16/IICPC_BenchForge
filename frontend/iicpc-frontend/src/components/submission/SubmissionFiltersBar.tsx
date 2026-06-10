@@ -17,7 +17,7 @@ interface SubmissionFiltersBarProps {
 
 export function SubmissionFiltersBar({ filters, setFilters, onRefresh, isRefreshing }: SubmissionFiltersBarProps) {
   return (
-    <div className="flex flex-col xl:flex-row gap-6 items-center justify-between w-full mt-6">
+    <div className="flex flex-col xl:flex-row gap-6 items-center justify-between w-full">
       <div className="flex-1 w-full xl:max-w-md relative group">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-indigo-400 transition-colors" size={18} />
         <input 

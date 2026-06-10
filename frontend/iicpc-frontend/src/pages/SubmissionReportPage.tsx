@@ -27,6 +27,7 @@ export function SubmissionReportPage() {
   const [data, setData] = useState<any>(null)
   
   useEffect(() => {
+    window.scrollTo(0, 0)
     const fetchData = async () => {
       if (!id) return
       setLoading(true)
@@ -69,6 +70,18 @@ export function SubmissionReportPage() {
     }
     fetchData()
   }, [id])
+
+  useEffect(() => {
+    if (!loading) {
+      // Force scroll to top after the large DOM paints, defeating browser native scroll restoration
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+      }, 50)
+      return () => clearTimeout(timer)
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [loading])
 
   if (loading) {
     return <div className="text-center py-20 text-muted-foreground">Loading report...</div>
@@ -481,6 +494,11 @@ export function SubmissionReportPage() {
       {/* Replay Engine */}
       <div id="replay" className="scroll-mt-32">
         <Card title="Benchmark Replay Engine">
+          <div className="mt-4 mb-6">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The Replay Engine provides a granular, microsecond-level visualization of the matching engine's execution lifecycle. You can use this timeline to trace the exact moments when your engine was overwhelmed, visualize when specific persona bots encountered order rejection, or identify thread deadlocks during massive HFT traffic bursts. It's essentially a slow-motion playback of your engine's performance under fire.
+            </p>
+          </div>
           {replay ? (
             <div className="mt-6">
               <LifecycleTrack events={replay.lifecycle_events} currentStatus={benchState} />
@@ -737,11 +755,11 @@ export function SubmissionReportPage() {
               <p className="text-xs text-muted-foreground mb-2 text-center">TPS over Time</p>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-                  <YAxis stroke="#94a3b8" fontSize={10} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                  <XAxis dataKey="time" stroke="currentColor" opacity={0.5} fontSize={10} />
+                  <YAxis stroke="currentColor" opacity={0.5} fontSize={10} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }}
                     itemStyle={{ color: '#2dd4bf' }}
                   />
                   <Line type="monotone" dataKey="tps" stroke="#2dd4bf" strokeWidth={2} dot={false} />
@@ -753,11 +771,11 @@ export function SubmissionReportPage() {
               <p className="text-xs text-muted-foreground mb-2 text-center">Average Latency (ms)</p>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-                  <YAxis stroke="#94a3b8" fontSize={10} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                  <XAxis dataKey="time" stroke="currentColor" opacity={0.5} fontSize={10} />
+                  <YAxis stroke="currentColor" opacity={0.5} fontSize={10} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', color: 'var(--foreground)' }}
                     itemStyle={{ color: '#fbbf24' }}
                   />
                   <Line type="monotone" dataKey="latency" stroke="#fbbf24" strokeWidth={2} dot={false} />

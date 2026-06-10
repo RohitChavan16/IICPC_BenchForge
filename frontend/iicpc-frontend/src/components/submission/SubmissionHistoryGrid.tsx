@@ -55,7 +55,7 @@ export function SubmissionHistoryGrid({ submissions, leaderboard, isLoading }: S
   const paginatedSubmissions = submissions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
-    <div className="w-full bg-card dark:bg-[#0f121a] border border-border/40 rounded-xl mt-6 flex flex-col h-[600px] xl:h-[700px] shadow-sm dark:shadow-none">
+    <div className="w-full bg-card dark:bg-[#0f121a] border border-border/40 rounded-xl flex flex-col shadow-sm dark:shadow-none">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-muted-foreground border-collapse table-fixed lg:table-auto min-w-full">
           <thead className="bg-muted/50 dark:bg-[#161a23] border-b border-border/40 text-xs text-muted-foreground uppercase tracking-wider text-left sticky top-0 z-10 shadow-sm">
