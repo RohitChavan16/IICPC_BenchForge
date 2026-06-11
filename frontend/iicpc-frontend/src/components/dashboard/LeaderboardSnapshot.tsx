@@ -1,12 +1,32 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SectionWrapper } from './SectionWrapper';
-import { mockLeaderboardSnapshot } from '@/data/mockDashboardData';
 import { Trophy, ArrowUp, ArrowDown, Medal, User, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { fetchTopLeaderboardEntries } from '@/services/api/leaderboardService';
+import type { LeaderboardEntry } from '@/types/api';
 
 export function LeaderboardSnapshot() {
-  const data = mockLeaderboardSnapshot;
-  const isPositiveRank = data.currentUser.rankChange.startsWith('+');
+  const [topEntries, setTopEntries] = useState<LeaderboardEntry[]>([]);
+
+  useEffect(() => {
+    fetchTopLeaderboardEntries().then(setTopEntries).catch(console.error);
+  }, []);
+
+  const data = {
+    currentUser: {
+      rankChange: '-',
+      rank: '-',
+      gapToNext: '-',
+      gapToTop10: '-'
+    },
+    topTeams: topEntries.slice(0, 5).map(e => ({
+      rank: e.rank,
+      team: e.teamName,
+      score: e.finalScore.toLocaleString()
+    }))
+  };
+
+  const isPositiveRank = false;
 
   const actions = (
     <Link to="/leaderboard" className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg hover:bg-muted text-foreground transition-colors text-sm font-medium">

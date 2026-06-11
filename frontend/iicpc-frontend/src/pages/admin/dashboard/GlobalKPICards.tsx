@@ -13,18 +13,83 @@ import {
   RefreshCw
 } from 'lucide-react'
 
-const kpiData = [
-  { id: 1, label: 'Total Teams', value: '1,248', trend: '+12%', trendType: 'positive', icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-  { id: 2, label: 'Total Submissions', value: '45,892', trend: '+24%', trendType: 'positive', icon: FileCode, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  { id: 3, label: 'Active Benchmarks', value: '12', trend: 'Stable', trendType: 'neutral', icon: Activity, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-  { id: 4, label: 'Queue Depth', value: '0', trend: '-4%', trendType: 'positive', icon: Clock, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-  { id: 5, label: 'Running Deployments', value: '8', trend: '+2', trendType: 'neutral', icon: Rocket, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-  { id: 6, label: 'Failed Deployments', value: '2', trend: '-1', trendType: 'positive', icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-  { id: 7, label: 'Average TPS', value: '4,521', trend: '+8%', trendType: 'positive', icon: Cpu, color: 'text-sky-500', bg: 'bg-sky-500/10' },
-  { id: 8, label: 'Average Correctness', value: '98.4%', trend: 'Stable', trendType: 'neutral', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-]
+import { useEffect, useState, useMemo } from 'react'
+import { getSharedWebsocketClient } from '@/services/websocket/websocketClient'
+import type { MetricSnapshot } from '@/types/api'
+import { fetchBenchmarkSessions } from '@/services/api/benchmarkService'
+import { listSubmissions } from '@/services/api/submissionService'
+import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
 
 export function GlobalKPICards() {
+  const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null)
+  const [submissions, setSubmissions] = useState<any[]>([])
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
+  const [benchmarks, setBenchmarks] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchAll = async () => {
+    try {
+      const [subs, lb, bench] = await Promise.all([
+        listSubmissions(),
+        fetchLeaderboardEntries(),
+        fetchBenchmarkSessions()
+      ])
+      setSubmissions(subs)
+      setLeaderboard(lb.items || [])
+      setBenchmarks(bench.items || [])
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws')
+    setSnapshot(ws.getLatestSnapshot())
+
+    const handleSnapshot = (data: MetricSnapshot) => setSnapshot(data)
+    ws.addHandler(handleSnapshot)
+    ws.connect()
+
+    fetchAll()
+    const interval = setInterval(fetchAll, 10000)
+
+    return () => {
+      ws.removeHandler(handleSnapshot)
+      clearInterval(interval)
+    }
+  }, [])
+
+  const totalTeams = useMemo(() => {
+    const uniqueTeams = new Set(submissions.map(s => s.teamName).filter(Boolean))
+    return Math.max(uniqueTeams.size, leaderboard.length)
+  }, [submissions, leaderboard])
+
+  const totalSubmissions = submissions.length
+  const activeBenchmarks = benchmarks.filter(b => b.status === 'RUNNING' || !b.endTime).length
+  const queueDepth = 0 // Mocked for now
+  const runningDeployments = submissions.filter(s => !['completed', 'failed', 'cancelled'].includes(s.status?.toLowerCase())).length
+  const failedDeployments = submissions.filter(s => s.status?.toLowerCase() === 'failed').length
+  const averageTPS = snapshot ? Math.floor(snapshot.tps) : 0
+  
+  const avgCorrectness = useMemo(() => {
+    const scores = leaderboard.filter(l => l.correctnessScore !== undefined).map(l => l.correctnessScore)
+    if (scores.length === 0) return 0
+    return scores.reduce((a, b) => a + b, 0) / scores.length
+  }, [leaderboard])
+
+  const kpiData = [
+    { id: 1, label: 'Total Teams', value: totalTeams.toLocaleString(), trend: '-', trendType: 'neutral', icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+    { id: 2, label: 'Total Submissions', value: totalSubmissions.toLocaleString(), trend: '-', trendType: 'neutral', icon: FileCode, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { id: 3, label: 'Active Benchmarks', value: activeBenchmarks.toString(), trend: '-', trendType: 'neutral', icon: Activity, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+    { id: 4, label: 'Queue Depth', value: queueDepth.toString(), trend: '-', trendType: 'neutral', icon: Clock, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { id: 5, label: 'Running Deployments', value: runningDeployments.toString(), trend: '-', trendType: 'neutral', icon: Rocket, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+    { id: 6, label: 'Failed Deployments', value: failedDeployments.toString(), trend: '-', trendType: 'neutral', icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { id: 7, label: 'Average TPS', value: averageTPS.toLocaleString(), trend: '-', trendType: 'neutral', icon: Cpu, color: 'text-sky-500', bg: 'bg-sky-500/10' },
+    { id: 8, label: 'Average Correctness', value: `${avgCorrectness.toFixed(1)}%`, trend: '-', trendType: 'neutral', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+  ]
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -38,8 +103,8 @@ export function GlobalKPICards() {
           <p className="text-sm text-slate-500 dark:text-slate-400">High-level metrics across the entire platform</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs font-medium">
-            <RefreshCw size={14} />
+          <button onClick={fetchAll} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs font-medium disabled:opacity-50">
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             Refresh
           </button>
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs font-medium">

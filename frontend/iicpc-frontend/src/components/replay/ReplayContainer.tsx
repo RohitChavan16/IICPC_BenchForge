@@ -14,8 +14,9 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
   const [speed, setSpeed] = useState<1 | 2>(1);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const maxIndex = replay.snapshots.length - 1;
-  const currentSnapshot = replay.snapshots[currentIndex];
+  const snapshots = replay.snapshots || [];
+  const maxIndex = Math.max(0, snapshots.length - 1);
+  const currentSnapshot = snapshots[currentIndex];
   
   // Handle playback interval
   useEffect(() => {
@@ -65,7 +66,7 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
   const activeInsights = replay.insights.filter(i => i.bucket_index === currentIndex);
 
   // Prepare chart data (slice up to current index)
-  const chartData = replay.snapshots.slice(0, currentIndex + 1).map(s => {
+  const chartData = snapshots.slice(0, currentIndex + 1).map(s => {
     const data: any = { 
       progress: s.progress_percent,
       tps: s.tps,
@@ -79,9 +80,9 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
   });
 
   // Replay Summary Metrics
-  const peakTps = Math.max(...replay.snapshots.map(s => s.tps));
-  const worstP99 = Math.max(...replay.snapshots.map(s => s.p99)) / 1000000;
-  const avgSuccessRate = replay.snapshots.reduce((acc, s) => acc + s.success_rate, 0) / replay.snapshots.length;
+  const peakTps = Math.max(...snapshots.map(s => s.tps));
+  const worstP99 = Math.max(...snapshots.map(s => s.p99)) / 1000000;
+  const avgSuccessRate = snapshots.reduce((acc, s) => acc + s.success_rate, 0) / (snapshots.length || 1);
 
   return (
     <div className="space-y-6">
@@ -90,7 +91,7 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
         <MetricCard title="Worst P99" value={`${worstP99.toFixed(1)} ms`} variant="rose" />
         <MetricCard title="Avg Success" value={`${avgSuccessRate.toFixed(1)}%`} variant="emerald" />
         <MetricCard title="Progress" value={`${currentSnapshot.progress_percent}%`} variant="violet" />
-        <MetricCard title="Duration" value={`${(replay.snapshots.length * 5)}% Timeline`} variant="amber" />
+        <MetricCard title="Duration" value={`${(snapshots.length * 5)}% Timeline`} variant="amber" />
       </div>
 
       {activeInsights.length > 0 && (
@@ -196,7 +197,7 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
             <div className="absolute w-full h-2 bg-secondary/50 rounded-full top-1/2 -translate-y-1/2 border border-border/50" />
             {/* Timeline markers for insights */}
             {replay.insights.map((insight, idx) => {
-               const percentage = replay.snapshots[insight.bucket_index]?.progress_percent || 0;
+               const percentage = snapshots[insight.bucket_index]?.progress_percent || 0;
                return (
                  <div 
                    key={idx}

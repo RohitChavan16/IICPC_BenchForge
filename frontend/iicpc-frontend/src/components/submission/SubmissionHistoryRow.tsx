@@ -45,12 +45,12 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
 
   const showDashes = isFailed || isCancelled || isRunning
 
-  // Extract dummy values or use leaderboard if available
-  const rank = leaderboardEntry?.rank || Math.floor(Math.random() * 10) + 1
-  const score = leaderboardEntry?.finalScore || (Math.random() * 2000).toFixed(2)
-  const p99 = (Math.random() * 300 + 50).toFixed(0)
-  const concurrency = (Math.random() * 20000 + 5000).toLocaleString(undefined, { maximumFractionDigits: 0 })
-  const correctness = leaderboardEntry?.correctnessScore || (Math.random() * 5 + 95).toFixed(1)
+  // Use leaderboard entry if available, otherwise we don't have the final score in this list view
+  const rank = leaderboardEntry?.rank
+  const score = leaderboardEntry?.finalScore?.toFixed(2)
+  const p99 = undefined
+  const concurrency = undefined
+  const correctness = leaderboardEntry?.correctnessScore?.toFixed(1)
 
   let displayFileName = `${submission.submissionName}.zip`
   if (submission.filePath) {
@@ -78,8 +78,8 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
       {/* Engine / Submission */}
       <td className="px-2 lg:px-4 py-2 lg:py-2.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-indigo-500/10 text-indigo-400 shrink-0">
-            <Box size={16} />
+          <div className={`p-1.5 rounded shrink-0 ${leaderboardEntry ? 'bg-amber-500/10 text-amber-500' : 'bg-indigo-500/10 text-indigo-400'}`}>
+            {leaderboardEntry ? <Trophy size={16} /> : <Box size={16} />}
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-semibold text-foreground text-sm truncate max-w-[120px] lg:max-w-[140px]" title={submission.submissionName}>{submission.submissionName}</span>
@@ -94,7 +94,7 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
           <File size={14} className="text-indigo-400 shrink-0" />
           <div className="flex flex-col min-w-0">
             <span className="text-sm text-foreground truncate max-w-[100px] lg:max-w-[120px]" title={displayFileName}>{displayFileName}</span>
-            <span className="text-[11px] text-muted-foreground mt-0.5">{formatBytes(submission.fileSizeBytes)}</span>
+            <span className="text-[11px] text-muted-foreground mt-0.5">{formatBytes((submission as any).fileSizeBytes)}</span>
           </div>
         </div>
       </td>
@@ -113,21 +113,20 @@ export function SubmissionHistoryRow({ submission, leaderboardEntry }: Submissio
         </div>
       </td>
 
-      {/* Rank */}
       <td className="px-2 lg:px-4 py-2 lg:py-2.5">
-        {showDashes && !leaderboardEntry ? (
+        {(showDashes || rank === undefined) ? (
           <span className="text-muted-foreground">---</span>
         ) : (
           <span className="flex items-center gap-1 text-sm font-bold text-foreground">
-            <Trophy size={14} className={rank === 1 ? 'text-amber-500' : 'text-slate-400'} />
-            #{rank}
+            {leaderboardEntry && <Trophy size={14} className="text-amber-500" />}
+            #{rank} {leaderboardEntry ? '' : <span className="text-[10px] text-muted-foreground font-normal">(Hypothetical)</span>}
           </span>
         )}
       </td>
 
       {/* Score */}
       <td className="px-2 lg:px-4 py-2 lg:py-2.5">
-        {showDashes && !leaderboardEntry ? (
+        {(showDashes || score === undefined) ? (
           <span className="text-muted-foreground">---</span>
         ) : (
           <span className="text-sm text-indigo-400 font-semibold">{score}</span>

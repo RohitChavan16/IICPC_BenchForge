@@ -15,6 +15,7 @@ func NewServer(db *sql.DB) *mux.Router {
 	r.HandleFunc("/leaderboard", leaderboardHandler.ListLeaderboard).Methods("GET")
 	r.HandleFunc("/leaderboard/top", leaderboardHandler.ListTopLeaderboard).Methods("GET")
 	r.HandleFunc("/leaderboard/team/{team}", leaderboardHandler.ListLeaderboardByTeam).Methods("GET")
+	r.HandleFunc("/leaderboard/benchmark/{benchmarkId}", leaderboardHandler.GetLeaderboardByBenchmark).Methods("GET")
 
 	return r
 }

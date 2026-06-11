@@ -20,7 +20,7 @@ export const useSubmissionStore = create<SubmissionState>((set) => ({
   error: null,
 
   fetchSubmissions: async () => {
-    set({ isLoading: true, error: null })
+    set((state) => ({ isLoading: state.submissionsHistory.length === 0, error: null }))
     try {
       const items = await submissionService.listSubmissions()
       set({ submissionsHistory: items, isLoading: false })

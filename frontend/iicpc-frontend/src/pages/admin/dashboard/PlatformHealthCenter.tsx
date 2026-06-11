@@ -1,17 +1,35 @@
 import { motion } from 'framer-motion'
 import { Activity, CheckCircle2, AlertTriangle, XCircle, Settings, ArrowRight, Server, Clock, Zap, FileText, BarChart2 } from 'lucide-react'
 
-const services = [
-  { name: 'API Gateway', status: 'healthy', uptime: '99.99%', lastCheck: '2s ago' },
-  { name: 'Submission Service', status: 'healthy', uptime: '99.98%', lastCheck: '5s ago' },
-  { name: 'Benchmark Service', status: 'healthy', uptime: '99.95%', lastCheck: '1s ago' },
-  { name: 'Leaderboard Service', status: 'healthy', uptime: '100%', lastCheck: '10s ago' },
-  { name: 'Telemetry Service', status: 'degraded', uptime: '98.40%', lastCheck: '2s ago' },
-  { name: 'Redis', status: 'healthy', uptime: '99.99%', lastCheck: '1s ago' },
-  { name: 'PostgreSQL', status: 'healthy', uptime: '99.99%', lastCheck: '1s ago' },
-]
+import { useEffect, useState } from 'react'
+import { fetchHealthStatus } from '@/services/api/infraService'
+import type { HealthStatus } from '@/types/api'
+import { getSharedWebsocketClient } from '@/services/websocket/websocketClient'
+import type { MetricSnapshot } from '@/types/api'
 
 export function PlatformHealthCenter() {
+  const [services, setServices] = useState<HealthStatus[]>([])
+  const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null)
+
+  useEffect(() => {
+    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws')
+    setSnapshot(ws.getLatestSnapshot())
+    const handleSnapshot = (data: MetricSnapshot) => setSnapshot(data)
+    ws.addHandler(handleSnapshot)
+    ws.connect()
+
+    const fetchHealth = () => fetchHealthStatus().then(setServices).catch(console.error)
+    fetchHealth()
+    const interval = setInterval(fetchHealth, 15000)
+
+    return () => {
+      ws.removeHandler(handleSnapshot)
+      clearInterval(interval)
+    }
+  }, [])
+
+  const globalUptime = services.length > 0 && services.every(s => s.status.toLowerCase() === 'healthy') ? '99.99%' : '98.50%'
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -49,21 +67,21 @@ export function PlatformHealthCenter() {
               <Clock size={14} />
               <span className="text-xs font-semibold uppercase tracking-wider">Uptime</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">99.98%</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{globalUptime}</div>
           </div>
           <div className="col-span-1 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
             <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-1">
               <Server size={14} />
               <span className="text-xs font-semibold uppercase tracking-wider">Req Rate</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">4.5k<span className="text-sm text-slate-500">/s</span></div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{snapshot ? Math.floor(snapshot.tps) : 0}<span className="text-sm text-slate-500">/s</span></div>
           </div>
           <div className="col-span-1 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50">
             <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 mb-1">
               <Zap size={14} />
               <span className="text-xs font-semibold uppercase tracking-wider">Latency</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">18<span className="text-sm text-slate-500">ms</span></div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{snapshot ? Math.floor(snapshot.p50) : 0}<span className="text-sm text-slate-500">ms</span></div>
           </div>
           <div className="col-span-2 lg:col-span-2 flex gap-2">
             <button className="flex-1 flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/50 dark:hover:bg-slate-800/50 transition-colors">
@@ -80,23 +98,23 @@ export function PlatformHealthCenter() {
         {/* Services List */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3">
           {services.map((service, idx) => {
-            const isHealthy = service.status === 'healthy'
-            const isDegraded = service.status === 'degraded'
+            const isHealthy = service.status.toLowerCase() === 'healthy'
+            const isDegraded = service.status.toLowerCase() === 'warning' || service.status.toLowerCase() === 'degraded'
             
             return (
               <motion.div 
-                key={service.name}
+                key={service.label}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2, delay: 0.2 + idx * 0.05 }}
                 className="group flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm"
               >
                 <div>
-                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{service.name}</h3>
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{service.label}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Up: {service.uptime}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{service.status}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Check: {service.lastCheck}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 max-w-[120px]">{service.details}</span>
                   </div>
                 </div>
                 

@@ -44,7 +44,7 @@ export function SubmissionHistoryGrid({ submissions, leaderboard, isLoading }: S
         </p>
         <div className="flex items-center gap-4">
           <Link to="/submit">
-            <Button size="default" className="font-bold bg-indigo-600 hover:bg-indigo-500 text-white border-transparent">Submit First Engine</Button>
+            <Button size="md" className="font-bold bg-indigo-600 hover:bg-indigo-500 text-white border-transparent">Submit First Engine</Button>
           </Link>
         </div>
       </motion.div>

@@ -78,7 +78,7 @@ export function PipelineDirectory({ entries }: PipelineDirectoryProps) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={entry.finalScore > 0 ? 'default' : 'secondary'} className={entry.finalScore > 0 ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20' : ''}>
+                      <Badge variant={entry.finalScore > 0 ? 'default' : 'info'} className={entry.finalScore > 0 ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20' : ''}>
                         {entry.finalScore > 0 ? 'COMPLETED' : 'RUNNING'}
                       </Badge>
                     </td>

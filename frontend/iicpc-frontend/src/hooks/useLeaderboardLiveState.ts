@@ -3,11 +3,14 @@ import type { LeaderboardEntry } from '@/types/api';
 
 export type RankMovement = 'up' | 'down' | 'new' | 'none';
 
-export interface LeaderboardLiveStateEntry extends LeaderboardEntry {
+export interface LiveLeaderboardEntry extends LeaderboardEntry {
   previousRank?: number;
   rankDelta: number;
   movement: RankMovement;
+  rankChange?: number | 'new';
 }
+
+export type LeaderboardLiveStateEntry = LiveLeaderboardEntry;
 
 export type ActivityEventType = 
   | 'Rank Improved' 
@@ -54,7 +57,8 @@ export function useLeaderboardLiveState(currentEntries: LeaderboardEntry[]) {
         previousRank: prev?.rank,
         rankDelta,
         movement,
-      } as LeaderboardLiveStateEntry;
+        rankChange: movement === 'new' ? 'new' : rankDelta,
+      } as LiveLeaderboardEntry;
     });
   }, [currentEntries]);
 

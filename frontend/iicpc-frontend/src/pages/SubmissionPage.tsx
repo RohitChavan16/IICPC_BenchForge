@@ -10,7 +10,7 @@ import * as submissionService from '@/services/api/submissionService'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useSubmissionStore } from '@/stores/useSubmissionStore'
 import { useToast } from '@/components/ui/ToastProvider'
-import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
+import { fetchLeaderboardEntries, fetchLeaderboardForTeam } from '@/services/api/leaderboardService'
 import { DeploymentControlHeader } from '@/components/submission/DeploymentControlHeader'
 import { SubmissionFiltersBar } from '@/components/submission/SubmissionFiltersBar'
 import type { FilterState } from '@/components/submission/SubmissionFiltersBar'
@@ -52,9 +52,17 @@ export function SubmissionPage() {
   const logsEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchSubmissions()
-    fetchLeaderboardEntries().then(data => setLeaderboard(data.items || [])).catch(console.error)
-  }, [fetchSubmissions])
+    const fetchAll = () => {
+      fetchSubmissions()
+      const teamName = user?.team || user?.name
+      if (teamName) {
+        fetchLeaderboardForTeam(teamName).then(data => setLeaderboard(data.items || [])).catch(console.error)
+      } else {
+        fetchLeaderboardEntries().then(data => setLeaderboard(data.items || [])).catch(console.error)
+      }
+    }
+    fetchAll()
+  }, [fetchSubmissions, user])
 
   // WebSocket for Logs and State Updates
   useEffect(() => {
@@ -100,7 +108,9 @@ export function SubmissionPage() {
             )
           })
         } else if (data.stage === 'BENCHMARK' && data.stage_status === 'SUCCESS') {
-          fetchLeaderboardEntries().then(res => {
+          const teamName = useAuthStore.getState().user?.team || useAuthStore.getState().user?.name;
+          const fetchFn = teamName ? () => fetchLeaderboardForTeam(teamName) : fetchLeaderboardEntries;
+          fetchFn().then(res => {
             const items = res.items || [];
             setLeaderboard(items);
             const entry = items.find((l: any) => l.submissionId === activeSubmission.id);
@@ -254,18 +264,22 @@ export function SubmissionPage() {
   const isSubmissionOver = (activeStepIndex === timelineSteps.length && !hasFailed) || hasFailed
   
   const showActivePanel = activeSubmission != null && !isSubmitRoute
-  const showEmptyUpload = isSubmitRoute || activeSubmission == null || showUploadForm
+  const showEmptyUpload = isSubmitRoute || showUploadForm
 
   const totalSubmissions = submissionsHistory.length;
   const totalCompleted = submissionsHistory.filter(s => s.status.toLowerCase() === 'completed').length;
   const successRate = totalSubmissions > 0 ? ((totalCompleted / totalSubmissions) * 100).toFixed(1) + '%' : '0%';
   const currentRunning = submissionsHistory.filter(s => !['completed', 'failed', 'cancelled'].includes(s.status.toLowerCase())).length;
 
-  const bestRankNum = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.rank)) : null
-  const bestScoreNum = leaderboard.length > 0 ? Math.max(...leaderboard.map(l => l.finalScore)) : null
-  const worstScoreNum = leaderboard.length > 0 ? Math.min(...leaderboard.map(l => l.finalScore)) : null
+  const userLeaderboardEntries = leaderboard.filter(l => 
+    submissionsHistory.some(s => s.id === l.submissionId)
+  )
+
+  const bestRankNum = userLeaderboardEntries.length > 0 ? Math.min(...userLeaderboardEntries.map(l => l.rank)) : null
+  const bestScoreNum = userLeaderboardEntries.length > 0 ? Math.max(...userLeaderboardEntries.map(l => l.finalScore)) : null
+  const worstScoreNum = userLeaderboardEntries.length > 0 ? Math.min(...userLeaderboardEntries.map(l => l.finalScore)) : null
   const failedCount = submissionsHistory.filter(s => s.status.toLowerCase() === 'failed').length;
-  const correctnessScores = leaderboard.filter(l => l.correctnessScore !== undefined).map(l => l.correctnessScore as number)
+  const correctnessScores = userLeaderboardEntries.filter(l => l.correctnessScore !== undefined).map(l => l.correctnessScore as number)
   const avgCorrectnessNum = correctnessScores.length > 0 ? correctnessScores.reduce((a,b)=>a+b,0)/correctnessScores.length : null
 
   const filteredHistory = submissionsHistory.filter(sub => {
@@ -287,7 +301,7 @@ export function SubmissionPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6 pb-2 overflow-x-hidden">
       <PageHero 
-        theme={isSubmitRoute ? "dashboard" : "history"}
+        theme={isSubmitRoute ? "dashboard" : "submission"}
         icon={<TerminalSquare size={40} />}
         title={isSubmitRoute ? "Deploy Engine" : "Deployment History"}
         subtitle={isSubmitRoute 

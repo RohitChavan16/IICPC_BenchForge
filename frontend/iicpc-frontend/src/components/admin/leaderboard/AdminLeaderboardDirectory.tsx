@@ -78,7 +78,7 @@ export function AdminLeaderboardDirectory({ entries }: AdminLeaderboardDirectory
                         <div className="mt-1 text-xs text-muted-foreground font-mono truncate max-w-[150px]">{entry.submissionName}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={lang !== 'Unknown' ? 'default' : 'secondary'} className="text-[10px] h-5 py-0 px-2">{lang}</Badge>
+                        <Badge variant={lang !== 'Unknown' ? 'default' : 'info'} className="text-[10px] h-5 py-0 px-2">{lang}</Badge>
                       </td>
                       <td className="px-6 py-4 font-bold text-amber-500">{formatNumber(entry.finalScore)}</td>
                       <td className="px-6 py-4 font-mono text-foreground">{formatNumber(entry.tps)}</td>

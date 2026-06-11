@@ -1,26 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SectionWrapper } from './SectionWrapper';
-import { mockLiveActivityFeed } from '@/data/mockDashboardData';
 import { Filter, Pause, Play, Terminal, FileText, Repeat, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getSharedWebsocketClient } from '@/services/websocket/websocketClient';
+import type { LiveRequest } from '@/types/api';
 
 export function LiveActivityFeed() {
   const [isPaused, setIsPaused] = useState(false);
   const [filter, setFilter] = useState('All');
+  const [requests, setRequests] = useState<LiveRequest[]>([]);
 
-  const types = ['All', 'System', 'Submission', 'Replay', 'Leaderboard'];
+  useEffect(() => {
+    if (isPaused) return;
+
+    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws');
+    setRequests(ws.getLatestRequests());
+
+    const handleRequests = (data: LiveRequest[]) => setRequests(data);
+    ws.addRequestHandler(handleRequests);
+    ws.connect();
+
+    return () => {
+      ws.removeRequestHandler(handleRequests);
+    };
+  }, [isPaused]);
+
+  const types = ['All', 'Live Request'];
 
   const getIcon = (type: string) => {
-    switch (type) {
-      case 'System': return <Terminal size={14} className="text-cyan-500" />;
-      case 'Submission': return <FileText size={14} className="text-emerald-500" />;
-      case 'Replay': return <Repeat size={14} className="text-purple-500" />;
-      case 'Leaderboard': return <Trophy size={14} className="text-amber-500" />;
-      default: return <Terminal size={14} />;
-    }
+    return <Terminal size={14} className="text-cyan-500" />;
   };
 
-  const filteredFeed = filter === 'All' ? mockLiveActivityFeed : mockLiveActivityFeed.filter(item => item.type === filter);
+  const feedData = requests.map(r => ({
+    id: r.requestId,
+    type: 'Live Request',
+    time: 'Just now',
+    message: `${r.botType} Bot: ${Math.floor(r.latency)}ms [${r.success ? 'Success' : 'Fail'}] on Worker ${r.workerId.slice(0, 8)}`
+  }));
+
+  const filteredFeed = filter === 'All' ? feedData : feedData.filter(item => item.type === filter);
 
   const actions = (
     <div className="flex gap-2">

@@ -64,3 +64,25 @@ func (h *LeaderboardHandler) ListLeaderboardByTeam(w http.ResponseWriter, r *htt
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (h *LeaderboardHandler) GetLeaderboardByBenchmark(w http.ResponseWriter, r *http.Request) {
+	benchmarkID := mux.Vars(r)["benchmarkId"]
+	if benchmarkID == "" {
+		http.Error(w, "benchmarkId is required", http.StatusBadRequest)
+		return
+	}
+
+	entry, err := repository.GetLeaderboardEntryForBenchmark(h.db, benchmarkID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("get leaderboard by benchmark error: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entry)
+}

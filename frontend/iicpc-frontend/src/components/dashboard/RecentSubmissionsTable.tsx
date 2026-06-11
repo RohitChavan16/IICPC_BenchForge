@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SectionWrapper } from './SectionWrapper';
-import { mockRecentSubmissions } from '@/data/mockDashboardData';
 import { Badge } from '@/components/ui/Badge';
 import { FileText, Play, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSubmissionStore } from '@/stores/useSubmissionStore';
 
 export function RecentSubmissionsTable() {
   const [filter, setFilter] = useState('All');
+  const { submissionsHistory } = useSubmissionStore();
   
-  const filters = ['All', 'Passed', 'Failed', 'Running'];
-  const data = filter === 'All' ? mockRecentSubmissions : mockRecentSubmissions.filter(s => s.status === filter);
+  const filters = ['All', 'completed', 'failed', 'running'];
+  const data = filter === 'All' ? submissionsHistory : submissionsHistory.filter(s => s.status === filter);
 
   const actions = (
     <div className="flex bg-muted/50 p-1 rounded-lg border border-border">
@@ -58,17 +59,17 @@ export function RecentSubmissionsTable() {
                   exit={{ opacity: 0 }}
                   className="hover:bg-muted/20 transition-colors group"
                 >
-                  <td className="px-4 py-3 font-medium text-foreground">{sub.name}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{sub.submissionName}</td>
                   <td className="px-4 py-3 text-muted-foreground">{sub.language}</td>
-                  <td className="px-4 py-3 font-bold text-right text-foreground">{sub.score}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{sub.tps}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{sub.p99}</td>
+                  <td className="px-4 py-3 font-bold text-right text-foreground">{sub.correctnessScore ?? '-'}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">-</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">-</td>
                   <td className="px-4 py-3 text-center">
-                    <Badge variant={sub.status === 'Passed' ? 'success' : sub.status === 'Failed' ? 'danger' : 'warning'}>
-                      {sub.status}
+                    <Badge variant={sub.status === 'completed' ? 'success' : sub.status === 'failed' ? 'danger' : 'warning'}>
+                      {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{sub.created}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(sub.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="p-1.5 rounded bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors" title="View Report">

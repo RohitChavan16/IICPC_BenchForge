@@ -1,21 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from './SectionWrapper';
 import { Play, FileText, Activity, Trophy, Server, Users, List, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getSharedWebsocketClient } from '@/services/websocket/websocketClient';
+import type { WebSocketStatus } from '@/services/websocket/websocketClient';
+import type { MetricSnapshot, PersonaMetricMap } from '@/types/api';
 
 export function DashboardLiveCommandCenter() {
-  // Using some hardcoded/mock live data for the dashboard's command center view
-  const isLive = true;
+  const [status, setStatus] = useState<WebSocketStatus>('disconnected');
+  const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
+  const [personas, setPersonas] = useState<PersonaMetricMap>({});
+
+  useEffect(() => {
+    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws');
+    
+    setStatus(ws.getStatus());
+    setSnapshot(ws.getLatestSnapshot());
+    setPersonas(ws.getLatestPersonas());
+
+    const handleStatus = (s: WebSocketStatus) => setStatus(s);
+    const handleSnapshot = (data: MetricSnapshot) => setSnapshot(data);
+    const handlePersonas = (data: PersonaMetricMap) => setPersonas(data);
+
+    ws.addStatusHandler(handleStatus);
+    ws.addHandler(handleSnapshot);
+    ws.addPersonaHandler(handlePersonas);
+    ws.connect();
+
+    return () => {
+      ws.removeStatusHandler(handleStatus);
+      ws.removeHandler(handleSnapshot);
+      ws.removePersonaHandler(handlePersonas);
+    };
+  }, []);
+
+  const isLive = status === 'connected';
   
+  const formatPersonaMix = (map: PersonaMetricMap) => {
+    const keys = Object.keys(map);
+    if (keys.length === 0) return '-';
+    return keys.map(k => `${k}: ${Math.floor(map[k].tps)} TPS`).join(', ');
+  };
+
   const liveStats = {
-    stage: 'Ramping Up',
-    tps: '45,210',
-    p99: '18ms',
-    success: '99.9%',
-    workerUtilization: '85%',
-    queueDepth: '12,400',
-    personaMix: '40% Aggressive, 60% Balanced'
+    stage: '-',
+    tps: snapshot ? Math.floor(snapshot.tps).toLocaleString() : '-',
+    p99: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-',
+    success: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-',
+    workerUtilization: '-',
+    queueDepth: '-',
+    personaMix: formatPersonaMix(personas)
   };
 
   const actions = (

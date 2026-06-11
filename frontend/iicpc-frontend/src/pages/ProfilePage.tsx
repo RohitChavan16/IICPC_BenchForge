@@ -10,14 +10,25 @@ import {
   Key,
   Edit3,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check
 } from 'lucide-react'
+import { useState } from 'react'
 
 export function ProfilePage() {
   const { data: user, isLoading, isError } = useQuery({ 
     queryKey: ['userProfile'], 
     queryFn: fetchProfile 
   })
+  
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="space-y-8">
@@ -82,13 +93,24 @@ export function ProfilePage() {
               </div>
             ) : (
               <div className="grid gap-6 sm:grid-cols-2">
-                {/* ID */}
+                {/* Account ID */}
                 <div className="group rounded-2xl border border-border/50 bg-muted/30 p-5 transition-colors hover:bg-muted/50">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Fingerprint size={16} />
-                    <p className="text-xs font-semibold uppercase tracking-wider">Account ID</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Fingerprint size={16} />
+                      <p className="text-xs font-semibold uppercase tracking-wider">Account ID</p>
+                    </div>
+                    {user?.id && (
+                      <button 
+                        onClick={() => handleCopy(user.id)}
+                        className="text-muted-foreground hover:text-primary transition-colors p-1"
+                        title="Copy Account ID"
+                      >
+                        {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                      </button>
+                    )}
                   </div>
-                  <p className="mt-2 truncate text-base font-medium text-foreground">{user?.id}</p>
+                  <p className="mt-2 text-base font-medium text-foreground tracking-wide">{user?.id}</p>
                 </div>
 
                 {/* Name */}

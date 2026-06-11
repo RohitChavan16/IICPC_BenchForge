@@ -24,3 +24,8 @@ export async function fetchLeaderboardForTeam(team: string): Promise<Leaderboard
   const items = (response.data?.items ?? []) as LeaderboardEntry[]
   return { items, total: items.length }
 }
+
+export async function fetchLeaderboardForBenchmark(benchmarkId: string): Promise<LeaderboardEntry> {
+  const response = await apiClient.get(endpoints.leaderboardBenchmark(benchmarkId))
+  return response.data as LeaderboardEntry
+}

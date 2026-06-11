@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS auth_users (
     password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE SEQUENCE IF NOT EXISTS account_id_seq START 1;
+
+ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS account_id VARCHAR UNIQUE;
+ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS normalized_team_name TEXT;
+
+-- Backfill existing users
+UPDATE auth_users 
+SET account_id = 'BF-ACC-' || LPAD(nextval('account_id_seq')::text, 6, '0') 
+WHERE account_id IS NULL;
+
+UPDATE auth_users 
+SET normalized_team_name = LOWER(TRIM(team)) 
+WHERE normalized_team_name IS NULL;
 `
 	_, err := db.Exec(query)
 	return err

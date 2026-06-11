@@ -9,7 +9,7 @@ import { motion } from 'framer-motion'
 import * as submissionService from '@/services/api/submissionService'
 import * as deploymentService from '@/services/api/deploymentService'
 import * as benchmarkService from '@/services/api/benchmarkService'
-import { fetchLeaderboardEntries } from '@/services/api/leaderboardService'
+import { fetchLeaderboardForBenchmark, fetchLeaderboardForTeam } from '@/services/api/leaderboardService'
 import { fetchBenchmarkTelemetryHistory, fetchPersonaAnalytics } from '@/services/api/telemetryService'
 import { LiveLogs } from '@/components/LiveLogs'
 import { MarketSimulationAnalytics } from '@/components/analytics/MarketSimulationAnalytics'
@@ -33,25 +33,39 @@ export function SubmissionReportPage() {
       setLoading(true)
       try {
         const subs = await submissionService.listSubmissions()
-        const submission = subs.find(s => s.id === id)
+        const submission = (subs || []).find(s => s.id === id)
         
         const deps = await deploymentService.listDeployments()
-        const deployment = deps.items.find(d => d.submissionId === id)
+        const deployment = (deps?.items || []).find(d => d.submissionId === id)
         
         let benchmark = null
         if (deployment) {
           const benchs = await benchmarkService.fetchBenchmarkSessions()
-          benchmark = benchs.items.find((b: any) => b.deploymentId === deployment.id)
+          benchmark = (benchs?.items || []).find((b: any) => b.deploymentId === deployment.id)
         }
         
         let leaderboardEntry = null
+        let teamBestEntry = null
         let history = []
         let personas = []
+
+        if (submission) {
+          try {
+            const teamLb = await fetchLeaderboardForTeam(submission.teamName)
+            if (teamLb.items && teamLb.items.length > 0) {
+              teamBestEntry = teamLb.items[0]
+            }
+          } catch(e) { console.error("Team best fetch failed", e) }
+        }
+
         if (benchmark) {
-          const lb = await fetchLeaderboardEntries()
-          leaderboardEntry = lb.items.find((e: any) => e.benchmarkId === benchmark.id)
-          history = await fetchBenchmarkTelemetryHistory(benchmark.id)
-          personas = await fetchPersonaAnalytics(benchmark.id)
+          try {
+            leaderboardEntry = await fetchLeaderboardForBenchmark(benchmark.id)
+          } catch(e) { console.error("Leaderboard fetch failed", e) }
+          try {
+            history = await fetchBenchmarkTelemetryHistory(benchmark.id)
+            personas = await fetchPersonaAnalytics(benchmark.id)
+          } catch(e) { console.error("Telemetry fetch failed", e) }
         }
         
         let replay = null
@@ -61,7 +75,7 @@ export function SubmissionReportPage() {
           } catch(e) { console.error("Replay fetch failed", e) }
         }
 
-        setData({ submission, deployment, benchmark, leaderboardEntry, history, personas, replay })
+        setData({ submission, deployment, benchmark, leaderboardEntry, teamBestEntry, history, personas, replay })
       } catch (err) {
         console.error(err)
       } finally {
@@ -91,7 +105,7 @@ export function SubmissionReportPage() {
     return <div className="text-center py-20 text-muted-foreground">Submission not found.</div>
   }
 
-  const { submission, deployment, benchmark, leaderboardEntry, history, personas, replay } = data
+  const { submission, deployment, benchmark, leaderboardEntry, teamBestEntry, history, personas, replay } = data
 
   const botLabels: Record<string, string> = {
     retail: 'Retail Trader',
@@ -265,7 +279,12 @@ export function SubmissionReportPage() {
         metadata={[
           { label: 'Language', value: submission.language },
           { label: 'Score', value: leaderboardEntry ? finalScore.toFixed(2) : 'N/A' },
-          { label: 'Rank', value: leaderboardEntry ? `#${leaderboardEntry.rank}` : 'N/A' },
+          { 
+            label: 'Rank', 
+            value: leaderboardEntry 
+              ? `#${leaderboardEntry.rank}` + (teamBestEntry && teamBestEntry.benchmarkId === benchmark?.id ? '' : ' (Hypothetical)')
+              : 'N/A' 
+          },
           { label: 'Correctness', value: submission.correctnessScore != null ? `${submission.correctnessScore.toFixed(1)}%` : 'N/A' },
           { label: 'TPS', value: effectiveTps ? effectiveTps.toFixed(2) : 'N/A' },
         ]}
@@ -284,6 +303,35 @@ export function SubmissionReportPage() {
           { label: 'Logs', targetId: 'logs' }
         ]}
       />
+
+      {/* Team Best Banner */}
+      {benchmark && benchmark.status === 'COMPLETED' && teamBestEntry && (
+        <div className={`rounded-xl border p-4 mb-4 ${teamBestEntry.benchmarkId === benchmark.id ? 'bg-amber-500/10 border-amber-500/30' : 'bg-secondary/20 border-border/50'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Trophy className={teamBestEntry.benchmarkId === benchmark.id ? "text-amber-500" : "text-muted-foreground"} size={20} />
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {teamBestEntry.benchmarkId === benchmark.id ? "🏆 Current Team Best" : "Historical Submission"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {teamBestEntry.benchmarkId === benchmark.id 
+                    ? "This submission is currently representing your team on the live leaderboard." 
+                    : `Your team's best score is ${teamBestEntry.finalScore.toFixed(2)} (Rank #${teamBestEntry.rank}).`}
+                </p>
+              </div>
+            </div>
+            {teamBestEntry.benchmarkId !== benchmark.id && leaderboardEntry && (
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground">{leaderboardEntry.finalScore.toFixed(2)} Score</p>
+                <p className={`text-xs ${leaderboardEntry.finalScore >= teamBestEntry.finalScore ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {leaderboardEntry.finalScore >= teamBestEntry.finalScore ? '+' : ''}{(leaderboardEntry.finalScore - teamBestEntry.finalScore).toFixed(2)} vs Best
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 1. Benchmark Verdict Hero Card */}
       {benchmark && benchmark.status === 'COMPLETED' && leaderboardEntry && (
@@ -542,51 +590,142 @@ export function SubmissionReportPage() {
         </div>
       )}
 
-      {/* 4. Score Analysis */}
+      {/* 4. Score Analysis & Persona Impact */}
       {leaderboardEntry && (
         <div id="personas" className="scroll-mt-32">
-        <Card title="Score Analysis">
-          <div className="mt-4">
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                The final score is calculated using the Phase 4 formula:
-                <br />
-                <code className="bg-black/30 p-1 rounded text-primary text-xs mt-2 inline-block">
-                  Final Score = Effective TPS * (250/(250+p99)) * (Correctness / 100)² * (Concurrency / 100)²
-                </code>
-              </p>
+          <Card title="Score Analysis">
+            <div className="mt-4 grid lg:grid-cols-2 gap-8">
               
-              <div className="space-y-3 mt-4">
-                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Effective TPS</span>
-                  <span className="font-mono text-emerald-400">{effectiveTps.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Latency Factor</span>
-                  <span className="font-mono text-emerald-400">
-                    x{latencyFactor.toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Correctness Multiplier</span>
-                  <span className="font-mono text-emerald-400">
-                    x{Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Concurrency Multiplier</span>
-                  <span className="font-mono text-emerald-400">
-                    x{Math.pow(concurrencyScore / 100.0, 2).toFixed(4)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-primary">
-                  <span className="text-sm font-semibold text-primary">Total Score</span>
-                  <span className="font-mono font-bold text-primary">{finalScore.toFixed(2)}</span>
+              {/* Left Column: Score Formula & Details */}
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  The final score is calculated using the Phase 4 formula:
+                  <br />
+                  <code className="bg-black/30 p-3 rounded text-primary text-xs mt-3 block">
+                    Final Score = Effective TPS * (250/(250+p99)) * (Correctness / 100)² * (Concurrency / 100)²
+                  </code>
+                </p>
+                
+                <div className="space-y-3 mt-6">
+                  <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                    <span className="text-sm text-muted-foreground">Effective TPS</span>
+                    <span className="font-mono text-emerald-400">{effectiveTps.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                    <span className="text-sm text-muted-foreground">Latency Factor</span>
+                    <span className="font-mono text-emerald-400">
+                      x{latencyFactor.toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                    <span className="text-sm text-muted-foreground">Correctness Multiplier</span>
+                    <span className="font-mono text-emerald-400">
+                      x{Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
+                    <span className="text-sm text-muted-foreground">Concurrency Multiplier</span>
+                    <span className="font-mono text-emerald-400">
+                      x{Math.pow(concurrencyScore / 100.0, 2).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-primary mt-2">
+                    <span className="text-sm font-semibold text-primary">Total Score</span>
+                    <span className="font-mono font-bold text-primary">{finalScore.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Right Column: Persona Impact Panel */}
+              <div className="bg-background/40 rounded-xl border border-border/50 p-5 flex flex-col h-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="font-medium text-foreground">Persona Latency Influence Analysis</h4>
+                  <div className="cursor-help text-muted-foreground hover:text-primary transition-colors" title="Shows how each market persona influences latency relative to other market personas. Influence is weighted by traffic share and compared against a market-only latency baseline. This metric is directional and intended for optimization insights.">
+                    <Info size={14} />
+                  </div>
+                </div>
+                
+                {marketPersonas.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-2">
+                      <span className="w-1/3 text-left">Persona</span>
+                      <span className="w-1/3 text-center">Influence</span>
+                      <span className="w-1/3 text-right">Value</span>
+                    </div>
+                    <div className="space-y-4 flex-1">
+                      {(() => {
+                        const totalMarketRequests = marketPersonas.reduce((sum: any, p: any) => sum + p.total, 0);
+
+                        /*
+                         * This is a traffic-weighted market latency proxy.
+                         * It is not an exact combined P99 because percentile values cannot be
+                         * mathematically merged without the original latency distribution.
+                         */
+                        const marketBaselineP99 = marketPersonas.reduce((sum: any, p: any) => {
+                            const p99 = p.latency / 1000000;
+                            const share = p.total / (totalMarketRequests || 1);
+                            return sum + (p99 * share);
+                        }, 0);
+                        
+                        const marketBaselineFac = 250 / (250 + marketBaselineP99);
+
+                        return marketPersonas.map((p: any) => {
+                          const requestShare = p.total / (totalMarketRequests || 1);
+                          
+                          const p99 = p.latency / 1000000;
+                          const pFac = 250 / (250 + p99);
+                          
+                          const latencyFactorDelta = ((pFac - marketBaselineFac) / marketBaselineFac) * 100;
+                          const impact = requestShare * latencyFactorDelta;
+                          
+                          const isPositive = impact >= 0;
+                          const valStr = (isPositive ? '+' : '') + impact.toFixed(2) + '%';
+                          const title = botLabels[p.botType] || p.botType;
+
+                          return (
+                            <div key={p.botType} className="flex items-center justify-between hover:bg-secondary/10 transition-colors p-1 rounded-lg">
+                              <span className="text-sm font-medium text-foreground w-1/3 truncate text-left">{title}</span>
+                              
+                              <div className="w-1/3 px-2">
+                                <div className="w-full h-5 bg-[#2D2B45] rounded relative flex items-center overflow-hidden">
+                                  <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-emerald-500/30 z-10" />
+                                  
+                                  {/* Negative Bar */}
+                                  {!isPositive && (
+                                    <div 
+                                      className="absolute right-1/2 h-full bg-rose-500 rounded-l-sm transition-all"
+                                      style={{ width: `${Math.min(Math.abs(impact) * 10, 50)}%` }}
+                                    />
+                                  )}
+
+                                  {/* Positive Bar */}
+                                  {isPositive && (
+                                    <div 
+                                      className="absolute left-1/2 h-full bg-emerald-500 rounded-r-sm transition-all"
+                                      style={{ width: `${Math.min(Math.abs(impact) * 10, 50)}%` }}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <span className={`text-sm font-mono font-bold w-1/3 text-right ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                {valStr}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
+                    <p>No persona data available to calculate impact.</p>
+                  </div>
+                )}
+              </div>
+
             </div>
-          </div>
-        </Card>
+          </Card>
         </div>
       )}
 
@@ -662,7 +801,7 @@ export function SubmissionReportPage() {
       <div id="correctness" className="space-y-6 scroll-mt-32">
         {/* Tracer Validation */}
         {(() => {
-          const tracer = personas.find((p: any) => p.botType === 'tracer');
+          const tracer = (personas || []).find((p: any) => p.botType === 'tracer');
           if (!tracer) return null;
           return (
             <Card title="Tracer Validation" className="border-l-4 border-l-blue-500">
@@ -792,7 +931,17 @@ export function SubmissionReportPage() {
       {benchmark && benchmark.status === 'COMPLETED' && (
         <Card title="Market Conditions Summary (v1.0 - Hackathon Mix)">
           <div className="mt-4">
-            <MarketSimulationAnalytics benchmarkId={benchmark.id} />
+            {marketPersonas.length > 0 ? (
+              <MarketSimulationAnalytics benchmarkId={benchmark.id} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4 bg-secondary/10 rounded-xl border border-border/50">
+                <Info className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
+                <p className="text-lg font-medium text-foreground mb-2">Persona Data Unavailable</p>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                  No individual persona metrics were recorded for this benchmark session.
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       )}

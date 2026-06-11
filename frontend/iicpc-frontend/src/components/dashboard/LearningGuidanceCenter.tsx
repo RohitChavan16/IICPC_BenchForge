@@ -1,8 +1,14 @@
 import React from 'react';
 import { SectionWrapper } from './SectionWrapper';
-import { mockLearningCards } from '@/data/mockDashboardData';
 import { Calculator, Zap, Clock, Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const mockLearningCards = [
+  { id: 'scoring', title: 'How Scoring Works', description: 'Understand the formula balancing TPS, latency, and correctness.', icon: 'Calculator' },
+  { id: 'tps', title: 'Understanding TPS', description: 'Learn how throughput is measured across distributed workers.', icon: 'Zap' },
+  { id: 'latency', title: 'Understanding Latency', description: 'Why p99 matters more than average response times.', icon: 'Clock' },
+  { id: 'personas', title: 'Understanding Personas', description: 'Explore the different simulated user profiles in benchmarks.', icon: 'Users' }
+];
 
 export function LearningGuidanceCenter() {
   const iconMap: Record<string, React.ReactNode> = {

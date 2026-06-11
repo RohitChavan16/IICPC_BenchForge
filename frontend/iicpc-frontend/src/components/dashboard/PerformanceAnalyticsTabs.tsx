@@ -1,22 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SectionWrapper } from './SectionWrapper';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { mockPerformanceAnalytics } from '@/data/mockDashboardData';
+import { fetchTelemetryHistory } from '@/services/api/telemetryService';
+import type { MetricSnapshot } from '@/types/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Tab = 'tps' | 'latency' | 'success' | 'correctness';
+type Tab = 'tps' | 'latency' | 'success';
 
 const tabDetails = {
   tps: { label: 'TPS', color: '#3b82f6', desc: 'Throughput (Transactions Per Second)' },
   latency: { label: 'Latency (ms)', color: '#f59e0b', desc: 'p99 Response Time' },
-  success: { label: 'Success %', color: '#10b981', desc: 'Successful API Calls' },
-  correctness: { label: 'Correctness %', color: '#8b5cf6', desc: 'Payload Validation Pass Rate' }
+  success: { label: 'Success %', color: '#10b981', desc: 'Successful API Calls' }
 };
 
 export function PerformanceAnalyticsTabs() {
   const [activeTab, setActiveTab] = useState<Tab>('tps');
+  const [history, setHistory] = useState<MetricSnapshot[]>([]);
 
-  const data = mockPerformanceAnalytics[activeTab];
+  useEffect(() => {
+    fetchTelemetryHistory().then(setHistory).catch(console.error);
+  }, []);
+
+  const data = history.map(h => {
+    const time = new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (activeTab === 'tps') return { time, value: Math.floor(h.tps) };
+    if (activeTab === 'latency') return { time, value: Math.floor(h.p99) };
+    if (activeTab === 'success') return { time, value: parseFloat(((1 - h.failureRate) * 100).toFixed(1)) };
+    return { time, value: 0 };
+  });
+
   const details = tabDetails[activeTab];
 
   const actions = (

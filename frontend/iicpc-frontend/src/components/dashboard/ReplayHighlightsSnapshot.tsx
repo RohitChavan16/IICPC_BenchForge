@@ -1,11 +1,64 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SectionWrapper } from './SectionWrapper';
-import { mockReplayHighlights } from '@/data/mockDashboardData';
 import { Play, AlertTriangle, ShieldCheck, Clock, ArrowRight, UserX, UserCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { fetchBenchmarkSessions, fetchBenchmarkReplay } from '@/services/api/benchmarkService';
+import type { ReplayData } from '@/types/api';
 
 export function ReplayHighlightsSnapshot() {
-  const data = mockReplayHighlights;
+  const [replay, setReplay] = useState<ReplayData | null>(null);
+
+  useEffect(() => {
+    fetchBenchmarkSessions()
+      .then(res => {
+        if (res.items.length > 0) {
+          return fetchBenchmarkReplay(res.items[0].id);
+        }
+        return null;
+      })
+      .then(data => {
+        if (data) setReplay(data);
+      })
+      .catch(console.error);
+  }, []);
+
+  const getInsights = () => {
+    if (!replay) return { recoveryEvents: '-', anomaliesDetected: '-', worstPersona: '-', bestPersona: '-', availability: '-', status: 'Idle', timeline: [] };
+
+    const recoveryEvents = replay.insights.filter(i => i.type.toLowerCase().includes('recover')).length;
+    const anomaliesDetected = replay.insights.filter(i => i.type.toLowerCase().includes('anomal')).length;
+
+    let worstPersona = '-';
+    let bestPersona = '-';
+    if (replay.snapshots.length > 0) {
+      const lastSnapshot = replay.snapshots[replay.snapshots.length - 1];
+      if (lastSnapshot.persona_metrics) {
+        const sorted = Object.entries(lastSnapshot.persona_metrics).sort((a, b) => b[1].tps - a[1].tps);
+        if (sorted.length > 0) {
+          bestPersona = sorted[0][0];
+          worstPersona = sorted[sorted.length - 1][0];
+        }
+      }
+    }
+
+    const timeline = replay.lifecycle_events.map(e => ({
+      type: e.status.toLowerCase().includes('fail') ? 'anomaly' : (e.status.toLowerCase().includes('recover') ? 'recovery' : 'start'),
+      label: e.phase,
+      time: new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }));
+
+    return {
+      recoveryEvents: recoveryEvents.toString(),
+      anomaliesDetected: anomaliesDetected.toString(),
+      worstPersona,
+      bestPersona,
+      availability: '24h',
+      status: replay.status,
+      timeline
+    };
+  };
+
+  const data = getInsights();
 
   const actions = (
     <Link to="/replays/latest" className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500 hover:text-white transition-colors text-sm font-medium">

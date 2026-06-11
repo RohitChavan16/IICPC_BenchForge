@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronRight, ArrowUp, ArrowDown, Sparkles, Search } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ArrowUp, ArrowDown, Sparkles, Search } from 'lucide-react';
 import type { LeaderboardLiveStateEntry, RankMovement } from '@/hooks/useLeaderboardLiveState';
 import { formatNumber, formatPercent } from '@/utils/formatters';
 import { Badge } from '@/components/ui/Badge';
@@ -51,6 +51,13 @@ function MovementBadge({ movement, delta }: { movement: RankMovement; delta: num
 }
 
 export function RankingsTable({ entries, filter, setFilter, sortKey, setSortKey }: RankingsTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset to page 1 when filter or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, sortKey]);
   
   const filteredEntries = useMemo(() => {
     const query = filter.trim().toLowerCase();
@@ -71,6 +78,12 @@ export function RankingsTable({ entries, filter, setFilter, sortKey, setSortKey 
         return left.p99 - right.p99;
       });
   }, [filter, entries, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / ITEMS_PER_PAGE));
+  const paginatedEntries = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredEntries.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredEntries, currentPage]);
 
   return (
     <motion.section 
@@ -133,7 +146,7 @@ export function RankingsTable({ entries, filter, setFilter, sortKey, setSortKey 
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredEntries.map((entry, index) => (
+                {paginatedEntries.map((entry, index) => (
                   <motion.tr 
                     layoutId={`table-row-${entry.teamName}`}
                     initial={{ opacity: 0 }}
@@ -174,7 +187,7 @@ export function RankingsTable({ entries, filter, setFilter, sortKey, setSortKey 
                   </motion.tr>
                 ))}
               </AnimatePresence>
-              {filteredEntries.length === 0 && (
+              {paginatedEntries.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     No matching competitors found.
@@ -183,6 +196,32 @@ export function RankingsTable({ entries, filter, setFilter, sortKey, setSortKey 
               )}
             </tbody>
           </table>
+          
+          {/* Pagination Controls */}
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-border px-6 py-4 sm:flex-row">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{filteredEntries.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}</span> to <span className="font-medium text-foreground">{Math.min(currentPage * ITEMS_PER_PAGE, filteredEntries.length)}</span> of <span className="font-medium text-foreground">{filteredEntries.length}</span> entries
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="text-sm font-medium text-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </Card>
     </motion.section>

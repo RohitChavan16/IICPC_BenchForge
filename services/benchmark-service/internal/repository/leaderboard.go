@@ -9,10 +9,23 @@ func EnsureLeaderboardTable(db *sql.DB) error {
 	query := `
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'legacy_leaderboard_entries') THEN
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'leaderboard_entries') THEN
+            ALTER TABLE leaderboard_entries RENAME TO legacy_leaderboard_entries;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_rank RENAME TO idx_legacy_leaderboard_entries_rank;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_team_name RENAME TO idx_legacy_leaderboard_entries_team_name;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_final_score RENAME TO idx_legacy_leaderboard_entries_final_score;
+        END IF;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS leaderboard_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  benchmark_id UUID UNIQUE NOT NULL,
+  benchmark_id UUID NOT NULL,
   team_name TEXT NOT NULL,
+  normalized_team_name TEXT UNIQUE NOT NULL,
   submission_id UUID,
   submission_name TEXT NOT NULL,
   deployment_id UUID NOT NULL,
@@ -24,6 +37,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
   total_requests BIGINT NOT NULL DEFAULT 0,
   duration_seconds INTEGER NOT NULL DEFAULT 0,
   correctness_score NUMERIC NOT NULL DEFAULT 0,
+  concurrency_score NUMERIC NOT NULL DEFAULT 0,
   final_score NUMERIC NOT NULL DEFAULT 0,
   rank INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -31,7 +45,7 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
 );
 
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);
-CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(team_name);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(normalized_team_name);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);
 `
 	_, err := db.Exec(query)
@@ -100,9 +114,10 @@ WHERE b.id = $1
 	finalScore := computeFinalScore(computedTps, computedSuccessRate, p99.Float64, cScore, 100.0)
 
 	query = `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())
-ON CONFLICT (benchmark_id) DO UPDATE SET
+INSERT INTO leaderboard_entries (benchmark_id, team_name, normalized_team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
+VALUES ($1, $2, LOWER(TRIM($2)), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())
+ON CONFLICT (normalized_team_name) DO UPDATE SET
+  benchmark_id = EXCLUDED.benchmark_id,
   team_name = EXCLUDED.team_name,
   submission_id = EXCLUDED.submission_id,
   submission_name = EXCLUDED.submission_name,
@@ -118,6 +133,7 @@ ON CONFLICT (benchmark_id) DO UPDATE SET
   concurrency_score = EXCLUDED.concurrency_score,
   final_score = EXCLUDED.final_score,
   updated_at = now()
+WHERE EXCLUDED.final_score > leaderboard_entries.final_score
 `
 	var dbSubID interface{} = nil
 	if submissionID.Valid {

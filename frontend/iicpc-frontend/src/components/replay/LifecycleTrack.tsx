@@ -16,7 +16,7 @@ export function LifecycleTrack({ events, currentStatus }: LifecycleTrackProps) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           {phases.map((phase, idx) => {
-            const event = events.find(e => e.phase === phase);
+            const event = (events || []).find(e => e.phase === phase);
             const isCompleted = event?.status === 'SUCCESS';
             const isFailed = event?.status === 'FAILED';
             const isActive = !event && currentStatus === phase;

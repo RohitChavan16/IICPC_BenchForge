@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Globe, CheckCircle, Activity, Zap, Clock, ShieldCheck, Hash } from 'lucide-react';
-import { mockExecutiveKPIs } from '@/data/mockDashboardData';
+import { getSharedWebsocketClient } from '@/services/websocket/websocketClient';
+import type { MetricSnapshot } from '@/types/api';
+import { fetchBenchmarkSessions } from '@/services/api/benchmarkService';
 
 const iconMap: Record<string, React.ReactNode> = {
   bestScore: <Trophy size={20} />,
@@ -49,24 +51,59 @@ const item = {
   show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 24 } }
 };
 
-export function ExecutiveKPIStrip() {
-  const [data, setData] = useState<typeof mockExecutiveKPIs | null>(null);
+export interface ExecutiveKPIStripProps {
+  bestScore?: number | null;
+  globalRank?: number | null;
+  correctness?: number | null;
+}
+
+export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: ExecutiveKPIStripProps) {
+  const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
+  const [benchmarksRun, setBenchmarksRun] = useState<number | '-'>('-');
 
   useEffect(() => {
-    // Simulate loading state
-    const timer = setTimeout(() => setData(mockExecutiveKPIs), 300);
-    return () => clearTimeout(timer);
+    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws');
+    setSnapshot(ws.getLatestSnapshot());
+
+    const handleSnapshot = (data: MetricSnapshot) => setSnapshot(data);
+    ws.addHandler(handleSnapshot);
+    ws.connect();
+
+    fetchBenchmarkSessions()
+      .then(res => setBenchmarksRun(res.total))
+      .catch(console.error);
+
+    return () => {
+      ws.removeHandler(handleSnapshot);
+    };
   }, []);
 
-  if (!data) {
-    return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-[120px] rounded-2xl bg-muted/50 animate-pulse border border-border" />
-        ))}
-      </div>
-    );
-  }
+  const data = {
+    bestScore: {
+      value: bestScore != null ? bestScore.toFixed(2) : '-', trend: '-', description: 'Highest recorded correctness and throughput score'
+    },
+    globalRank: {
+      value: globalRank != null ? `#${globalRank}` : '-', trend: '-', description: 'Current standing on the global leaderboard'
+    },
+    benchmarksCompleted: {
+      value: benchmarksRun.toString(), trend: '-', description: 'Total benchmark execution sessions completed'
+    },
+    successRate: {
+      value: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-', trend: '-', description: 'Percentage of requests processed without errors'
+    },
+    averageTPS: {
+      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', trend: '-', description: 'Average transactions processed per second'
+    },
+    bestTPS: {
+      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', trend: '-', description: 'Peak transactions per second recorded today'
+    },
+    bestP99: {
+      value: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-', trend: '-', description: 'Lowest P99 latency achieved today'
+    },
+    correctness: {
+      value: correctness != null ? `${correctness.toFixed(1)}%` : '-', trend: '-', description: 'Overall business logic correctness score'
+    }
+  };
 
   return (
     <motion.div 

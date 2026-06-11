@@ -72,7 +72,7 @@ export function SubmissionDirectory({ entries, selectedSubmission, setSelectedSu
                     </td>
                     <td className="px-6 py-4 text-foreground font-medium">{entry.teamName}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={lang !== 'Unknown' ? 'default' : 'secondary'} className="text-[10px] h-5 py-0 px-2">{lang}</Badge>
+                      <Badge variant={lang !== 'Unknown' ? 'default' : 'info'} className="text-[10px] h-5 py-0 px-2">{lang}</Badge>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">

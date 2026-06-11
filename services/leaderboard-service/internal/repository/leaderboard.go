@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"log"
 	"math"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/model"
@@ -11,10 +12,23 @@ func EnsureLeaderboardTable(db *sql.DB) error {
 	query := `
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'legacy_leaderboard_entries') THEN
+        IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'leaderboard_entries') THEN
+            ALTER TABLE leaderboard_entries RENAME TO legacy_leaderboard_entries;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_rank RENAME TO idx_legacy_leaderboard_entries_rank;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_team_name RENAME TO idx_legacy_leaderboard_entries_team_name;
+            ALTER INDEX IF EXISTS idx_leaderboard_entries_final_score RENAME TO idx_legacy_leaderboard_entries_final_score;
+        END IF;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS leaderboard_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  benchmark_id UUID UNIQUE NOT NULL,
+  benchmark_id UUID NOT NULL,
   team_name TEXT NOT NULL,
+  normalized_team_name TEXT UNIQUE NOT NULL,
   submission_id UUID,
   submission_name TEXT NOT NULL,
   deployment_id UUID NOT NULL,
@@ -38,7 +52,7 @@ ALTER TABLE leaderboard_entries ADD COLUMN IF NOT EXISTS concurrency_score NUMER
 ALTER TABLE leaderboard_entries ADD COLUMN IF NOT EXISTS submission_id UUID;
 
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);
-CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(team_name);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(normalized_team_name);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);
 `
 	_, err := db.Exec(query)
@@ -96,32 +110,148 @@ func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry,
 }
 
 func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardEntry, error) {
-	rows, err := db.Query(`SELECT id, benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, rank, created_at, updated_at FROM leaderboard_entries WHERE LOWER(team_name) = LOWER($1) ORDER BY rank ASC NULLS LAST, final_score DESC`, team)
+	// First fetch all benchmarks for this team
+	rows, err := db.Query(`
+	SELECT
+		b.id, b.team_name, s.id, s.submission_name, b.deployment_id,
+		CASE WHEN COALESCE(b.duration_seconds, 0) > 0 THEN b.total_requests::numeric / b.duration_seconds ELSE 0 END AS tps,
+		CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS success_rate,
+		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.duration_seconds, 0),
+		COALESCE(s.correctness_score, CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) AS correctness_score,
+		100 AS concurrency_score, b.created_at
+	FROM benchmarks b
+	JOIN deployments d ON b.deployment_id = d.id
+	JOIN submissions s ON d.submission_id = s.id
+	WHERE LOWER(b.team_name) = LOWER($1) AND b.status = 'COMPLETED'
+	ORDER BY b.created_at DESC
+	`, team)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	items := []model.LeaderboardEntry{}
+	var items []model.LeaderboardEntry
 	for rows.Next() {
 		var entry model.LeaderboardEntry
 		var subID sql.NullString
-		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &subID, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.ConcurrencyScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+		if err := rows.Scan(&entry.BenchmarkID, &entry.TeamName, &subID, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.ConcurrencyScore, &entry.CreatedAt); err != nil {
 			return nil, err
 		}
 		if subID.Valid {
 			entry.SubmissionID = subID.String
 		}
+
+		// Calculate FinalScore
+		latencyFactor := 250.0 / (250.0 + entry.P99)
+		corrMult := math.Pow(entry.CorrectnessScore / 100.0, 2)
+		concMult := math.Pow(entry.ConcurrencyScore / 100.0, 2)
+		effectiveTps := entry.TPS * (entry.SuccessRate / 100.0)
+		entry.FinalScore = effectiveTps * latencyFactor * corrMult * concMult
+
 		items = append(items, entry)
 	}
-	return items, rows.Err()
+	
+	// Now calculate rank for each entry
+	for i := range items {
+		entry := &items[i]
+		var rank int
+		err = db.QueryRow(`
+			SELECT COUNT(*) + 1 
+			FROM leaderboard_entries 
+			WHERE (
+				final_score > $1 
+				OR (final_score = $1 AND success_rate > $2)
+				OR (final_score = $1 AND success_rate = $2 AND p99 < $3)
+				OR (final_score = $1 AND success_rate = $2 AND p99 = $3 AND tps > $4)
+			) AND normalized_team_name != LOWER(TRIM($5))
+		`, entry.FinalScore, entry.SuccessRate, entry.P99, entry.TPS, team).Scan(&rank)
+		if err != nil {
+			return nil, err
+		}
+		entry.Rank = rank
+		entry.ID = entry.BenchmarkID // Provide synthetic ID
+		entry.UpdatedAt = entry.CreatedAt
+	}
+	return items, nil
+}
+
+func GetLeaderboardEntryForBenchmark(db *sql.DB, benchmarkID string) (*model.LeaderboardEntry, error) {
+	// Check if this benchmark is explicitly in the leaderboard (it is the current team best)
+	row := db.QueryRow(`SELECT id, benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, rank, created_at, updated_at FROM leaderboard_entries WHERE benchmark_id=$1`, benchmarkID)
+	
+	var entry model.LeaderboardEntry
+	var subID sql.NullString
+	err := row.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &subID, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.ConcurrencyScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt)
+	if err == nil {
+		if subID.Valid {
+			entry.SubmissionID = subID.String
+		}
+		// If found in leaderboard_entries, it is the team's best, and rank is accurate!
+		return &entry, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// NOT in leaderboard. We must fetch from benchmarks and compute hypothetical rank!
+	// Join with deployments and submissions to get deployment_id, submission_id, submission_name, team_name.
+	q := `
+	SELECT
+		b.id, b.team_name, s.id, s.submission_name, b.deployment_id,
+		CASE WHEN b.duration_seconds > 0 THEN b.total_requests::numeric / b.duration_seconds ELSE 0 END AS tps,
+		CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS success_rate,
+		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.duration_seconds, 0),
+		COALESCE(s.correctness_score, CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) AS correctness_score,
+		100 AS concurrency_score, b.created_at
+	FROM benchmarks b
+	JOIN deployments d ON b.deployment_id = d.id
+	JOIN submissions s ON d.submission_id = s.id
+	WHERE b.id = $1 AND b.status = 'COMPLETED'
+	`
+	row = db.QueryRow(q, benchmarkID)
+	err = row.Scan(&entry.BenchmarkID, &entry.TeamName, &subID, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.ConcurrencyScore, &entry.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	if subID.Valid {
+		entry.SubmissionID = subID.String
+	}
+
+	// Compute final_score using identical formula:
+	latencyFactor := 250.0 / (250.0 + entry.P99)
+	corrMult := math.Pow(entry.CorrectnessScore / 100.0, 2)
+	concMult := math.Pow(entry.ConcurrencyScore / 100.0, 2)
+	effectiveTps := entry.TPS * (entry.SuccessRate / 100.0)
+	entry.FinalScore = effectiveTps * latencyFactor * corrMult * concMult
+
+	// Compute hypothetical rank: count how many CURRENT leaderboard entries are strictly better
+	var rank int
+	err = db.QueryRow(`
+		SELECT COUNT(*) + 1 
+		FROM leaderboard_entries 
+		WHERE (
+		      final_score > $1 
+		   OR (final_score = $1 AND success_rate > $2)
+		   OR (final_score = $1 AND success_rate = $2 AND p99 < $3)
+		   OR (final_score = $1 AND success_rate = $2 AND p99 = $3 AND tps > $4)
+		) AND normalized_team_name != LOWER(TRIM($5))
+	`, entry.FinalScore, entry.SuccessRate, entry.P99, entry.TPS, entry.TeamName).Scan(&rank)
+	if err != nil {
+		return nil, err
+	}
+	entry.Rank = rank
+	entry.ID = benchmarkID // Provide a synthetic ID
+	entry.UpdatedAt = entry.CreatedAt
+
+	return &entry, nil
 }
 
 func UpsertLeaderboardEntry(db *sql.DB, benchmarkID, teamName, submissionID, submissionName, deploymentID string, tps, successRate, p50, p90, p99 float64, totalRequests int64, duration int, correctnessScore float64, concurrencyScore float64, finalScore float64) error {
 	query := `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())
-ON CONFLICT (benchmark_id) DO UPDATE SET
+INSERT INTO leaderboard_entries (benchmark_id, team_name, normalized_team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
+VALUES ($1, $2, LOWER(TRIM($2)), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, now(), now())
+ON CONFLICT (normalized_team_name) DO UPDATE SET
+  benchmark_id = EXCLUDED.benchmark_id,
   team_name = EXCLUDED.team_name,
   submission_id = EXCLUDED.submission_id,
   submission_name = EXCLUDED.submission_name,
@@ -137,6 +267,7 @@ ON CONFLICT (benchmark_id) DO UPDATE SET
   concurrency_score = EXCLUDED.concurrency_score,
   final_score = EXCLUDED.final_score,
   updated_at = now()
+WHERE EXCLUDED.final_score > leaderboard_entries.final_score
 `
 	var dbSubID interface{} = nil
 	if submissionID != "" {
@@ -164,35 +295,38 @@ WHERE leaderboard_entries.id = ranked.id
 }
 
 func BackfillLeaderboardEntries(db *sql.DB) error {
-	query := `
-INSERT INTO leaderboard_entries (benchmark_id, team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
-SELECT
-  b.id,
-  s.team_name,
-  s.id as submission_id,
-  s.submission_name,
-  b.deployment_id,
-  CASE WHEN b.duration_seconds > 0 THEN b.total_requests::numeric / b.duration_seconds ELSE 0 END AS tps,
-  CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS success_rate,
-  COALESCE(b.p50, 0),
-  COALESCE(b.p90, 0),
-  COALESCE(b.p99, 0),
-  b.total_requests,
-  COALESCE(b.duration_seconds, 0),
-  COALESCE(s.correctness_score, CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) AS correctness_score,
-  100 AS concurrency_score,
-  0 AS final_score, -- will be updated by a separate backfill pass if needed, or we just leave as 0 and it updates on next run
-  now(),
-  now()
-FROM benchmarks b
-JOIN deployments d ON b.deployment_id = d.id
-JOIN submissions s ON d.submission_id = s.id
-LEFT JOIN leaderboard_entries l ON l.benchmark_id = b.id
-WHERE b.status = 'COMPLETED' AND l.id IS NULL
-`
-	if _, err := db.Exec(query); err != nil {
+	rows, err := db.Query(`SELECT id FROM benchmarks WHERE status = 'COMPLETED' ORDER BY created_at ASC`)
+	if err != nil {
 		return err
 	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		entry, err := BuildLeaderboardEntryFromBenchmark(db, id)
+		if err != nil {
+			continue // Skip if missing data
+		}
+		
+		finalScore := ComputeFinalScore(entry.TPS, entry.SuccessRate, entry.P99, entry.CorrectnessScore, entry.ConcurrencyScore)
+		err = UpsertLeaderboardEntry(db, id, entry.TeamName, entry.SubmissionID, entry.SubmissionName, entry.DeploymentID, entry.TPS, entry.SuccessRate, entry.P50, entry.P90, entry.P99, entry.TotalRequests, entry.Duration, entry.CorrectnessScore, entry.ConcurrencyScore, finalScore)
+		if err != nil {
+			// Log but continue
+			log.Printf("failed to upsert benchmark %s: %v", id, err)
+		}
+	}
+	
 	return updateLeaderboardRanks(db)
 }
 
