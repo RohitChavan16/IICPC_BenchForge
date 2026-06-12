@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>BenchForge Architecture</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.85);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --border: #1e293b;
+            --success: #10b981;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            font-weight: 300;
+        }
+
+        .header .flow {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-top: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            flex: 1;
+        }
+
+        .diagram-container {
+            flex: 4;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            min-width: 250px;
+        }
+
+        .sidebar h3 {
+            font-size: 1.2rem;
+            margin: 0 0 10px 0;
+            color: var(--text-main);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .badge {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .badge:hover {
+            transform: translateX(5px);
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--success);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+
+        .badge::before {
+            content: '✓';
+            font-weight: 800;
+        }
+
+        .footer {
+            margin-top: 30px;
+            background: linear-gradient(90deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .footer .arrow {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .mermaid {
+            width: 100%;
+            min-width: 1000px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>BenchForge</h1>
+        <p>Distributed Trading Engine Benchmarking Platform</p>
+        <div class="flow">Submission → Validation → Benchmarking → Analytics → Replay → Leaderboard</div>
+    </div>
+
+    <div class="container">
+        <div class="diagram-container">
+            <div class="mermaid">
+                graph LR
+                    classDef userLayer fill:#1e1b4b,stroke:#8b5cf6,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef frontLayer fill:#082f49,stroke:#0ea5e9,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef ctrlLayer fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef execLayer fill:#451a03,stroke:#f59e0b,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef pipeLayer fill:#4c1d95,stroke:#c084fc,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef teleLayer fill:#0f766e,stroke:#2dd4bf,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef obsLayer fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#fff,rx:8,ry:8
+                    classDef dbLayer fill:#3f3f46,stroke:#a1a1aa,stroke-width:2px,color:#fff,rx:8,ry:8
+
+                    subgraph L1 ["👤 Contestant"]
+                        direction TB
+                        User["Contestant User"]:::userLayer
+                    end
+
+                    subgraph L2 ["🖥️ Frontend"]
+                        direction TB
+                        Dash["Dashboard"]:::frontLayer
+                        Port["Submission Portal"]:::frontLayer
+                        Rep["Reports UI"]:::frontLayer
+                        RepUI["Replay UI"]:::frontLayer
+                        LeadUI["Leaderboard"]:::frontLayer
+                    end
+
+                    subgraph L3 ["🚦 Control Plane (API Gateway)"]
+                        direction TB
+                        GW["API Gateway"]:::ctrlLayer
+                        Auth["Auth Svc"]:::ctrlLayer
+                        SubSvc["Submission Svc"]:::ctrlLayer
+                        DepSvc["Deployment Svc"]:::ctrlLayer
+                        BenchSvc["Benchmark Svc"]:::ctrlLayer
+                        LeadSvc["Leaderboard Svc"]:::ctrlLayer
+                        TeleSvc["Telemetry Svc"]:::ctrlLayer
+                    end
+
+                    subgraph L4 ["⚙️ Pipeline"]
+                        direction TB
+                        Up["Upload"]:::pipeLayer
+                        Val["Validate"]:::pipeLayer
+                        Bld["Build"]:::pipeLayer
+                        Cnt["Containerize"]:::pipeLayer
+                    end
+
+                    subgraph L5 ["⚡ Benchmark Execution"]
+                        direction TB
+                        TEUT["Trading Engine Under Test"]:::execLayer
+                        subgraph Workers ["Bot Worker Fleet"]
+                            Ret["Retail"]:::execLayer
+                            MM["Market Maker"]:::execLayer
+                            Sclp["Scalper"]:::execLayer
+                            Whl["Whale"]:::execLayer
+                            HFT["HFT Stressor"]:::execLayer
+                            ValW["Tracer Validator"]:::execLayer
+                        end
+                    end
+
+                    subgraph L6 ["📡 Telemetry & Replay"]
+                        direction TB
+                        RedisStream["Redis Streams"]:::teleLayer
+                        TeleAgg["Aggregation Svc"]:::teleLayer
+                        ReplayEng["Replay Engine"]:::teleLayer
+                    end
+
+                    subgraph L9 ["🔍 Observability"]
+                        direction TB
+                        Prom["Prometheus"]:::obsLayer
+                        Graf["Grafana"]:::obsLayer
+                        cAdv["cAdvisor"]:::obsLayer
+                        NExp["Node Exporter"]:::obsLayer
+                    end
+
+                    subgraph L10 ["💾 Storage"]
+                        direction TB
+                        PG["PostgreSQL"]:::dbLayer
+                        RedisDB["Redis"]:::dbLayer
+                    end
+
+                    %% Edges
+                    User -->|"Submit"| Port
+                    User -->|"View"| Dash
+                    User -->|"View"| Rep
+                    User -->|"Play"| RepUI
+                    User -->|"View"| LeadUI
+
+                    Port --> GW
+                    Dash --> GW
+                    Rep --> GW
+                    RepUI --> GW
+                    LeadUI -.->|"WebSocket"| GW
+
+                    GW --> Auth
+                    GW --> SubSvc
+                    GW --> DepSvc
+                    GW --> BenchSvc
+                    GW --> LeadSvc
+                    GW --> TeleSvc
+
+                    SubSvc --> Up
+                    Up --> Val
+                    Val --> Bld
+                    Bld --> Cnt
+                    Cnt --> DepSvc
+
+                    DepSvc -->|"Deploys"| TEUT
+                    BenchSvc --> Workers
+                    Workers -->|"Concurrent Tx"| TEUT
+
+                    Workers -->|"Events/Metrics"| RedisStream
+                    RedisStream --> TeleSvc
+                    TeleSvc --> TeleAgg
+                    TeleAgg --> ReplayEng
+                    ReplayEng -->|"Timeline"| RepUI
+
+                    BenchSvc --> LeadSvc
+                    LeadSvc --> LeadUI
+
+                    TeleAgg --> PG
+                    LeadSvc --> PG
+                    SubSvc --> PG
+                    TeleSvc --> RedisDB
+
+                    %% Observability Connections
+                    Prom -.-> GW
+                    Prom -.-> BenchSvc
+                    Graf --> Prom
+                    cAdv -.-> TEUT
+                    NExp -.-> Workers
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>Key Callouts</h3>
+            <div class="badge">Distributed Architecture</div>
+            <div class="badge">Real-Time Telemetry</div>
+            <div class="badge">Redis Streams Pipeline</div>
+            <div class="badge">Trading Persona Simulation</div>
+            <div class="badge">Replay Engine</div>
+            <div class="badge">Live Leaderboard</div>
+            <div class="badge">WebSocket Updates</div>
+            <div class="badge">Docker Isolation</div>
+            <div class="badge">Observability Stack</div>
+            <div class="badge">Correctness Validation</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>
+            BenchForge Evaluation Flow: 
+            <span>Submit Engine</span> <span class="arrow">→</span>
+            <span>Deploy</span> <span class="arrow">→</span>
+            <span>Benchmark</span> <span class="arrow">→</span>
+            <span>Telemetry</span> <span class="arrow">→</span>
+            <span>Replay Analysis</span> <span class="arrow">→</span>
+            <span>Score Calculation</span> <span class="arrow">→</span>
+            <span>Leaderboard</span>
+        </p>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose',
+            flowchart: {
+                htmlLabels: true,
+                curve: 'basis',
+                rankSpacing: 70,
+                nodeSpacing: 40
+            }
+        });
+    </script>
+</body>
+</html>

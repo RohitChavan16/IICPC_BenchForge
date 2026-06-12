@@ -40,3 +40,6 @@ docker-data/
 # Temporary
 tmp/
 temp/
+
+# Testing files
+temp_zip/
