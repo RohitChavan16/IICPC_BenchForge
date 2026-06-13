@@ -447,7 +447,6 @@ Deep dive into the BenchForge internals:
 👉 **[Click here to view the full UI Screenshot Gallery](./docs/SCREENSHOT_GALLERY.md)**
 
 ---
-
 ## 🏛️ Architecture & Data Flow Diagram
 
 **[Visit benchforge_architecture.html to view the complete interactive diagram](./benchforge_architecture.html)**
