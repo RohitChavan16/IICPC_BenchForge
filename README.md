@@ -40,6 +40,67 @@ Every component of this massive distributed system was designed and built by a s
 
 ---
 
+## 🖼️ Platform Screenshots
+
+<div align="center">
+  <img src="./demo/Screenshot 2026-06-12 213346.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 212619.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-12 212700.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 212838.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-12 212951.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 213015.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-12 213051.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 213118.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-12 213201.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 213346-1.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-12 213425.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 213451.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 203239.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 203308.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 203331.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 203359.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 203653.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 210728.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 212546.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 212718.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 213044.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 213105.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 224941.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 225005.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 225805.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 225818.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-13 225836.png" width="48%" style="margin: 1%;"/>
+</div>
+
+---
+
+## 🏛️ Architecture & Data Flow Diagram
+
+<div align="center">
+  
+  <img src="./demo/Screenshot 2026-06-14 161754.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-14 161818.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-14 161838.png" width="48%" style="margin: 1%;"/>
+  
+  <img src="./demo/Screenshot 2026-06-14 161920.png" width="48%" style="margin: 1%;"/>
+</div>
+
+---
+
 ## 02 | Problem Statement & The Gap BenchForge Fills
 
 Existing evaluation platforms share a critical blind spot: they test algorithmic correctness on a single thread, then declare a winner. None of them measure whether a system survives real-world concurrency — the defining challenge of production software engineering.
@@ -368,6 +429,61 @@ Deep dive into the BenchForge internals:
 - [Roadmap](./docs/roadmap.md)
 - [Coding Standards](./docs/coding-standards.md)
 - [Screenshots](./docs/screenshots.md)
+
+---
+
+## 🖼️ Platform Screenshots
+
+<div align="center">
+
+  <img src="./demo/Screenshot 2026-06-12 212619.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-12 213346.png" width="48%" style="margin: 1%;"/>
+
+  
+  <img src="./demo/Screenshot 2026-06-12 212838.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-13 225005.png" width="48%" style="margin: 1%;"/>
+</div>
+
+👉 **[Click here to view the full UI Screenshot Gallery](./docs/SCREENSHOT_GALLERY.md)**
+
+---
+
+## 🏛️ Architecture & Data Flow Diagram
+
+**[Visit benchforge_architecture.html to view the complete interactive diagram](./benchforge_architecture.html)**
+
+<div align="center">
+  <div style="display: inline-block; width: 48%; margin: 1%;">
+    <a href="https://iicpc_tech.oneapp.dev/">
+      <img src="./demo/Screenshot 2026-06-14 161754.png" width="100%"/>
+      <br><em>visit this to get complete diagram</em>
+    </a>
+  </div>
+  <div style="display: inline-block; width: 48%; margin: 1%;">
+    <a href="https://iicpc_cycle.oneapp.dev/">
+      <img src="./demo/Screenshot 2026-06-14 161818.png" width="100%"/>
+      <br><em>visit this to get complete diagram</em>
+    </a>
+  </div>
+  <div style="display: inline-block; width: 48%; margin: 1%;">
+    <a href="https://iicpc_tele.oneapp.dev/">
+      <img src="./demo/Screenshot 2026-06-14 161838.png" width="100%"/>
+      <br><em>visit this to get complete diagram</em>
+    </a>
+  </div>
+  <div style="display: inline-block; width: 48%; margin: 1%;">
+    <a href="https://iicpc_er.oneapp.dev/">
+      <img src="./demo/Screenshot 2026-06-14 161920.png" width="100%"/>
+      <br><em>visit this to get complete diagram</em>
+    </a>
+  </div>
+</div>
+
+<p align="center">
+  <img src="./docs/architecture_diagram.png" alt="Architecture Diagram" width="85%">
+  <br>
+  <em>Distributed Microservices and Event-Driven Telemetry Pipeline</em>
+</p>
 
 ---
 
