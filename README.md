@@ -478,12 +478,6 @@ Deep dive into the BenchForge internals:
   </div>
 </div>
 
-<p align="center">
-  <img src="./docs/architecture_diagram.png" alt="Architecture Diagram" width="85%">
-  <br>
-  <em>Distributed Microservices and Event-Driven Telemetry Pipeline</em>
-</p>
-
 ---
 
 ## 17 | How to Test & Demo
