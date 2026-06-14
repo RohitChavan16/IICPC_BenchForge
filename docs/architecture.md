@@ -49,6 +49,8 @@ The system is decoupled into isolated, independently scalable services written i
 - **Benchmark Service**: Orchestrates the lifecycle of a benchmark (Init, Start, Stop, Report).
 - **Leaderboard Service**: Manages WebSocket connections and streams live ranking data.
 - **Submission Service**: Handles user code uploads and compilation triggers.
+- **Deployment Service**: Manages dynamic port allocation, Docker bridge networks, and contestant engine execution.
+- **Container Runner**: Responsible for safely isolating and building contestant Dockerfiles.
 
 ## Databases
 

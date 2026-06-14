@@ -15,13 +15,18 @@ BenchForge provides a suite of internal APIs for inter-service communication and
 ## Primary Endpoints
 
 ### Benchmark Orchestration (REST)
-- `POST /api/v1/benchmarks/start`: Initiates a new benchmark run. Requires admin authentication.
-- `POST /api/v1/benchmarks/stop`: Broadcasts a graceful shutdown signal to all active Bot Workers.
-- `GET /api/v1/benchmarks/{id}/report`: Retrieves the final aggregated metrics and scoring for a completed run.
+- `POST /benchmarks`: Initiates a new benchmark run. Requires admin authentication.
+- `POST /benchmarks/{id}/stop`: Broadcasts a graceful shutdown signal to all active Bot Workers.
+- `GET /benchmarks/{id}`: Retrieves the final aggregated metrics and scoring for a completed run.
 
 ### Submissions
-- `POST /api/v1/submissions/upload`: Accepts a `.zip` or `.tar.gz` payload containing a contestant's source code.
-- `GET /api/v1/submissions/{id}/status`: Polls the containerization and build status of an uploaded engine.
+- `POST /submissions`: Accepts a multipart form payload containing a contestant's source code.
+- `GET /submissions/{id}`: Polls the containerization and build status of an uploaded engine.
+
+### Internal & Control Routes (API Gateway Proxy)
+The Gateway proxy also exposes these undocumented routes:
+- **Auth**: `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`
+- **Internal Entities**: `/deployments`, `/history`, `/personas`, `/replay`, `/workers`
 
 ## Authentication Flow
 

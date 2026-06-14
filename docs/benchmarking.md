@@ -40,22 +40,24 @@ To simulate a realistic exchange environment, the benchmark engine utilizes mult
 - **Whale Bot**: 
   - Submits orders capable of wiping out entire price levels in the order book.
   - Tests the target's liquidity sweep algorithms and memory allocation during large data mutations.
-- **Panic Seller**: 
-  - Simulates market crashes.
-  - Triggers massive, simultaneous market sell orders.
-  - Tests backpressure, circuit breakers, and queue saturation.
+- **Market Maker**: 
+  - Simulates liquidity providers.
+  - Submits cascading limit orders to test the matching core's recursive fills.
+- **Scalper**: 
+  - Simulates HFT day traders crossing the spread.
+  - Tests race conditions during rapid bid/ask volatility.
 
 ## Scoring Formula
 
 Scores are not purely based on raw Requests Per Second (RPS). 
 
-```text
-Final Score = (Throughput Multiplier) * (Correctness Penalty) * (Latency Degradation Factor)
+```sql
+Final Score = tps * (success_rate / 100.0) * (250.0 / (250.0 + P99)) * POWER(correctness_score / 100.0, 2) * POWER(concurrency_score / 100.0, 2)
 ```
 
-- **Throughput**: Calculated based on the 95th percentile of successful matches per second.
-- **Correctness**: Any invalid match or FIFO violation reduces the multiplier. Extreme violations result in an immediate `0`.
-- **Latency Factor**: Systems that maintain consistent latency at high load score better than systems that exhibit massive latency spikes under pressure.
+- **Throughput Component**: Purely based on `tps * success_rate`.
+- **Latency Penalty**: Damped using an exponential function on the P99 latency.
+- **Correctness & Concurrency**: Both apply massive quadratic penalties (squaring the decimal) to obliterate the scores of unstable or incorrect engines.
 
 ## Telemetry Collection
 
