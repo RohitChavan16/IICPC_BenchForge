@@ -99,12 +99,6 @@ export function BenchmarkSessionsPage() {
       />
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <Link
-          to="/benchmarks/new"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary/90"
-        >
-          Start Benchmark
-        </Link>
         <div className="relative flex-grow max-w-md">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground0" />
           <input
@@ -151,12 +145,6 @@ export function BenchmarkSessionsPage() {
           <h1 className="mt-2 text-3xl font-semibold text-foreground">Benchmark sessions</h1>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link
-            to="/benchmarks/new"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-primary/90"
-          >
-            Start Benchmark
-          </Link>
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground0" />
             <input

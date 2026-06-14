@@ -8,11 +8,22 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/model"
 )
 
-func ListBenchmarks(db *sql.DB, limit int) ([]model.Benchmark, error) {
+func ListBenchmarks(db *sql.DB, limit int, userID string) ([]model.Benchmark, error) {
 	query := `SELECT id, name, user_id, team_id, team_name, submission_id, deployment_id, target_type, status, worker_count, total_jobs, started_at, finished_at, duration_seconds, total_requests, success_count, failure_count, p50, p90, p99, correctness_score, tracer_total, tracer_success, metadata, last_heartbeat, failure_reason, wait_time_seconds, execution_time_seconds, created_at, updated_at,
 	          (CASE WHEN status = 'QUEUED' THEN (SELECT COUNT(*) + 1 FROM benchmarks b2 WHERE b2.status = 'QUEUED' AND b2.created_at < benchmarks.created_at) ELSE 0 END) as queue_position
-	          FROM benchmarks ORDER BY created_at DESC LIMIT $1`
-	rows, err := db.Query(query, limit)
+	          FROM benchmarks`
+	
+	var rows *sql.Rows
+	var err error
+
+	if userID != "" {
+		query += ` WHERE user_id = $2 ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit, userID)
+	} else {
+		query += ` ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit)
+	}
+
 	if err != nil {
 		return nil, err
 	}

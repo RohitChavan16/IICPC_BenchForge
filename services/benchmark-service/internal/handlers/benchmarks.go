@@ -78,7 +78,8 @@ func (h *BenchmarkHandler) setStage(subID, stage, status, reason string) {
 }
 
 func (h *BenchmarkHandler) ListBenchmarks(w http.ResponseWriter, r *http.Request) {
-	items, err := repository.ListBenchmarks(h.db, 100)
+	userID := r.Header.Get("X-User-Id")
+	items, err := repository.ListBenchmarks(h.db, 100, userID)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return

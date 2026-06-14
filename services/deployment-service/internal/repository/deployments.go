@@ -83,8 +83,20 @@ func GetDeploymentByID(db *sql.DB, id string) (*model.Deployment, error) {
 	return &d, nil
 }
 
-func ListDeployments(db *sql.DB, limit int) ([]model.Deployment, error) {
-	rows, err := db.Query(`SELECT id, user_id, team_id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments ORDER BY created_at DESC LIMIT $1`, limit)
+func ListDeployments(db *sql.DB, limit int, userID string) ([]model.Deployment, error) {
+	query := `SELECT id, user_id, team_id, submission_id, container_id, container_image, host_port, container_port, deployment_status, deployment_log, deployed_at, stopped_at, created_at, updated_at FROM deployments`
+	
+	var rows *sql.Rows
+	var err error
+
+	if userID != "" {
+		query += ` WHERE user_id = $2 ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit, userID)
+	} else {
+		query += ` ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit)
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -6,8 +6,19 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/submission-service/internal/model"
 )
 
-func ListSubmissions(db *sql.DB, limit int) ([]model.Submission, error) {
-	rows, err := db.Query(`SELECT id, user_id, team_id, team_name, submission_name, language, file_path, file_size_bytes, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at, correctness_score, correctness_details FROM submissions ORDER BY created_at DESC LIMIT $1`, limit)
+func ListSubmissions(db *sql.DB, limit int, userID string) ([]model.Submission, error) {
+	query := `SELECT id, user_id, team_id, team_name, submission_name, language, file_path, file_size_bytes, status, current_stage, stage_status, failure_reason, started_at, finished_at, build_log, created_at, updated_at, correctness_score, correctness_details FROM submissions`
+	var rows *sql.Rows
+	var err error
+
+	if userID != "" {
+		query += ` WHERE user_id = $2 ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit, userID)
+	} else {
+		query += ` ORDER BY created_at DESC LIMIT $1`
+		rows, err = db.Query(query, limit)
+	}
+
 	if err != nil {
 		return nil, err
 	}

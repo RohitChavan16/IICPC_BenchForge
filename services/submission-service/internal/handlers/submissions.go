@@ -50,7 +50,8 @@ func NewSubmissionHandler(db *sql.DB, rdb *redis.Client, uploadDir string) *Subm
 }
 
 func (h *SubmissionHandler) ListSubmissions(w http.ResponseWriter, r *http.Request) {
-	items, err := repository.ListSubmissions(h.db, 100)
+	userID := r.Header.Get("X-User-Id")
+	items, err := repository.ListSubmissions(h.db, 100, userID)
 	if err != nil {
 		log.Printf("list submissions error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)

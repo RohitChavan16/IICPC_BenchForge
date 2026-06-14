@@ -205,7 +205,28 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 		
 		r.publishLog(id, "DEPLOYMENT", "state_change", "Triggering deployment", "IN_PROGRESS")
 		reqBody := fmt.Sprintf(`{"submissionId": "%s"}`, id)
-		resp, err := http.Post(deploymentURL+"/deployments", "application/json", strings.NewReader(reqBody))
+		
+		var userID, teamID sql.NullString
+		_ = r.db.QueryRow(`SELECT user_id, team_id FROM submissions WHERE id=$1`, id).Scan(&userID, &teamID)
+
+		req, err := http.NewRequest("POST", deploymentURL+"/deployments", strings.NewReader(reqBody))
+		if err != nil {
+			msg := fmt.Sprintf("Failed to construct deployment request for %s: %v", id, err)
+			log.Println(msg)
+			r.publishLog(id, "DEPLOYMENT", "log", msg, "FAILED")
+			r.setStage(id, "DEPLOYMENT", "FAILED", "Deployment trigger failed")
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if userID.Valid {
+			req.Header.Set("X-User-Id", userID.String)
+		}
+		if teamID.Valid {
+			req.Header.Set("X-Team-Id", teamID.String)
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to trigger deployment for submission %s: %v", id, err)
 			log.Println(msg)

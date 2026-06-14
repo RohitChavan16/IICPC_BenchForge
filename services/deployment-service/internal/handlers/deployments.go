@@ -45,7 +45,8 @@ func NewHandler(db *sql.DB, rdb *redis.Client) *Handler {
 }
 
 func (h *Handler) ListDeployments(w http.ResponseWriter, r *http.Request) {
-	items, err := repository.ListDeployments(h.db, 100)
+	userID := r.Header.Get("X-User-Id")
+	items, err := repository.ListDeployments(h.db, 100, userID)
 	if err != nil {
 		log.Printf("list deployments error: %v", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)

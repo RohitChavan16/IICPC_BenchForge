@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { UserProfile } from '@/types/user'
+import { useSubmissionStore } from './useSubmissionStore'
+import { queryClient } from '@/app/queryClient'
 
 interface AuthState {
   user: UserProfile | null
@@ -36,6 +38,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       window.localStorage.removeItem('benchforge_user')
       window.localStorage.removeItem('benchforge_token')
     }
+    useSubmissionStore.getState().clearSubmissions()
+    queryClient.clear()
     set({ user: null, token: null, isAuthenticated: false })
   },
 }))

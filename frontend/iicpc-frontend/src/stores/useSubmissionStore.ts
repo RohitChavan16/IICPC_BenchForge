@@ -11,6 +11,7 @@ interface SubmissionState {
   fetchSubmissions: () => Promise<void>
   setActiveSubmission: (submission: Submission | null) => void
   updateSubmissionStatus: (id: string, status: string) => void
+  clearSubmissions: () => void
 }
 
 export const useSubmissionStore = create<SubmissionState>((set) => ({
@@ -54,5 +55,9 @@ export const useSubmissionStore = create<SubmissionState>((set) => ({
 
       return { submissionsHistory: history, activeSubmission: active }
     })
+  },
+
+  clearSubmissions: () => {
+    set({ activeSubmission: null, submissionsHistory: [], isLoading: false, error: null })
   }
 }))
