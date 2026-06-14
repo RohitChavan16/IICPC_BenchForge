@@ -51,7 +51,11 @@ export function RegisterPage() {
       })
       setAuth(response.user, response.token)
       pushToast({ title: 'Account ready', description: 'Welcome to BenchForge.', variant: 'success' })
-      navigate('/dashboard')
+      if (values.email === 'admin@benchforge.io') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error: unknown) {
       const message = (error as { message?: string })?.message ?? 'Could not create your account. Please try again.'
       pushToast({ title: 'Registration failed', description: message, variant: 'error' })

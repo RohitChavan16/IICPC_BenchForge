@@ -256,19 +256,44 @@ func (h *BenchmarkHandler) ProcessQueue() {
 		json.NewDecoder(scenarioResp.Body).Decode(&results)
 		scenarioResp.Body.Close()
 
-		passed := 0
 		unknown := false
+		
+		scenarioWeights := map[string]float64{
+			"basic_resting_order":     15.0,
+			"basic_matching_order":    15.0,
+			"partial_fill_order":      15.0,
+			"price_improvement":       20.0,
+			"fifo_priority":           20.0,
+			"multi_level_price_sweep": 15.0,
+		}
+
+		var correctnessScore float64 = 0.0
+		var maxPossibleScore float64 = 0.0
+
 		for _, r := range results {
-			if r["status"] == "PASSED" {
-				passed++
-			} else if r["status"] == "CONTRACT_NOT_SUPPORTED" {
+			if r["status"] == "CONTRACT_NOT_SUPPORTED" {
 				unknown = true
 			}
+			
+			name, ok := r["name"].(string)
+			if !ok {
+				continue
+			}
+			status, _ := r["status"].(string)
+			
+			weight, exists := scenarioWeights[name]
+			if !exists {
+				continue
+			}
+			
+			maxPossibleScore += weight
+			if status == "PASSED" {
+				correctnessScore += weight
+			}
 		}
-		
-		var correctnessScore float64
-		if len(results) > 0 {
-			correctnessScore = float64(passed) / float64(len(results)) * 100.0
+
+		if maxPossibleScore > 0 {
+			correctnessScore = (correctnessScore / maxPossibleScore) * 100.0
 		} else {
 			correctnessScore = 0.0
 		}

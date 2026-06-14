@@ -57,11 +57,7 @@ export function LiveLogs({ submissionId, isActive = true }: LiveLogsProps) {
     };
   }, [submissionId]);
 
-  useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs]);
+  // Removed auto-scroll on new logs as per user request
 
   return (
     <div className="bg-[#0f172a] rounded-lg border border-slate-800 overflow-hidden mt-6">

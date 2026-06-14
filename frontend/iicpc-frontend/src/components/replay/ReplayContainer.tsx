@@ -96,14 +96,38 @@ export function ReplayContainer({ replay }: ReplayContainerProps) {
 
       {activeInsights.length > 0 && (
         <div className="bg-blue-900/50 border border-blue-500/50 rounded-lg p-4 animate-in fade-in slide-in-from-bottom-4">
-          {activeInsights.map((insight, idx) => (
-            <div key={idx} className="flex items-center space-x-2">
-              <Badge variant="info" className="bg-blue-500/20 text-blue-300 border-blue-500/50">
-                {insight.type.replace('_', ' ')}
-              </Badge>
-              <span className="text-sm text-blue-100">{insight.message}</span>
-            </div>
-          ))}
+          {activeInsights.map((insight, idx) => {
+            if (insight.type === 'LATENCY_ANOMALY') {
+              const peakP99 = snapshots[insight.bucket_index]?.p99 / 1000000 || 0;
+              const overallP99 = (insight.bucket_index > 0 ? snapshots[insight.bucket_index - 1]?.p99 / 1000000 : peakP99) || 0;
+              let impact = "Low";
+              if (peakP99 > overallP99 * 3.0) impact = "High";
+              else if (peakP99 > overallP99 * 2.0) impact = "Medium";
+
+              return (
+                <div key={idx} className="flex flex-col space-y-2 mb-2 last:mb-0">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="info" className="bg-rose-500/20 text-rose-300 border-rose-500/50">
+                      LATENCY SPIKE DETECTED
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs font-mono text-rose-100 bg-rose-500/10 p-2 rounded border border-rose-500/20">
+                    <div><span className="text-rose-400">Peak P99:</span> {peakP99.toFixed(1)}ms</div>
+                    <div><span className="text-rose-400">Baseline P99:</span> {overallP99.toFixed(1)}ms</div>
+                    <div><span className="text-rose-400">Impact:</span> {impact}</div>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={idx} className="flex items-center space-x-2 mb-2 last:mb-0">
+                <Badge variant="info" className="bg-blue-500/20 text-blue-300 border-blue-500/50">
+                  {insight.type.replace('_', ' ')}
+                </Badge>
+                <span className="text-sm text-blue-100">{insight.message}</span>
+              </div>
+            );
+          })}
         </div>
       )}
 

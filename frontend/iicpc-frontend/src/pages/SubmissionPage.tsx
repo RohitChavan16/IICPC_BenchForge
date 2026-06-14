@@ -156,11 +156,7 @@ export function SubmissionPage() {
     }
   }, [activeSubmission?.id])
 
-  useEffect(() => {
-    if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [logs])
+  // Removed auto-scroll on new logs as per user request
 
   // Drag and drop handlers
   const onDragOver = (e: React.DragEvent) => {

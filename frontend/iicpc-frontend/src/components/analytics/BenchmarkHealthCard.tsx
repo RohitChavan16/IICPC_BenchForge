@@ -16,7 +16,11 @@ export function BenchmarkHealthCard({ benchmark, leaderboardEntry, submission }:
   const p99 = leaderboardEntry.p99
   const successRate = leaderboardEntry.successRate
   const correctness = leaderboardEntry.correctnessScore ?? submission.correctnessScore ?? 100
-  const concurrency = leaderboardEntry.concurrencyScore ?? 100
+  const rawConcurrency = leaderboardEntry.concurrencyScore ?? 100
+  const p50 = leaderboardEntry.p50 || 1.0
+  const ratio = p99 / Math.max(p50, 1.0)
+  const degradationScore = 100.0 / (1.0 + Math.pow(ratio / 20.0, 2))
+  const concurrency = (0.85 * rawConcurrency) + (0.15 * degradationScore)
   const status = benchmark.status
 
   return (

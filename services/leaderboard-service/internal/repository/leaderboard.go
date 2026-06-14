@@ -114,11 +114,11 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 	rows, err := db.Query(`
 	SELECT
 		b.id, b.team_name, s.id, s.submission_name, b.deployment_id,
-		CASE WHEN COALESCE(b.duration_seconds, 0) > 0 THEN b.total_requests::numeric / b.duration_seconds ELSE 0 END AS tps,
+		CASE WHEN COALESCE(b.execution_time_seconds, b.duration_seconds, 0) > 0 THEN b.total_requests::numeric / COALESCE(b.execution_time_seconds, b.duration_seconds) ELSE 0 END AS tps,
 		CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS success_rate,
-		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.duration_seconds, 0),
+		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.execution_time_seconds, b.duration_seconds, 0),
 		COALESCE(s.correctness_score, CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) AS correctness_score,
-		100 AS concurrency_score, b.created_at
+		CASE WHEN COALESCE(b.tracer_total, 0) > 0 THEN (b.tracer_success::numeric / b.tracer_total) * 100 ELSE 100 END AS concurrency_score, b.created_at
 	FROM benchmarks b
 	JOIN deployments d ON b.deployment_id = d.id
 	JOIN submissions s ON d.submission_id = s.id
@@ -142,11 +142,17 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 		}
 
 		// Calculate FinalScore
-		latencyFactor := 250.0 / (250.0 + entry.P99)
-		corrMult := math.Pow(entry.CorrectnessScore / 100.0, 2)
-		concMult := math.Pow(entry.ConcurrencyScore / 100.0, 2)
 		effectiveTps := entry.TPS * (entry.SuccessRate / 100.0)
-		entry.FinalScore = effectiveTps * latencyFactor * corrMult * concMult
+		latencyFactor := 250.0 / (250.0 + entry.P99)
+		correctnessMultiplier := math.Pow(entry.CorrectnessScore / 100.0, 2)
+		
+		tracerScore := entry.ConcurrencyScore
+		ratio := entry.P99 / math.Max(entry.P50, 1.0)
+		degradationScore := 100.0 / (1.0 + math.Pow(ratio/20.0, 2))
+		combinedConcurrencyScore := (0.85 * tracerScore) + (0.15 * degradationScore)
+		concurrencyMultiplier := math.Pow(combinedConcurrencyScore / 100.0, 2)
+		
+		entry.FinalScore = effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
 
 		items = append(items, entry)
 	}
@@ -198,11 +204,11 @@ func GetLeaderboardEntryForBenchmark(db *sql.DB, benchmarkID string) (*model.Lea
 	q := `
 	SELECT
 		b.id, b.team_name, s.id, s.submission_name, b.deployment_id,
-		CASE WHEN b.duration_seconds > 0 THEN b.total_requests::numeric / b.duration_seconds ELSE 0 END AS tps,
+		CASE WHEN COALESCE(b.execution_time_seconds, b.duration_seconds, 0) > 0 THEN b.total_requests::numeric / COALESCE(b.execution_time_seconds, b.duration_seconds) ELSE 0 END AS tps,
 		CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END AS success_rate,
-		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.duration_seconds, 0),
+		COALESCE(b.p50, 0), COALESCE(b.p90, 0), COALESCE(b.p99, 0), b.total_requests, COALESCE(b.execution_time_seconds, b.duration_seconds, 0),
 		COALESCE(s.correctness_score, CASE WHEN b.total_requests > 0 THEN (b.success_count::numeric / b.total_requests) * 100 ELSE 0 END) AS correctness_score,
-		100 AS concurrency_score, b.created_at
+		CASE WHEN COALESCE(b.tracer_total, 0) > 0 THEN (b.tracer_success::numeric / b.tracer_total) * 100 ELSE 100 END AS concurrency_score, b.created_at
 	FROM benchmarks b
 	JOIN deployments d ON b.deployment_id = d.id
 	JOIN submissions s ON d.submission_id = s.id
@@ -218,11 +224,17 @@ func GetLeaderboardEntryForBenchmark(db *sql.DB, benchmarkID string) (*model.Lea
 	}
 
 	// Compute final_score using identical formula:
-	latencyFactor := 250.0 / (250.0 + entry.P99)
-	corrMult := math.Pow(entry.CorrectnessScore / 100.0, 2)
-	concMult := math.Pow(entry.ConcurrencyScore / 100.0, 2)
 	effectiveTps := entry.TPS * (entry.SuccessRate / 100.0)
-	entry.FinalScore = effectiveTps * latencyFactor * corrMult * concMult
+	latencyFactor := 250.0 / (250.0 + entry.P99)
+	correctnessMultiplier := math.Pow(entry.CorrectnessScore / 100.0, 2)
+	
+	tracerScore := entry.ConcurrencyScore
+	ratio := entry.P99 / math.Max(entry.P50, 1.0)
+	degradationScore := 100.0 / (1.0 + math.Pow(ratio/20.0, 2))
+	combinedConcurrencyScore := (0.85 * tracerScore) + (0.15 * degradationScore)
+	concurrencyMultiplier := math.Pow(combinedConcurrencyScore / 100.0, 2)
+	
+	entry.FinalScore = effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
 
 	// Compute hypothetical rank: count how many CURRENT leaderboard entries are strictly better
 	var rank int
@@ -319,7 +331,7 @@ func BackfillLeaderboardEntries(db *sql.DB) error {
 			continue // Skip if missing data
 		}
 		
-		finalScore := ComputeFinalScore(entry.TPS, entry.SuccessRate, entry.P99, entry.CorrectnessScore, entry.ConcurrencyScore)
+		finalScore := ComputeFinalScore(entry.TPS, entry.SuccessRate, entry.P50, entry.P99, entry.CorrectnessScore, entry.ConcurrencyScore)
 		err = UpsertLeaderboardEntry(db, id, entry.TeamName, entry.SubmissionID, entry.SubmissionName, entry.DeploymentID, entry.TPS, entry.SuccessRate, entry.P50, entry.P90, entry.P99, entry.TotalRequests, entry.Duration, entry.CorrectnessScore, entry.ConcurrencyScore, finalScore)
 		if err != nil {
 			// Log but continue
@@ -330,7 +342,7 @@ func BackfillLeaderboardEntries(db *sql.DB) error {
 	return updateLeaderboardRanks(db)
 }
 
-func ComputeFinalScore(tps, successRate, p99, correctnessScore, concurrencyScore float64) float64 {
+func ComputeFinalScore(tps, successRate, p50, p99, correctnessScore, concurrencyScore float64) float64 {
 	if correctnessScore < 0 {
 		correctnessScore = 0
 	}
@@ -342,8 +354,12 @@ func ComputeFinalScore(tps, successRate, p99, correctnessScore, concurrencyScore
 	latencyFactor := 250.0 / (250.0 + p99)
 	correctnessMultiplier := math.Pow(correctnessScore/100.0, 2)
 	
-	// TEMPORARILY IGNORE CONCURRENCY until tracer metrics are verified end-to-end
-	concurrencyMultiplier := 1.0 // math.Pow(concurrencyScore/100.0, 2)
+	tracerScore := concurrencyScore
+	ratio := p99 / math.Max(p50, 1.0)
+	degradationScore := 100.0 / (1.0 + math.Pow(ratio/20.0, 2))
+	
+	combinedConcurrencyScore := (0.85 * tracerScore) + (0.15 * degradationScore)
+	concurrencyMultiplier := math.Pow(combinedConcurrencyScore/100.0, 2)
 	
 	finalScore := effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
 	return math.Round(finalScore*100) / 100
@@ -364,7 +380,7 @@ SELECT
   b.p50,
   b.p90,
   b.p99,
-  b.duration_seconds,
+  COALESCE(b.execution_time_seconds, b.duration_seconds) AS duration_seconds,
   b.deployment_id,
   b.tracer_total,
   b.tracer_success,
@@ -420,7 +436,7 @@ WHERE b.id = $1
 		concurrencyScore = (float64(tracerSuccess.Int64) / float64(tracerTotal.Int64)) * 100.0
 	}
 
-	finalScore := ComputeFinalScore(computedTps, successRate, p99.Float64, actualCorrectness, concurrencyScore)
+	finalScore := ComputeFinalScore(computedTps, successRate, p50.Float64, p99.Float64, actualCorrectness, concurrencyScore)
 
 	return &model.LeaderboardEntry{
 		BenchmarkID:      benchmarkID,

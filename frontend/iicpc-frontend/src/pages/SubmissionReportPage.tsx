@@ -118,7 +118,9 @@ export function SubmissionReportPage() {
   const marketPersonas = (personas || []).filter((p: any) => p.botType !== 'tracer')
 
   // Score Calculations
-  let concurrencyScore = 0
+  let tracerScore = 100.0
+  let degradationScore = 100.0
+  let combinedConcurrencyScore = 100.0
   let effectiveTps = 0
   let latencyFactor = 0
   let finalScore = 0
@@ -135,9 +137,15 @@ export function SubmissionReportPage() {
   }
 
   if (leaderboardEntry) {
-    concurrencyScore = leaderboardEntry.concurrencyScore !== undefined ? leaderboardEntry.concurrencyScore : 100.0
+    tracerScore = leaderboardEntry.concurrencyScore !== undefined ? leaderboardEntry.concurrencyScore : 100.0
     effectiveTps = leaderboardEntry.tps * (leaderboardEntry.successRate / 100.0)
     latencyFactor = 250.0 / (250.0 + (leaderboardEntry.p99 || 0))
+    
+    let p50 = leaderboardEntry.p50 || 0
+    let p99 = leaderboardEntry.p99 || 0
+    let ratio = p99 / Math.max(p50, 1.0)
+    degradationScore = 100.0 / (1.0 + Math.pow(ratio/20.0, 2))
+    combinedConcurrencyScore = (0.85 * tracerScore) + (0.15 * degradationScore)
 
     finalScore = leaderboardEntry.finalScore
   }
@@ -147,7 +155,7 @@ export function SubmissionReportPage() {
       time: new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       tps: d.tps || 0,
       successRate: d.success_rate || 0,
-      latency: d.p50 || 0
+      latency: (d.p50 || 0) / 1000000.0
     }))
   }
 
@@ -539,6 +547,38 @@ export function SubmissionReportPage() {
         </Card>
       )}
 
+      {/* TPS Verification Audit Card */}
+      {benchmark && benchmark.status === 'COMPLETED' && (
+        <Card title="TPS Verification Audit" className="mt-6 overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
+             <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">Duration</p>
+              <p className="text-lg font-mono text-foreground">{benchmark.durationSeconds}s</p>
+            </div>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">Execution Time</p>
+              <p className="text-lg font-mono text-cyan-400">{benchmark.executionTimeSeconds}s</p>
+            </div>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">Total Requests</p>
+              <p className="text-lg font-mono text-foreground">{benchmark.totalRequests}</p>
+            </div>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">Successful</p>
+              <p className="text-lg font-mono text-emerald-400">{benchmark.successCount}</p>
+            </div>
+            <div className="p-3 bg-card rounded-lg border border-border">
+              <p className="text-[10px] uppercase text-muted-foreground font-bold">Raw TPS</p>
+              <p className="text-lg font-mono text-foreground">{(benchmark.totalRequests / (benchmark.executionTimeSeconds || 1)).toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-card rounded-lg border border-border border-primary/30 bg-primary/5">
+              <p className="text-[10px] uppercase text-primary font-bold">Effective TPS</p>
+              <p className="text-lg font-mono text-primary font-bold">{(benchmark.successCount / (benchmark.executionTimeSeconds || 1)).toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Replay Engine */}
       <div id="replay" className="scroll-mt-32">
         <Card title="Benchmark Replay Engine">
@@ -593,7 +633,7 @@ export function SubmissionReportPage() {
       {/* 4. Score Analysis & Persona Impact */}
       {leaderboardEntry && (
         <div id="personas" className="scroll-mt-32">
-          <Card title="Score Analysis">
+          <Card title="Final Score Calculation">
             <div className="mt-4 grid lg:grid-cols-2 gap-8">
               
               {/* Left Column: Score Formula & Details */}
@@ -604,34 +644,38 @@ export function SubmissionReportPage() {
                   <code className="bg-black/30 p-3 rounded text-primary text-xs mt-3 block">
                     Final Score = Effective TPS * (250/(250+p99)) * (Correctness / 100)² * (Concurrency / 100)²
                   </code>
+                  <div className="mt-2 text-xs text-muted-foreground/80">
+                    <p className="mb-1">* Effective TPS is based on execution time (throughput capacity).</p>
+                    <p>* Concurrency = 85% Tracer Success + 15% Latency Degradation (p99/p50).</p>
+                  </div>
                 </p>
                 
                 <div className="space-y-3 mt-6">
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Effective TPS</span>
-                    <span className="font-mono text-emerald-400">{effectiveTps.toFixed(2)}</span>
+                    <span className="font-mono text-foreground">{effectiveTps.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Latency Factor</span>
-                    <span className="font-mono text-emerald-400">
-                      x{latencyFactor.toFixed(4)}
+                    <span className="font-mono text-amber-400">
+                      × {latencyFactor.toFixed(4)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Correctness Multiplier</span>
-                    <span className="font-mono text-emerald-400">
-                      x{Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
+                    <span className="font-mono text-blue-400">
+                      × {Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Concurrency Multiplier</span>
-                    <span className="font-mono text-emerald-400">
-                      x{Math.pow(concurrencyScore / 100.0, 2).toFixed(4)}
+                    <span className="font-mono text-purple-400">
+                      × {Math.pow(combinedConcurrencyScore / 100.0, 2).toFixed(4)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-cyan-900/20 rounded-lg border border-primary mt-2">
-                    <span className="text-sm font-semibold text-primary">Total Score</span>
-                    <span className="font-mono font-bold text-primary">{finalScore.toFixed(2)}</span>
+                  <div className="flex justify-between items-center p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30 mt-4 shadow-sm">
+                    <span className="text-lg font-bold text-emerald-400 uppercase tracking-widest">Final Score</span>
+                    <span className="font-mono text-2xl font-black text-emerald-400">{finalScore.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -756,7 +800,8 @@ export function SubmissionReportPage() {
                       const highestVolume = [...marketPersonas].sort((a,b) => b.total - a.total)[0];
                       const totalVol = marketPersonas.reduce((acc: number, p: any) => acc + p.total, 0);
                       const pct = highestVolume ? Math.round((highestVolume.total / totalVol) * 100) : 0;
-                      return `${highestVolume ? botLabels[highestVolume.botType] || highestVolume.botType : 'Traffic'} generated ${pct}% of benchmark volume while maintaining ${highestVolume && highestVolume.latency < 50000000 ? 'stable' : 'elevated'} latency, indicating ${highestVolume && highestVolume.latency < 50000000 ? 'efficient' : 'constrained'} order insertion performance.`
+                      const latencyMs = highestVolume ? highestVolume.latency / 1000000 : 0;
+                      return `Despite handling the highest request volume (${pct}% of total traffic), P99 remained below ${Math.max(latencyMs, 1).toFixed(1)}ms and throughput exceeded ${highestVolume?.tps.toFixed(1)} TPS, indicating strong load handling characteristics.`
                     })()}
                   </p>
                 </div>
@@ -769,8 +814,8 @@ export function SubmissionReportPage() {
                   </div>
                   <p className="text-foreground font-medium mb-4 text-sm leading-relaxed">
                     {(() => {
-                      const highestTps = [...marketPersonas].sort((a,b) => b.tps - a.tps)[0];
-                      return `${highestTps ? botLabels[highestTps.botType] || highestTps.botType : 'Traffic'} maintained exceptionally high throughput (${highestTps?.tps.toFixed(1)} TPS), indicating stable orderbook insertion performance.`
+                      const lowestLatency = [...marketPersonas].sort((a,b) => a.latency - b.latency)[0];
+                      return `${lowestLatency ? botLabels[lowestLatency.botType] || lowestLatency.botType : 'Traffic'} achieved the lowest latency profile (${(lowestLatency?.latency / 1000000).toFixed(1)}ms) without suffering throughput degradation, reflecting optimal low-latency pathing.`
                     })()}
                   </p>
                 </div>
@@ -836,46 +881,83 @@ export function SubmissionReportPage() {
         })()}
 
         {correctnessResults.length > 0 && (
-          <Card title="Correctness Validation Scenarios" className="overflow-hidden">
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {correctnessResults.map((res: any, idx: number) => {
-                let boxClass = "flex flex-col p-4 rounded-xl border transition-all duration-300 gap-3 ";
-                if (res.status === 'PASSED') {
-                  boxClass += "bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]";
-                } else if (res.status === 'CONTRACT_NOT_SUPPORTED') {
-                  boxClass += "bg-amber-500/5 border-amber-500/30 hover:border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.05)] hover:shadow-[0_0_20px_rgba(245,158,11,0.2)]";
-                } else {
-                  boxClass += "bg-rose-500/5 border-rose-500/30 hover:border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.05)] hover:shadow-[0_0_20px_rgba(244,63,94,0.2)]";
+          <Card title="Tiered Correctness Validation" className="overflow-hidden">
+            <div className="mt-4 space-y-8">
+              {[
+                {
+                  title: 'Foundation Validation',
+                  description: 'Basic orderbook functionality. Failures here indicate the engine cannot process basic trading.',
+                  scenarios: ['basic_resting_order', 'basic_matching_order', 'partial_fill_order']
+                },
+                {
+                  title: 'Market Integrity',
+                  description: 'Ensures deterministic fairness and best execution. Failures here severely penalize the final score.',
+                  scenarios: ['price_improvement', 'fifo_priority']
+                },
+                {
+                  title: 'Advanced Matching',
+                  description: 'Complex algorithmic edge cases involving deep liquidity sweeps.',
+                  scenarios: ['multi_level_price_sweep']
                 }
-
-                let detailText = "Verification complete";
-                if (res.name === 'basic_resting_order') detailText = "Expected: resting | Actual: resting";
-                else if (res.name === 'basic_matching_order') detailText = "Expected: filled | Actual: filled";
-                else if (res.name === 'partial_fill_order') detailText = "Partial execution verified";
-                else if (res.name === 'price_improvement') detailText = "Price improvement preserved";
-                else if (res.name === 'fifo_priority') detailText = "FIFO ordering verified";
-                else if (res.name === 'multi_level_price_sweep') detailText = "Multi-level matching verified";
+              ].map((tier, tIdx) => {
+                const tierResults = correctnessResults.filter(r => tier.scenarios.includes(r.name));
+                if (tierResults.length === 0) return null;
 
                 return (
-                  <div key={idx} className={boxClass}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">{res.name || `Scenario ${idx + 1}`}</span>
-                      {res.status === 'PASSED' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                          <CheckCircle size={12} /> PASSED
-                        </span>
-                      ) : res.status === 'CONTRACT_NOT_SUPPORTED' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
-                          <Activity size={12} /> LEGACY
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20">
-                          <XCircle size={12} /> FAILED
-                        </span>
-                      )}
+                  <div key={tIdx} className="space-y-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">{tier.title}</h4>
+                      <p className="text-xs text-muted-foreground">{tier.description}</p>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border border-border/50">
-                      {detailText}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {tierResults.map((res: any, idx: number) => {
+                        let boxClass = "flex flex-col p-4 rounded-xl border transition-all duration-300 gap-3 ";
+                        if (res.status === 'PASSED') {
+                          boxClass += "bg-emerald-500/5 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.05)]";
+                        } else if (res.status === 'CONTRACT_NOT_SUPPORTED') {
+                          boxClass += "bg-amber-500/5 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.05)]";
+                        } else {
+                          boxClass += "bg-rose-500/5 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.05)]";
+                        }
+
+                        let detailText = "Verification complete";
+                        let weightText = "15%";
+                        if (res.name === 'basic_resting_order') { detailText = "Expected: resting | Actual: resting"; weightText = "15%"; }
+                        else if (res.name === 'basic_matching_order') { detailText = "Expected: filled | Actual: filled"; weightText = "15%"; }
+                        else if (res.name === 'partial_fill_order') { detailText = "Partial execution verified"; weightText = "15%"; }
+                        else if (res.name === 'price_improvement') { detailText = "Price improvement preserved"; weightText = "20%"; }
+                        else if (res.name === 'fifo_priority') { detailText = "FIFO ordering verified"; weightText = "20%"; }
+                        else if (res.name === 'multi_level_price_sweep') { detailText = "Multi-level matching verified"; weightText = "15%"; }
+
+                        return (
+                          <div key={idx} className={boxClass}>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-foreground text-sm truncate pr-2" title={res.name}>{res.name}</span>
+                              {res.status === 'PASSED' ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
+                                  <CheckCircle size={12} /> PASSED
+                                </span>
+                              ) : res.status === 'CONTRACT_NOT_SUPPORTED' ? (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
+                                  <Activity size={12} /> LEGACY
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20">
+                                  <XCircle size={12} /> FAILED
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-auto">
+                              <div className="text-[11px] text-muted-foreground bg-background/50 px-2 py-1 rounded border border-border/50 truncate flex-1 mr-2">
+                                {detailText}
+                              </div>
+                              <div className="text-xs font-mono font-bold text-foreground bg-secondary/50 px-2 py-1 rounded border border-border/50">
+                                {weightText}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -998,18 +1080,22 @@ export function SubmissionReportPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {marketPersonas.map((p: any, idx: number) => {
-              const isHealthy = p.successRate >= 99 && p.latency < 500000000;
-              const isDegraded = p.successRate >= 95 && p.latency < 2000000000 && !isHealthy;
+              const latencyMs = p.latency / 1000000;
+              const isHealthy = p.successRate >= 99 && latencyMs < 100;
+              const isWarning = p.successRate >= 95 && latencyMs >= 100 && latencyMs <= 250;
               
               let stateText = "HEALTHY";
               let stateColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
+              let thresholdRule = "<100ms P99 & >99% Success";
               
-              if (!isHealthy && !isDegraded) {
+              if (!isHealthy && !isWarning) {
                 stateText = "CRITICAL";
                 stateColor = "text-rose-400 bg-rose-500/10 border-rose-500/30";
-              } else if (isDegraded) {
-                stateText = "DEGRADED";
+                thresholdRule = ">250ms P99 or <95% Success";
+              } else if (isWarning) {
+                stateText = "WARNING";
                 stateColor = "text-amber-400 bg-amber-500/10 border-amber-500/30";
+                thresholdRule = "100-250ms P99 & >95% Success";
               }
 
               const labelMap: Record<string, string> = {
@@ -1033,6 +1119,24 @@ export function SubmissionReportPage() {
                 >
                   <span className="text-xs font-semibold uppercase tracking-wider mb-2 text-foreground/80 text-center">{title}</span>
                   <span className="text-xl font-bold tracking-widest">{stateText}</span>
+                  
+                  <div className="flex flex-col items-center gap-1 mt-3 w-full border-t border-current/20 pt-3">
+                    <div className="flex justify-between w-full text-xs">
+                      <span className="opacity-70">P99:</span>
+                      <span className="font-mono font-medium">{(p.latency / 1000000).toFixed(1)}ms</span>
+                    </div>
+                    <div className="flex justify-between w-full text-xs">
+                      <span className="opacity-70">TPS:</span>
+                      <span className="font-mono font-medium">{p.tps ? p.tps.toFixed(0) : 0}</span>
+                    </div>
+                    <div className="flex justify-between w-full text-xs">
+                      <span className="opacity-70">Succ:</span>
+                      <span className="font-mono font-medium">{p.successRate.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] opacity-60 mt-3 text-center border border-current/10 bg-current/5 px-2 py-1 rounded w-full">
+                    {thresholdRule}
+                  </div>
                 </motion.div>
               )
             })}

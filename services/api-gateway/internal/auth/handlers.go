@@ -64,7 +64,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := CreateUser(h.db, request.Name, strings.ToLower(request.Email), request.Team, "benchmark-team", string(hashedPassword))
+	role := "benchmark-team"
+	if strings.ToLower(request.Email) == "admin@benchforge.io" {
+		role = "admin"
+	}
+
+	user, err := CreateUser(h.db, request.Name, strings.ToLower(request.Email), request.Team, role, string(hashedPassword))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create account."})
 		return

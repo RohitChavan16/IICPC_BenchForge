@@ -53,6 +53,12 @@ func GenerateReplay(db *pgxpool.Pool, benchmarkID string, defaultFailReason *str
 		return
 	}
 
+	if bmData.Status == "CREATED" || bmData.Status == "QUEUED" || bmData.Status == "RUNNING" {
+		log.Printf("Benchmark %s is still %s. Re-queueing replay generation.", benchmarkID, bmData.Status)
+		database.UpdateReplayData(db, benchmarkID, "PENDING", nil)
+		return
+	}
+
 	totalExpectedRequests := bmData.TotalRequests
 	if totalExpectedRequests == 0 {
 		totalExpectedRequests = 1 // Prevent division by zero

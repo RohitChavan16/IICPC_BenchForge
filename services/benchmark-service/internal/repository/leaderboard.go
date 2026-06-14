@@ -60,8 +60,10 @@ SELECT
   b.p50,
   b.p90,
   b.p99,
-  b.duration_seconds,
+  COALESCE(b.execution_time_seconds, b.duration_seconds),
   b.deployment_id,
+  b.tracer_total,
+  b.tracer_success,
   s.team_name,
   s.id as submission_id,
   s.submission_name,
@@ -75,11 +77,12 @@ WHERE b.id = $1
 	var p50, p90, p99 sql.NullFloat64
 	var duration sql.NullInt64
 	var deploymentID, teamName string
+	var tracerTotal, tracerSuccess sql.NullInt64
 	var submissionID sql.NullString
 	var submissionName string
 	var correctnessScore sql.NullFloat64
 
-	if err := db.QueryRow(query, benchmarkID).Scan(&totalRequests, &successCount, &p50, &p90, &p99, &duration, &deploymentID, &teamName, &submissionID, &submissionName, &correctnessScore); err != nil {
+	if err := db.QueryRow(query, benchmarkID).Scan(&totalRequests, &successCount, &p50, &p90, &p99, &duration, &deploymentID, &tracerTotal, &tracerSuccess, &teamName, &submissionID, &submissionName, &correctnessScore); err != nil {
 		return err
 	}
 
@@ -111,7 +114,13 @@ WHERE b.id = $1
 		cScore = correctnessScore.Float64
 	}
 	
-	finalScore := computeFinalScore(computedTps, computedSuccessRate, p99.Float64, cScore, 100.0)
+	// Concurrency Score logic
+	concurrencyScore := 100.0 // Default to 100 if no tracers ran
+	if tracerTotal.Valid && tracerTotal.Int64 > 0 {
+		concurrencyScore = (float64(tracerSuccess.Int64) / float64(tracerTotal.Int64)) * 100.0
+	}
+	
+	finalScore := computeFinalScore(computedTps, computedSuccessRate, p50.Float64, p99.Float64, cScore, concurrencyScore)
 
 	query = `
 INSERT INTO leaderboard_entries (benchmark_id, team_name, normalized_team_name, submission_id, submission_name, deployment_id, tps, success_rate, p50, p90, p99, total_requests, duration_seconds, correctness_score, concurrency_score, final_score, created_at, updated_at)
@@ -139,14 +148,14 @@ WHERE EXCLUDED.final_score > leaderboard_entries.final_score
 	if submissionID.Valid {
 		dbSubID = submissionID.String
 	}
-	if _, err := db.Exec(query, benchmarkID, teamName, dbSubID, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, cScore, 100.0, finalScore); err != nil {
+	if _, err := db.Exec(query, benchmarkID, teamName, dbSubID, submissionName, deploymentID, computedTps, computedSuccessRate, p50.Float64, p90.Float64, p99.Float64, total, dur, cScore, concurrencyScore, finalScore); err != nil {
 		return err
 	}
 
 	return updateLeaderboardRanks(db)
 }
 
-func computeFinalScore(tps, successRate, p99, correctnessScore, concurrencyScore float64) float64 {
+func computeFinalScore(tps, successRate, p50, p99, correctnessScore, concurrencyScore float64) float64 {
 	if correctnessScore < 0 {
 		correctnessScore = 0
 	}
@@ -158,8 +167,12 @@ func computeFinalScore(tps, successRate, p99, correctnessScore, concurrencyScore
 	latencyFactor := 250.0 / (250.0 + p99)
 	correctnessMultiplier := math.Pow(correctnessScore/100.0, 2)
 	
-	// TEMPORARILY IGNORE CONCURRENCY until tracer metrics are verified end-to-end
-	concurrencyMultiplier := 1.0 // math.Pow(concurrencyScore/100.0, 2)
+	tracerScore := concurrencyScore
+	ratio := p99 / math.Max(p50, 1.0)
+	degradationScore := 100.0 / (1.0 + math.Pow(ratio/20.0, 2))
+	
+	combinedConcurrencyScore := (0.85 * tracerScore) + (0.15 * degradationScore)
+	concurrencyMultiplier := math.Pow(combinedConcurrencyScore/100.0, 2)
 	
 	finalScore := effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
 	return math.Round(finalScore*100) / 100

@@ -10,7 +10,7 @@ import { Podium } from '@/components/leaderboard/Podium';
 import { CompetitionPressureMeter } from '@/components/leaderboard/CompetitionPressureMeter';
 import { RankingsTable } from '@/components/leaderboard/RankingsTable';
 import { PerformanceTrends } from '@/components/leaderboard/PerformanceTrends';
-import { LanguageBattle } from '@/components/leaderboard/LanguageBattle';
+
 import { LiveActivityFeed } from '@/components/leaderboard/LiveActivityFeed';
 import { ExplanationCenter } from '@/components/leaderboard/ExplanationCenter';
 
@@ -62,8 +62,6 @@ export function LeaderboardPage() {
       {/* Trends (Graceful fallback if no history payload exists yet) */}
       <PerformanceTrends historyData={[]} />
 
-      {/* Language Battle */}
-      <LanguageBattle entries={liveEntries} />
 
       {/* Activity Feed */}
       <LiveActivityFeed activityFeed={activityFeed} />

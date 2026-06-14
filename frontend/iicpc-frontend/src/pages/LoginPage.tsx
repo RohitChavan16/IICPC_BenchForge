@@ -44,7 +44,11 @@ export function LoginPage() {
       const response = await login({ email: values.email, password: values.password })
       setAuth(response.user, response.token)
       pushToast({ title: 'Welcome back', description: 'You are now authenticated.', variant: 'success' })
-      navigate('/dashboard')
+      if (values.email === 'admin@benchforge.io') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error: unknown) {
       const message = (error as { message?: string })?.message ?? 'Please check your credentials and try again.'
       pushToast({ title: 'Login failed', description: message, variant: 'error' })
