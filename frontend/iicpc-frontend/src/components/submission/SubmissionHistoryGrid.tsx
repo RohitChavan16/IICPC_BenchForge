@@ -19,7 +19,7 @@ export function SubmissionHistoryGrid({ submissions, leaderboard, isLoading }: S
   
   if (isLoading) {
     return (
-      <div className="w-full bg-[#0f121a] border border-border/40 rounded-xl overflow-hidden mt-6">
+      <div className="w-full bg-card dark:bg-[#0f121a] border border-border/40 rounded-xl overflow-hidden mt-6 shadow-sm dark:shadow-none">
         <div className="p-8 flex flex-col items-center justify-center animate-pulse gap-4">
           <div className="h-8 w-8 bg-border/50 rounded-full" />
           <div className="h-4 w-48 bg-border/50 rounded" />
@@ -33,7 +33,7 @@ export function SubmissionHistoryGrid({ submissions, leaderboard, isLoading }: S
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center p-12 lg:p-24 border border-border/40 rounded-xl bg-[#0f121a] text-center mt-6"
+        className="flex flex-col items-center justify-center p-12 lg:p-24 border border-border/40 rounded-xl bg-card dark:bg-[#0f121a] shadow-sm dark:shadow-none text-center mt-6"
       >
         <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400 mb-6 border border-indigo-500/20">
           <Rocket size={40} strokeWidth={1.5} />

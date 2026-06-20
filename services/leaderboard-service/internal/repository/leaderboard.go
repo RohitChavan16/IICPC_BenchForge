@@ -109,6 +109,48 @@ func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry,
 	return items, rows.Err()
 }
 
+func GetLeaderboardContext(db *sql.DB, teamName string) ([]model.LeaderboardEntry, error) {
+	query := `
+	WITH ordered AS (
+		SELECT 
+			id, benchmark_id, team_name, submission_id, submission_name, deployment_id, 
+			tps, success_rate, p50, p90, p99, total_requests, duration_seconds, 
+			correctness_score, concurrency_score, final_score, rank, created_at, updated_at,
+			ROW_NUMBER() OVER (ORDER BY rank ASC NULLS LAST, final_score DESC) as row_num
+		FROM leaderboard_entries
+	),
+	target AS (
+		SELECT row_num FROM ordered WHERE LOWER(team_name) = LOWER($1) LIMIT 1
+	)
+	SELECT 
+		id, benchmark_id, team_name, submission_id, submission_name, deployment_id, 
+		tps, success_rate, p50, p90, p99, total_requests, duration_seconds, 
+		correctness_score, concurrency_score, final_score, rank, created_at, updated_at
+	FROM ordered, target
+	WHERE ordered.row_num BETWEEN target.row_num - 1 AND target.row_num + 1
+	ORDER BY ordered.row_num ASC
+	`
+	rows, err := db.Query(query, teamName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []model.LeaderboardEntry
+	for rows.Next() {
+		var entry model.LeaderboardEntry
+		var subID sql.NullString
+		if err := rows.Scan(&entry.ID, &entry.BenchmarkID, &entry.TeamName, &subID, &entry.SubmissionName, &entry.DeploymentID, &entry.TPS, &entry.SuccessRate, &entry.P50, &entry.P90, &entry.P99, &entry.TotalRequests, &entry.Duration, &entry.CorrectnessScore, &entry.ConcurrencyScore, &entry.FinalScore, &entry.Rank, &entry.CreatedAt, &entry.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if subID.Valid {
+			entry.SubmissionID = subID.String
+		}
+		items = append(items, entry)
+	}
+	return items, rows.Err()
+}
+
 func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardEntry, error) {
 	// First fetch all benchmarks for this team
 	rows, err := db.Query(`

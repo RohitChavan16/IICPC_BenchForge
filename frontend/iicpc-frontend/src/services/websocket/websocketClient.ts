@@ -23,6 +23,7 @@ type RawMetricSnapshot = {
   p99?: number
   failure_rate?: number
   total?: number
+  queue_depth?: number
   type?: string
   id?: number | string
 }
@@ -115,6 +116,7 @@ function normalizeMetricSnapshot(payload: unknown): MetricSnapshot | null {
     p99: typeof data.p99 === 'number' ? data.p99 : 0,
     failureRate: typeof data.failure_rate === 'number' ? data.failure_rate : 0,
     total: typeof data.total === 'number' ? data.total : 0,
+    queueDepth: typeof data.queue_depth === 'number' ? data.queue_depth : 0,
   }
 }
 
@@ -160,7 +162,7 @@ export function getSharedWebsocketClient(url: string, options: WebsocketClientOp
 }
 
 export class WebsocketClient {
-  private url: string
+  private baseUrl: string
   private connection: WebSocket | null = null
   private handlers = new Set<WebsocketMessageHandler<MetricSnapshot>>()
   private workerHandlers = new Set<WebsocketWorkerHandler>()
@@ -184,8 +186,8 @@ export class WebsocketClient {
   private latestRequests: LiveRequest[] = []
   private history: RingBuffer<MetricSnapshot>
 
-  constructor(url: string, options: WebsocketClientOptions = {}) {
-    this.url = url
+  constructor(baseUrl: string, options: WebsocketClientOptions = {}) {
+    this.baseUrl = baseUrl
     this.options = {
       heartbeatInterval: options.heartbeatInterval ?? 20000,
       reconnectBaseDelay: options.reconnectBaseDelay ?? 1000,
@@ -272,7 +274,7 @@ export class WebsocketClient {
     this.statusHandlers.delete(handler)
   }
 
-  connect() {
+  async connect(benchmarkId: string = 'GLOBAL') {
     if (this.connection && this.connection.readyState !== WebSocket.CLOSED && this.connection.readyState !== WebSocket.CLOSING) {
       return
     }
@@ -284,15 +286,43 @@ export class WebsocketClient {
 
     this.manualClose = false
     this.setStatus('connecting')
-    this.connection = new WebSocket(this.url)
 
-    this.connection.addEventListener('open', () => {
-      this.reconnectAttempt = 0
-      this.lastMessageAt = Date.now()
-      this.pendingPong = false
-      this.setStatus('connected')
-      this.resetHeartbeat()
-    })
+    try {
+      const token = window.localStorage.getItem('benchforge_token')
+      const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+      
+      const response = await fetch(`${apiBase}/ticket?benchmarkId=${benchmarkId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.error("WebSocket connection forbidden or unauthorized.")
+          this.setStatus('error')
+          this.manualClose = true // Don't reconnect on 403
+          return
+        }
+        throw new Error('Failed to fetch websocket ticket')
+      }
+
+      const { ticket } = await response.json()
+      
+      const wsUrl = new URL(this.baseUrl)
+      wsUrl.searchParams.set('benchmarkId', benchmarkId)
+      wsUrl.searchParams.set('ticket', ticket)
+      
+      this.connection = new WebSocket(wsUrl.toString())
+
+      this.connection.addEventListener('open', () => {
+        this.reconnectAttempt = 0
+        this.lastMessageAt = Date.now()
+        this.pendingPong = false
+        this.setStatus('connected')
+        this.resetHeartbeat()
+      })
 
     this.connection.addEventListener('message', (event) => {
       try {
@@ -369,9 +399,16 @@ export class WebsocketClient {
       this.setStatus('error')
       this.connection?.close()
     })
+    } catch (error) {
+      console.error('Failed to connect to websocket', error)
+      this.setStatus('error')
+      if (!this.manualClose) {
+        this.scheduleReconnect()
+      }
+    }
   }
 
-  reconnect() {
+  reconnect(benchmarkId: string = 'GLOBAL') {
     this.manualClose = false
     if (this.reconnectTimer) {
       window.clearTimeout(this.reconnectTimer)
@@ -383,7 +420,7 @@ export class WebsocketClient {
       return
     }
 
-    this.connect()
+    this.connect(benchmarkId)
   }
 
   close() {
@@ -403,7 +440,7 @@ export class WebsocketClient {
     this.setStatus('disconnected')
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(benchmarkId: string = 'GLOBAL') {
     if (this.manualClose || this.reconnectTimer) {
       return
     }
@@ -416,7 +453,7 @@ export class WebsocketClient {
     this.reconnectTimer = window.setTimeout(() => {
       this.reconnectTimer = null
       this.reconnectAttempt += 1
-      this.connect()
+      this.connect(benchmarkId)
     }, delay)
   }
 

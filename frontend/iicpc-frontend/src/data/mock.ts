@@ -1,3 +1,6 @@
+/**
+ * @deprecated This file is no longer used. All mock data has been replaced with live production data integrations.
+ */
 import type { BenchmarkSession, InfrastructureMetric, LogEntry, MetricSnapshot, NotificationItem, PostgresMetric, RedisMetric, HealthStatus } from '@/types/api'
 
 const now = new Date()

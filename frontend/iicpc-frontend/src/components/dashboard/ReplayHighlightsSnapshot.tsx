@@ -9,17 +9,23 @@ export function ReplayHighlightsSnapshot() {
   const [replay, setReplay] = useState<ReplayData | null>(null);
 
   useEffect(() => {
-    fetchBenchmarkSessions()
-      .then(res => {
-        if (res.items.length > 0) {
-          return fetchBenchmarkReplay(res.items[0].id);
-        }
-        return null;
-      })
-      .then(data => {
-        if (data) setReplay(data);
-      })
-      .catch(console.error);
+    const fetchReplay = () => {
+      fetchBenchmarkSessions()
+        .then(res => {
+          if (res.items.length > 0) {
+            return fetchBenchmarkReplay(res.items[0].id);
+          }
+          return null;
+        })
+        .then(data => {
+          if (data) setReplay(data);
+        })
+        .catch(console.error);
+    };
+
+    fetchReplay();
+    const interval = setInterval(fetchReplay, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const getInsights = () => {
@@ -52,7 +58,6 @@ export function ReplayHighlightsSnapshot() {
       anomaliesDetected: anomaliesDetected.toString(),
       worstPersona,
       bestPersona,
-      availability: '24h',
       status: replay.status,
       timeline
     };
@@ -101,10 +106,6 @@ export function ReplayHighlightsSnapshot() {
               <span className="text-sm font-bold">{data.bestPersona}</span>
             </div>
           </div>
-          
-          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-            <Clock size={12}/> Available for {data.availability}
-          </p>
         </div>
 
         {/* Right Col: Mini Timeline Preview */}

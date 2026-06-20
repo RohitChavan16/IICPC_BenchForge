@@ -69,39 +69,45 @@ export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: Execut
     ws.addHandler(handleSnapshot);
     ws.connect();
 
-    fetchBenchmarkSessions()
-      .then(res => setBenchmarksRun(res.total))
-      .catch(console.error);
+    const fetchBenchmarks = () => {
+      fetchBenchmarkSessions()
+        .then(res => setBenchmarksRun(res.total))
+        .catch(console.error);
+    };
+    
+    fetchBenchmarks();
+    const interval = setInterval(fetchBenchmarks, 5000);
 
     return () => {
       ws.removeHandler(handleSnapshot);
+      clearInterval(interval);
     };
   }, []);
 
   const data = {
     bestScore: {
-      value: bestScore != null ? bestScore.toFixed(2) : '-', trend: '-', description: 'Highest recorded correctness and throughput score'
+      value: bestScore != null ? bestScore.toFixed(2) : '-', description: 'Highest recorded correctness and throughput score'
     },
     globalRank: {
-      value: globalRank != null ? `#${globalRank}` : '-', trend: '-', description: 'Current standing on the global leaderboard'
+      value: globalRank != null ? `#${globalRank}` : '-', description: 'Current standing on the global leaderboard'
     },
     benchmarksCompleted: {
-      value: benchmarksRun.toString(), trend: '-', description: 'Total benchmark execution sessions completed'
+      value: benchmarksRun.toString(), description: 'Total benchmark execution sessions completed'
     },
     successRate: {
-      value: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-', trend: '-', description: 'Percentage of requests processed without errors'
+      value: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-', description: 'Percentage of requests processed without errors'
     },
     averageTPS: {
-      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', trend: '-', description: 'Average transactions processed per second'
+      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', description: 'Average transactions processed per second'
     },
     bestTPS: {
-      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', trend: '-', description: 'Peak transactions per second recorded today'
+      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', description: 'Peak transactions per second recorded today'
     },
     bestP99: {
-      value: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-', trend: '-', description: 'Lowest P99 latency achieved today'
+      value: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-', description: 'Lowest P99 latency achieved today'
     },
     correctness: {
-      value: correctness != null ? `${correctness.toFixed(1)}%` : '-', trend: '-', description: 'Overall business logic correctness score'
+      value: correctness != null ? `${correctness.toFixed(1)}%` : '-', description: 'Overall business logic correctness score'
     }
   };
 
@@ -113,10 +119,6 @@ export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: Execut
       className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-8"
     >
       {Object.entries(data).map(([key, metric]) => {
-        const isPositive = metric.trend.startsWith('+');
-        const isNeutral = metric.trend === '0%';
-        const trendColor = isNeutral ? 'text-muted-foreground' : (isPositive ? 'text-emerald-500' : 'text-rose-500');
-
         return (
           <motion.div 
             key={key}
@@ -128,9 +130,6 @@ export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: Execut
               <div className="p-2 rounded-xl bg-white/50 dark:bg-black/20 shadow-sm backdrop-blur-sm">
                 {iconMap[key]}
               </div>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/20 ${trendColor}`}>
-                {metric.trend}
-              </span>
             </div>
             
             <div>

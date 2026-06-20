@@ -1,6 +1,5 @@
 import { apiClient } from './apiClient'
 import { endpoints } from './endpoints'
-import { mockTelemetryHistory } from '@/data/mock'
 import type { MetricSnapshot } from '@/types/api'
 
 export async function fetchTelemetryHistory(): Promise<MetricSnapshot[]> {
@@ -8,17 +7,14 @@ export async function fetchTelemetryHistory(): Promise<MetricSnapshot[]> {
     const response = await apiClient.get(endpoints.telemetryHistory)
     return response.data as MetricSnapshot[]
   } catch (error) {
-    return mockTelemetryHistory
+    return []
   }
 }
 
 export async function fetchTelemetrySummary(): Promise<MetricSnapshot> {
-  try {
-    const response = await apiClient.get(endpoints.telemetrySummary)
-    return response.data as MetricSnapshot
-  } catch (error) {
-    return mockTelemetryHistory[mockTelemetryHistory.length - 1]
-  }
+  // Unused endpoint - gateway does not support /telemetry/summary
+  // Use websocket getLatestSnapshot() instead
+  throw new Error('fetchTelemetrySummary is not supported. Use WebSocket snapshot.')
 }
 
 export async function fetchBenchmarkTelemetryHistory(benchmarkId: string): Promise<MetricSnapshot[]> {
@@ -33,6 +29,16 @@ export async function fetchBenchmarkTelemetryHistory(benchmarkId: string): Promi
 export async function fetchPersonaAnalytics(benchmarkId: string): Promise<import('@/types/api').PersonaData[]> {
   try {
     const response = await apiClient.get(`/personas?benchmarkId=${benchmarkId}`)
+    return response.data as import('@/types/api').PersonaData[]
+  } catch (error) {
+    return []
+  }
+}
+
+export async function fetchBatchPersonaAnalytics(benchmarkIds: string[]): Promise<import('@/types/api').PersonaData[]> {
+  if (!benchmarkIds.length) return [];
+  try {
+    const response = await apiClient.get(`/personas/batch?benchmarkIds=${benchmarkIds.join(',')}`)
     return response.data as import('@/types/api').PersonaData[]
   } catch (error) {
     return []

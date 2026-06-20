@@ -1,48 +1,77 @@
 package websocket
 
 import (
-	"log"
-	"net/http"
 	"sync"
-
-	"github.com/gorilla/websocket"
 )
 
 type Hub struct {
-	mu      sync.Mutex
-	clients map[*websocket.Conn]bool
+	// Registered clients organized by benchmark room.
+	Rooms map[string]map[*Client]bool
+
+	// Inbound messages from the clients.
+	BroadcastChan chan BroadcastMessage
+
+	// Register requests from the clients.
+	Register chan *Client
+
+	// Unregister requests from clients.
+	Unregister chan *Client
+
+	mu sync.RWMutex
+}
+
+type BroadcastMessage struct {
+	BenchmarkID string
+	Payload     []byte
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients: make(map[*websocket.Conn]bool),
+		Rooms:         make(map[string]map[*Client]bool),
+		BroadcastChan: make(chan BroadcastMessage),
+		Register:      make(chan *Client),
+		Unregister:    make(chan *Client),
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
+func (h *Hub) Run() {
+	for {
+		select {
+		case client := <-h.Register:
+			h.mu.Lock()
+			if h.Rooms[client.BenchmarkID] == nil {
+				h.Rooms[client.BenchmarkID] = make(map[*Client]bool)
+			}
+			h.Rooms[client.BenchmarkID][client] = true
+			h.mu.Unlock()
 
-func (h *Hub) HandleConnections(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+		case client := <-h.Unregister:
+			h.mu.Lock()
+			if room, ok := h.Rooms[client.BenchmarkID]; ok {
+				if _, ok := room[client]; ok {
+					delete(room, client)
+					close(client.Send)
+					if len(room) == 0 {
+						delete(h.Rooms, client.BenchmarkID)
+					}
+				}
+			}
+			h.mu.Unlock()
 
-	conn, err := upgrader.Upgrade(
-		w,
-		r,
-		nil,
-	)
-
-	if err != nil {
-		return
+		case message := <-h.BroadcastChan:
+			h.mu.RLock()
+			if room, ok := h.Rooms[message.BenchmarkID]; ok {
+				for client := range room {
+					select {
+					case client.Send <- message.Payload:
+					default:
+						// If the client's send buffer is full, disconnect them (slow consumer)
+						close(client.Send)
+						delete(room, client)
+					}
+				}
+			}
+			h.mu.RUnlock()
+		}
 	}
-
-	h.mu.Lock()
-	h.clients[conn] = true
-	h.mu.Unlock()
-
-	log.Println("WebSocket client connected")
 }

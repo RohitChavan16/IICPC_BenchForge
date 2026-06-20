@@ -2,22 +2,52 @@ import React, { useEffect, useState } from 'react';
 import { SectionWrapper } from './SectionWrapper';
 import { Trophy, ArrowUp, ArrowDown, Medal, User, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { fetchTopLeaderboardEntries } from '@/services/api/leaderboardService';
+import { fetchTopLeaderboardEntries, fetchLeaderboardForTeam } from '@/services/api/leaderboardService';
 import type { LeaderboardEntry } from '@/types/api';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export function LeaderboardSnapshot() {
   const [topEntries, setTopEntries] = useState<LeaderboardEntry[]>([]);
+  const [userEntry, setUserEntry] = useState<LeaderboardEntry | null>(null);
+  const { user } = useAuthStore();
 
   useEffect(() => {
-    fetchTopLeaderboardEntries().then(setTopEntries).catch(console.error);
-  }, []);
+    const fetchLeaderboard = () => {
+      fetchTopLeaderboardEntries().then(entries => {
+        setTopEntries(entries);
+        const teamName = user?.team || user?.name;
+        if (teamName) {
+          const found = entries.find(e => e.teamName === teamName);
+          if (found) {
+            setUserEntry(found);
+          } else {
+            fetchLeaderboardForTeam(teamName).then(data => {
+              if (data.items.length > 0) setUserEntry(data.items[0]);
+            }).catch(console.error);
+          }
+        }
+      }).catch(console.error);
+    };
+
+    fetchLeaderboard();
+    const interval = setInterval(fetchLeaderboard, 5000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const gapToNext = userEntry && userEntry.rank > 1 ? (
+    topEntries.find(e => e.rank === userEntry.rank - 1)?.finalScore || 0
+  ) - userEntry.finalScore : 0;
+
+  const gapToTop10 = userEntry && userEntry.rank > 10 ? (
+    topEntries.length >= 10 ? topEntries[9].finalScore - userEntry.finalScore : 0
+  ) : 0;
 
   const data = {
     currentUser: {
-      rankChange: '-',
-      rank: '-',
-      gapToNext: '-',
-      gapToTop10: '-'
+      rank: userEntry ? userEntry.rank : '-',
+      gapToNext: userEntry && userEntry.rank > 1 ? (gapToNext > 0 ? gapToNext.toFixed(0) : 'Unknown') : '-',
+      gapToTop10: userEntry && userEntry.rank > 10 ? (gapToTop10 > 0 ? gapToTop10.toFixed(0) : 'Unknown') : '-'
     },
     topTeams: topEntries.slice(0, 5).map(e => ({
       rank: e.rank,
@@ -25,8 +55,6 @@ export function LeaderboardSnapshot() {
       score: e.finalScore.toLocaleString()
     }))
   };
-
-  const isPositiveRank = false;
 
   const actions = (
     <Link to="/leaderboard" className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border rounded-lg hover:bg-muted text-foreground transition-colors text-sm font-medium">
@@ -52,10 +80,6 @@ export function LeaderboardSnapshot() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Rank</span>
-              <span className={`flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isPositiveRank ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
-                {isPositiveRank ? <ArrowUp size={10} className="mr-0.5"/> : <ArrowDown size={10} className="mr-0.5"/>}
-                {data.currentUser.rankChange}
-              </span>
             </div>
             <div className="text-4xl font-black text-amber-600 dark:text-amber-500 mb-6">
               #{data.currentUser.rank}

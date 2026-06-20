@@ -5,6 +5,8 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/handlers"
@@ -12,30 +14,35 @@ import (
 )
 
 func proxyToBenchmark(c *gin.Context) {
+	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 	target, _ := url.Parse("http://benchmark-service:8082")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
 func proxyToTelemetry(c *gin.Context) {
+	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 	target, _ := url.Parse("http://telemetry-service:8081")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
 func proxyToLeaderboard(c *gin.Context) {
+	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 	target, _ := url.Parse("http://leaderboard-service:8084")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
 func proxyToSubmission(c *gin.Context) {
+	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 	target, _ := url.Parse("http://submission-service:8083")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
 
 func proxyToDeployment(c *gin.Context) {
+	otel.GetTextMapPropagator().Inject(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
 	target, _ := url.Parse("http://deployment-service:8091")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.ServeHTTP(c.Writer, c.Request)
@@ -69,6 +76,8 @@ func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddlewa
 
 		protected.Any("/replay", func(c *gin.Context) { proxyToTelemetry(c) })
 		protected.Any("/replay/*proxyPath", func(c *gin.Context) { proxyToTelemetry(c) })
+		
+		protected.POST("/ticket", func(c *gin.Context) { proxyToTelemetry(c) })
 	}
 
 	// Public or Authenticated
@@ -84,5 +93,8 @@ func SetupRoutes(router *gin.Engine, authHandler *auth.AuthHandler, authMiddlewa
 		
 		admin.Any("/telemetry", func(c *gin.Context) { proxyToTelemetry(c) })
 		admin.Any("/telemetry/*proxyPath", func(c *gin.Context) { proxyToTelemetry(c) })
+		
+		admin.Any("/infrastructure", func(c *gin.Context) { proxyToTelemetry(c) })
+		admin.Any("/infrastructure/*proxyPath", func(c *gin.Context) { proxyToTelemetry(c) })
 	}
 }

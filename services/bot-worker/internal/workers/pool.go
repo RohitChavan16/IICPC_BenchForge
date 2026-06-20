@@ -57,6 +57,9 @@ func Worker(
 	rdb *redis.Client,
 	benchmarkID string,
 	submissionID string,
+	token string,
+	traceID string,
+	traceContext map[string]string,
 ) {
 	for {
 		select {
@@ -86,20 +89,24 @@ func Worker(
 						"type":         "log",
 						"message":      fmt.Sprintf("[TRACER FAILED] %s: %s", s.Name, res.ErrorMessage),
 						"stage_status": "IN_PROGRESS",
+						"trace_id":     traceID,
 					}
 					data, _ := json.Marshal(msg)
 					rdb.Publish(context.Background(), "pipeline_logs:"+submissionID, data)
 				}
 
 				metric = metrics.RequestMetric{
-					RequestID:   uuid.NewString(),
-					BotType:     "tracer",
-					WorkerID:    fmt.Sprintf("worker-%02d", id),
-					BenchmarkID: benchmarkID,
-					Latency:     latency,
-					Success:     res.Status == "PASSED",
-					Timestamp:   time.Now(),
-					StatusCode:  200,
+					RequestID:    uuid.NewString(),
+					TraceID:      traceID,
+					TraceContext: traceContext,
+					BotType:      "tracer",
+					WorkerID:     fmt.Sprintf("worker-%02d", id),
+					BenchmarkID:  benchmarkID,
+					Latency:      latency,
+					Success:      res.Status == "PASSED",
+					Timestamp:    time.Now(),
+					StatusCode:   200,
+					Token:        token,
 				}
 			} else {
 				// Deterministic Persona Router
@@ -131,13 +138,16 @@ func Worker(
 				latency := time.Since(start)
 
 				metric = metrics.RequestMetric{
-					RequestID:   uuid.NewString(),
-					BotType:     botType,
-					WorkerID:    fmt.Sprintf("worker-%02d", id),
-					BenchmarkID: benchmarkID,
-					Latency:     latency,
-					Success:     err == nil && checkCorrectnessStub(resp),
-					Timestamp:   time.Now(),
+					RequestID:    uuid.NewString(),
+					TraceID:      traceID,
+					TraceContext: traceContext,
+					BotType:      botType,
+					WorkerID:     fmt.Sprintf("worker-%02d", id),
+					BenchmarkID:  benchmarkID,
+					Latency:      latency,
+					Success:      err == nil && checkCorrectnessStub(resp),
+					Timestamp:    time.Now(),
+					Token:        token,
 				}
 
 				if err == nil {

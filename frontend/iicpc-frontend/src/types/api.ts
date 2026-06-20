@@ -6,6 +6,7 @@ export interface MetricSnapshot {
   p99: number
   failureRate: number
   total: number
+  queueDepth: number
 }
 
 export type WorkerRuntimeStatus = 'Active' | 'Idle' | 'Offline'
@@ -33,6 +34,7 @@ export interface BenchmarkSession {
   name: string
   status: 'Running' | 'Completed' | 'Failed' | 'Queued'
   workerCount: number
+  submissionId?: string
   startedAt: string
   finishedAt?: string
   duration?: number

@@ -1,0 +1,30 @@
+groups:
+  - name: BenchForgeAlerts
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP Error Rate"
+          description: "Over 5% of HTTP requests are failing across the platform."
+      
+      - alert: RedisReclaimedMessagesSpike
+        expr: rate(reclaimed_messages_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Abandoned Message Recovery Rate"
+          description: "Telemetry consumers are crashing and abandoning messages frequently."
+
+      - alert: BenchmarkLatencyHigh
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 Latency exceeds 2 seconds"
+          description: "The 99th percentile of API latency has exceeded 2 seconds for 5 minutes."
+

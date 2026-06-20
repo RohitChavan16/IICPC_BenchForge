@@ -313,30 +313,20 @@ export function SubmissionReportPage() {
       />
 
       {/* Team Best Banner */}
-      {benchmark && benchmark.status === 'COMPLETED' && teamBestEntry && (
-        <div className={`rounded-xl border p-4 mb-4 ${teamBestEntry.benchmarkId === benchmark.id ? 'bg-amber-500/10 border-amber-500/30' : 'bg-secondary/20 border-border/50'}`}>
+      {benchmark && benchmark.status === 'COMPLETED' && teamBestEntry && teamBestEntry.benchmarkId === benchmark.id && (
+        <div className="rounded-xl border p-4 mb-4 bg-amber-500/10 border-amber-500/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Trophy className={teamBestEntry.benchmarkId === benchmark.id ? "text-amber-500" : "text-muted-foreground"} size={20} />
+              <Trophy className="text-amber-500" size={20} />
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {teamBestEntry.benchmarkId === benchmark.id ? "🏆 Current Team Best" : "Historical Submission"}
+                  🏆 Current Team Best
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {teamBestEntry.benchmarkId === benchmark.id 
-                    ? "This submission is currently representing your team on the live leaderboard." 
-                    : `Your team's best score is ${teamBestEntry.finalScore.toFixed(2)} (Rank #${teamBestEntry.rank}).`}
+                  This submission is currently representing your team on the live leaderboard.
                 </p>
               </div>
             </div>
-            {teamBestEntry.benchmarkId !== benchmark.id && leaderboardEntry && (
-              <div className="text-right">
-                <p className="text-sm font-medium text-foreground">{leaderboardEntry.finalScore.toFixed(2)} Score</p>
-                <p className={`text-xs ${leaderboardEntry.finalScore >= teamBestEntry.finalScore ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {leaderboardEntry.finalScore >= teamBestEntry.finalScore ? '+' : ''}{(leaderboardEntry.finalScore - teamBestEntry.finalScore).toFixed(2)} vs Best
-                </p>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -553,7 +543,7 @@ export function SubmissionReportPage() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-4">
              <div className="p-3 bg-card rounded-lg border border-border">
               <p className="text-[10px] uppercase text-muted-foreground font-bold">Duration</p>
-              <p className="text-lg font-mono text-foreground">{benchmark.durationSeconds}s</p>
+              <p className="text-lg font-mono text-foreground">{benchmark.duration}s</p>
             </div>
             <div className="p-3 bg-card rounded-lg border border-border">
               <p className="text-[10px] uppercase text-muted-foreground font-bold">Execution Time</p>

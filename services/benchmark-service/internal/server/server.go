@@ -5,12 +5,22 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/handlers"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/middleware"
 )
 
 func NewServer(db *sql.DB, rdb *redis.Client) *mux.Router {
 	r := mux.NewRouter()
+	
+	r.Use(otelmux.Middleware("benchmark-service"))
+	r.Use(middleware.CorrelationID)
+	r.Use(middleware.PrometheusMetrics)
+
+	r.Handle("/metrics", promhttp.Handler()).Methods("GET")
+
 	benchmarkHandler := handlers.NewBenchmarkHandler(db, rdb)
 
 	// Resume any queued benchmarks that were interrupted by a restart

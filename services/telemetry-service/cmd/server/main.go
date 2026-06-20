@@ -15,12 +15,19 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/server"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/logger"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/tracing"
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
 
 func main() {
     
     logger.Init("telemetry-service")
+
+	tp, err := tracing.InitTracer("telemetry-service")
+	if err == nil {
+		defer tp.Shutdown(context.Background())
+	}
+
 	logger.Log.Info("Starting telemetry service")
 	// ROOT CONTEXT
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,7 +72,7 @@ func main() {
 	go aggregator.StartReplayProcessorWorker(ctx, db)
 
 	// START HTTP SERVER
-	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu, db)
+	go server.StartServer(hub, workerAggs, workerLastSeen, &workerMu, db, rdb)
 
 	// SIGNAL CHANNEL
 	sigChan := make(chan os.Signal, 1)

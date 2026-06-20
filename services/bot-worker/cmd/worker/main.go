@@ -13,6 +13,7 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/benchmarkclient"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/metrics"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/scenario"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/tracing"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/workers"
 	"github.com/redis/go-redis/v9"
 )
@@ -23,6 +24,9 @@ type RunRequest struct {
 	WorkerCount   int    `json:"workerCount"`
 	TotalRequests int    `json:"totalRequests"`
 	SubmissionID  string `json:"submissionId"`
+	Token         string `json:"token"`
+	TraceID       string `json:"traceId"`
+	TraceContext  map[string]string `json:"traceContext"`
 }
 
 var (
@@ -34,6 +38,10 @@ var (
 )
 
 func main() {
+	tp, err := tracing.InitTracer("bot-worker")
+	if err == nil {
+		defer tp.Shutdown(context.Background())
+	}
 	rdb = redis.NewClient(&redis.Options{
 		Addr: "redis:6379",
 	})
@@ -157,7 +165,7 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID, req.SubmissionID)
+			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID, req.SubmissionID, req.Token, req.TraceID, req.TraceContext)
 		}(w)
 	}
 
@@ -262,5 +270,6 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		BotType:     "system_control",
 		WorkerID:    "STOP_STREAM",
 		BenchmarkID: req.BenchmarkID,
+		Token:       req.Token,
 	})
 }

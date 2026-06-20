@@ -8,10 +8,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
+	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/dto"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/repository"
@@ -330,12 +334,45 @@ func (h *BenchmarkHandler) ProcessQueue() {
 		h.publishLog(b.SubmissionID, "BENCHMARK", "log", fmt.Sprintf("Benchmark %s is now RUNNING", b.Name), "IN_PROGRESS")
 	}
 
+	// Generate worker JWT
+	workerSecret := os.Getenv("WORKER_SECRET")
+	var tokenString string
+	if workerSecret != "" {
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"benchmark_id": b.ID,
+			"role":         "worker",
+			"exp":          time.Now().Add(time.Hour * 24).Unix(), // 24 hours expiry
+		})
+		tokenString, _ = token.SignedString([]byte(workerSecret))
+	}
+
+	var traceID string
+	if len(b.Metadata) > 0 {
+		var metaMap map[string]interface{}
+		if err := json.Unmarshal(b.Metadata, &metaMap); err == nil {
+			if t, ok := metaMap["trace_id"].(string); ok {
+				traceID = t
+			}
+		}
+	}
+
+	traceCtx := make(map[string]string)
+	
+	tracer := otel.Tracer("benchmark-service")
+	ctx, span := tracer.Start(context.Background(), "StartBenchmark")
+	defer span.End()
+	
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(traceCtx))
+
 	workerReqBody, _ := json.Marshal(map[string]interface{}{
 		"benchmarkId": b.ID,
 		"targetUrl": targetURL,
 		"workerCount": b.WorkerCount,
 		"totalRequests": b.TotalJobs,
 		"submissionId": b.SubmissionID,
+		"token": tokenString,
+		"traceId": traceID,
+		"traceContext": traceCtx,
 	})
 	
 	resp, err := client.Post("http://bot-worker:8085/run", "application/json", bytes.NewBuffer(workerReqBody))
@@ -378,11 +415,20 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 
 	if req.WorkerCount <= 0 { req.WorkerCount = 100 }
 	if req.TotalRequests <= 0 { req.TotalRequests = 1000 }
-
 	var submissionID = req.SubmissionID
 	req.UserID = r.Header.Get("X-User-Id")
 	req.TeamID = r.Header.Get("X-Team-Id")
 	req.TeamName = r.Header.Get("X-Team-Name")
+
+	traceID := r.Header.Get("X-Trace-Id")
+	if traceID != "" {
+		metaMap := make(map[string]interface{})
+		if len(req.Metadata) > 0 {
+			json.Unmarshal(req.Metadata, &metaMap)
+		}
+		metaMap["trace_id"] = traceID
+		req.Metadata, _ = json.Marshal(metaMap)
+	}
 
 	b, err := repository.CreateBenchmark(h.db, req.Name, req.UserID, req.TeamID, req.TeamName, req.SubmissionID, req.DeploymentID, req.TargetType, req.WorkerCount, req.TotalRequests, req.Metadata)
 	if err != nil {

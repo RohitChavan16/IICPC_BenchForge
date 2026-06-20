@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSharedWebsocketClient, type WebSocketStatus } from '@/services/websocket/websocketClient'
 import type { MetricSnapshot, WorkerMetricMap, PersonaMetricMap, TracerStats, LiveRequest } from '@/types/api'
 
-export function useWebsocket() {
+export function useWebsocket(benchmarkId: string = 'GLOBAL') {
   const defaultUrl = typeof window !== 'undefined'
     ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:8081/ws`
     : 'ws://localhost:8081/ws'
@@ -46,7 +46,9 @@ export function useWebsocket() {
     client.addPersonaHandler(personaHandler)
     client.addTracerHandler(tracerHandler)
     client.addRequestHandler(requestHandler)
-    client.connect()
+    
+    // Connect to the specific benchmark room
+    client.connect(benchmarkId)
 
     return () => {
       client.removeHandler(messageHandler)
@@ -56,7 +58,7 @@ export function useWebsocket() {
       client.removeRequestHandler(requestHandler)
       client.removeStatusHandler(statusHandler)
     }
-  }, [client])
+  }, [client, benchmarkId])
 
   return {
     status,

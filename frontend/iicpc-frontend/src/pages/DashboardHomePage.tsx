@@ -38,13 +38,13 @@ export function DashboardHomePage() {
       } else {
         fetchLeaderboardEntries().then(data => setLeaderboard(data.items || [])).catch(console.error);
       }
+
+      fetchBenchmarkSessions()
+        .then(res => setBenchmarksRun(res.total))
+        .catch(err => console.error('Failed to fetch benchmark sessions', err));
     };
     fetchAll();
     const interval = setInterval(fetchAll, 5000);
-
-    fetchBenchmarkSessions()
-      .then(res => setBenchmarksRun(res.total))
-      .catch(err => console.error('Failed to fetch benchmark sessions', err));
 
     return () => {
       ws.removeStatusHandler(handleStatus);

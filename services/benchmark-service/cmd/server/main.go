@@ -1,19 +1,28 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/logger"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/repository"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/server"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/tracing"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
+	logger.Init("benchmark-service")
+
+	tp, err := tracing.InitTracer("benchmark-service")
+	if err == nil {
+		defer tp.Shutdown(context.Background())
+	}
+
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://postgres:password@postgres:5432/iicpc?sslmode=disable"
@@ -21,12 +30,14 @@ func main() {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatalf("failed to open db: %v", err)
+		logger.Log.Error("failed to open db", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := repository.EnsureLeaderboardTable(db); err != nil {
-		log.Fatalf("failed to ensure leaderboard table: %v", err)
+		logger.Log.Error("failed to ensure leaderboard table", "error", err)
+		os.Exit(1)
 	}
 
 	redisURL := os.Getenv("REDIS_URL")
@@ -44,6 +55,9 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	log.Println("Benchmark service listening :8082")
-	log.Fatal(srv.ListenAndServe())
+	logger.Log.Info("Benchmark service listening :8082")
+	if err := srv.ListenAndServe(); err != nil {
+		logger.Log.Error("server crashed", "error", err)
+		os.Exit(1)
+	}
 }

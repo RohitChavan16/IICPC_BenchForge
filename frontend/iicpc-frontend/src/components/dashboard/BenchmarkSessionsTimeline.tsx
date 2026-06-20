@@ -7,9 +7,49 @@ import type { BenchmarkSession } from '@/types/api';
 
 export function BenchmarkSessionsTimeline() {
   const [sessions, setSessions] = useState<BenchmarkSession[]>([]);
+  const [personaMixes, setPersonaMixes] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetchBenchmarkSessions().then(res => setSessions(res.items.slice(0, 5))).catch(console.error);
+    const fetchTimeline = () => {
+      fetchBenchmarkSessions().then(async res => {
+        const top5 = res.items.slice(0, 5);
+        setSessions(top5);
+        
+        const mixes: Record<string, string> = {};
+        const ids = top5.map(s => s.id);
+        
+        if (ids.length > 0) {
+          try {
+            const telemetryService = await import('@/services/api/telemetryService');
+            const batchData = await telemetryService.fetchBatchPersonaAnalytics(ids);
+            
+            // Group by benchmark_id
+            const grouped: Record<string, string[]> = {};
+            batchData.forEach(p => {
+              if (!grouped[p.benchmarkId]) {
+                grouped[p.benchmarkId] = [];
+              }
+              grouped[p.benchmarkId].push(p.botType);
+            });
+
+            top5.forEach(s => {
+              if (grouped[s.id] && grouped[s.id].length > 0) {
+                mixes[s.id] = grouped[s.id].join(', ');
+              } else {
+                mixes[s.id] = 'Unavailable';
+              }
+            });
+          } catch (e) {
+            top5.forEach(s => { mixes[s.id] = 'Unavailable'; });
+          }
+        }
+        setPersonaMixes(mixes);
+      }).catch(console.error);
+    };
+
+    fetchTimeline();
+    const interval = setInterval(fetchTimeline, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const actions = (
@@ -54,7 +94,7 @@ export function BenchmarkSessionsTimeline() {
                 <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Clock size={14} /> {session.duration || '-'}s</span>
                   <span className="flex items-center gap-1"><Server size={14} /> {session.workerCount} Workers</span>
-                  <span className="flex items-center gap-1"><Users size={14} /> - Mix</span>
+                  <span className="flex items-center gap-1" title="Persona Mix"><Users size={14} /> {personaMixes[session.id] || 'Loading...'}</span>
                   {replayAvailable && <span className="flex items-center gap-1 text-purple-500"><PlayCircle size={14} /> Replay Ready</span>}
                 </div>
               </div>

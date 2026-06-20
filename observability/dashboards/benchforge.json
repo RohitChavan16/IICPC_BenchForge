@@ -1,0 +1,37 @@
+{
+  "title": "BenchForge End-to-End Metrics",
+  "panels": [
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (method, path)"
+        }
+      ]
+    },
+    {
+      "title": "P99 API Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le, path))"
+        }
+      ]
+    },
+    {
+      "title": "Redis Stream Processing Reliability",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(reclaimed_messages_total[1m])",
+          "legendFormat": "Reclaimed Messages (XAUTOCLAIM)"
+        },
+        {
+          "expr": "rate(dlq_messages_total[1m])",
+          "legendFormat": "Dead Letter Queue Messages"
+        }
+      ]
+    }
+  ]
+}

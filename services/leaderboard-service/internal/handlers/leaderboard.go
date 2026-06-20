@@ -86,3 +86,22 @@ func (h *LeaderboardHandler) GetLeaderboardByBenchmark(w http.ResponseWriter, r 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(entry)
 }
+
+func (h *LeaderboardHandler) GetLeaderboardContext(w http.ResponseWriter, r *http.Request) {
+	team := r.URL.Query().Get("team")
+	if team == "" {
+		http.Error(w, "team query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	entries, err := repository.GetLeaderboardContext(h.db, team)
+	if err != nil {
+		log.Printf("get leaderboard context error: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	resp := map[string]interface{}{"items": entries}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}

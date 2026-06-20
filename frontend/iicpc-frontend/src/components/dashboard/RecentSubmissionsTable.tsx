@@ -4,11 +4,35 @@ import { Badge } from '@/components/ui/Badge';
 import { FileText, Play, Download, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSubmissionStore } from '@/stores/useSubmissionStore';
+import { fetchBenchmarkSessions } from '@/services/api/benchmarkService';
+import { computeTps } from '@/services/api/analyticsService';
+import type { BenchmarkSession } from '@/types/api';
 
 export function RecentSubmissionsTable() {
   const [filter, setFilter] = useState('All');
   const { submissionsHistory } = useSubmissionStore();
+  const [sessions, setSessions] = useState<Record<string, BenchmarkSession>>({});
   
+  useEffect(() => {
+    const fetchSessionsData = () => {
+      fetchBenchmarkSessions().then(res => {
+        const sessionMap: Record<string, BenchmarkSession> = {};
+        res.items.forEach(s => {
+          if (s.submissionId) {
+            if (!sessionMap[s.submissionId] || new Date(s.createdAt) > new Date(sessionMap[s.submissionId].createdAt)) {
+              sessionMap[s.submissionId] = s;
+            }
+          }
+        });
+        setSessions(sessionMap);
+      }).catch(console.error);
+    };
+
+    fetchSessionsData();
+    const interval = setInterval(fetchSessionsData, 5000);
+    return () => clearInterval(interval);
+  }, [submissionsHistory]);
+
   const filters = ['All', 'completed', 'failed', 'running'];
   const data = filter === 'All' ? submissionsHistory : submissionsHistory.filter(s => s.status === filter);
 
@@ -62,8 +86,12 @@ export function RecentSubmissionsTable() {
                   <td className="px-4 py-3 font-medium text-foreground">{sub.submissionName}</td>
                   <td className="px-4 py-3 text-muted-foreground">{sub.language}</td>
                   <td className="px-4 py-3 font-bold text-right text-foreground">{sub.correctnessScore ?? '-'}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">-</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">-</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground" title={sessions[sub.id] ? "Approximation computed from session duration" : ""}>
+                    {sessions[sub.id] ? `~${Math.floor(computeTps(sessions[sub.id])).toLocaleString()}` : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">
+                    {sessions[sub.id]?.p99 ? `${Math.floor(sessions[sub.id].p99)}ms` : '-'}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <Badge variant={sub.status === 'completed' ? 'success' : sub.status === 'failed' ? 'danger' : 'warning'}>
                       {sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}

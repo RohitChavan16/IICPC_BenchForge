@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -12,22 +13,34 @@ const (
 	GroupName  = "telemetry_group"
 )
 
-func CreateConsumerGroup(
-	rdb *redis.Client,
-) {
+func CreateConsumerGroup(rdb *redis.Client) {
+	backoff := 1 * time.Second
+	maxBackoff := 30 * time.Second
 
-	err := rdb.XGroupCreateMkStream(
-		context.Background(),
-		StreamName,
-		GroupName,
-		"0",
-	).Err()
+	for {
+		err := rdb.XGroupCreateMkStream(
+			context.Background(),
+			StreamName,
+			GroupName,
+			"0",
+		).Err()
 
-	if err != nil &&
-		err.Error() != "BUSYGROUP Consumer Group name already exists" {
+		if err == nil {
+			log.Println("Consumer group ready")
+			return
+		}
 
-		log.Fatal(err)
+		if err.Error() == "BUSYGROUP Consumer Group name already exists" {
+			log.Println("Consumer group already exists")
+			return
+		}
+
+		log.Printf("Failed to create consumer group: %v. Retrying in %v...", err, backoff)
+		time.Sleep(backoff)
+
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
 	}
-
-	log.Println("Consumer group ready")
 }
