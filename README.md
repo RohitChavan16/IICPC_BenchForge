@@ -149,7 +149,6 @@ To successfully pass the **VALIDATION** phase, the target engine must expose `GE
 ```
 
 *(Note: Platform authentication via the API Gateway uses stateless JWTs valid for 1 hour, obtained via `POST /api/v1/auth/login`.)*
-
 ---
 
 ## 07 | Benchmark Engine & Trading Personas
