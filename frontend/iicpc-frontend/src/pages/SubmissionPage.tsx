@@ -297,7 +297,7 @@ export function SubmissionPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 md:space-y-6 pb-2 overflow-x-hidden">
       <PageHero 
-        theme={isSubmitRoute ? "dashboard" : "submission"}
+        theme={isSubmitRoute ? "deploy" : "submission"}
         icon={<TerminalSquare size={40} />}
         title={isSubmitRoute ? "Deploy Engine" : "Deployment History"}
         subtitle={isSubmitRoute 

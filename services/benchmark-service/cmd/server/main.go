@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/logger"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/repository"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/server"
@@ -23,12 +24,9 @@ func main() {
 		defer tp.Shutdown(context.Background())
 	}
 
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:password@postgres:5432/iicpc?sslmode=disable"
-	}
+	cfg := config.LoadConfig()
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		logger.Log.Error("failed to open db", "error", err)
 		os.Exit(1)
@@ -40,22 +38,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		redisURL = "redis:6379"
-	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr: redisURL,
+		Addr: cfg.RedisURL,
 	})
 
 	srv := &http.Server{
-		Addr:         ":8082",
-		Handler:      server.NewServer(db, rdb),
+		Addr:         ":" + cfg.Port,
+		Handler:      server.NewServer(cfg, db, rdb),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Log.Info("Benchmark service listening :8082")
+	logger.Log.Info("Benchmark service listening :" + cfg.Port)
 	if err := srv.ListenAndServe(); err != nil {
 		logger.Log.Error("server crashed", "error", err)
 		os.Exit(1)

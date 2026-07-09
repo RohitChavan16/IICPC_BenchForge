@@ -14,7 +14,11 @@ func calculatePercentiles(metricsList []metrics.RequestMetric) (float64, float64
 
 	latenciesMs := make([]float64, 0, len(metricsList))
 	for _, metric := range metricsList {
-		latenciesMs = append(latenciesMs, metric.Latency.Seconds()*1000)
+		if !metric.Success {
+			latenciesMs = append(latenciesMs, 5000.0) // Heavily penalize failed requests to avoid survivorship bias
+		} else {
+			latenciesMs = append(latenciesMs, metric.Latency.Seconds()*1000)
+		}
 	}
 
 	sort.Float64s(latenciesMs)

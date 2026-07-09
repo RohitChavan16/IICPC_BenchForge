@@ -32,7 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := server.NewServer(cfg.Port, db, cfg.JWTSecret)
+	app := server.NewServer(cfg, db, cfg.JWTSecret)
 
 	if err := app.Run(":" + cfg.Port); err != nil {
 		logger.Log.Error("server crashed", "error", err)

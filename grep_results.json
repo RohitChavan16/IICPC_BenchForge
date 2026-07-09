@@ -1,0 +1,1213 @@
+﻿{
+    "Error Handling":  {
+
+                       },
+    "Redis Streams":  [
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\bot-worker\\internal\\metrics\\publisher.go",
+                              "LineNumber":  22,
+                              "Line":  "\treturn rdb.XAdd(ctx, \u0026redis.XAddArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  90,
+                              "Line":  "\t\tstreams, err := rdb.XReadGroup("
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  92,
+                              "Line":  "\t\t\t\u0026redis.XReadGroupArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  111,
+                              "Line":  "\t\t\tlogger.Log.Error(\"Redis XReadGroup failed\", \"error\", err)"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  170,
+                              "Line":  "\t\tstreams, err := rdb.XReadGroup(ctx, \u0026redis.XReadGroupArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  218,
+                              "Line":  "\t\t\tpendingArgs := \u0026redis.XPendingExtArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  227,
+                              "Line":  "\t\t\tpending, err := rdb.XPendingExt(ctx, pendingArgs).Result()"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  244,
+                              "Line":  "\t\t\tclaimArgs := \u0026redis.XClaimArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  252,
+                              "Line":  "\t\t\tclaimed, err := rdb.XClaim(ctx, claimArgs).Result()"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  260,
+                              "Line":  "\t\t\t\t// Find matching XPendingExt struct for logs"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  261,
+                              "Line":  "\t\t\t\tvar p redis.XPendingExt"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  356,
+                              "Line":  "\t\trdb.XAck(ctx, StreamName, GroupName, message.ID)"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  399,
+                              "Line":  "\t\trdb.XAdd(ctx, \u0026redis.XAddArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  405,
+                              "Line":  "\t\trdb.XAck(ctx, StreamName, GroupName, message.ID)"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  412,
+                              "Line":  "\t\trdb.XAck(ctx, StreamName, GroupName, message.ID)"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\consumer.go",
+                              "LineNumber":  458,
+                              "Line":  "\terr = rdb.XAck("
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\group.go",
+                              "LineNumber":  21,
+                              "Line":  "\t\terr := rdb.XGroupCreateMkStream("
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\recovery_test.go",
+                              "LineNumber":  37,
+                              "Line":  "\trdb.XGroupCreateMkStream(ctx, StreamName, GroupName, \"0\")"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\recovery_test.go",
+                              "LineNumber":  40,
+                              "Line":  "\trdb.XAdd(ctx, \u0026redis.XAddArgs{"
+                          },
+                          {
+                              "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\recovery_test.go",
+                              "LineNumber":  46,
+                              "Line":  "\t// we will manually invoke the XPendingExt and XClaim logic on 0 duration for the test."
+                          }
+                      ],
+    "Hardcoded Redis":  {
+                            "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\docker-compose.yml",
+                            "LineNumber":  197,
+                            "Line":  "      REDIS_ADDR: redis://redis:6379"
+                        },
+    "Testing":  [
+                    {
+                        "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\bot-worker\\internal\\scenario\\executor_test.go",
+                        "LineNumber":  17,
+                        "Line":  "func TestPartialFill(t *testing.T) {"
+                    },
+                    {
+                        "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\bot-worker\\internal\\scenario\\executor_test.go",
+                        "LineNumber":  65,
+                        "Line":  "func TestPriceImprovement(t *testing.T) {"
+                    },
+                    {
+                        "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\bot-worker\\internal\\scenario\\executor_test.go",
+                        "LineNumber":  106,
+                        "Line":  "func TestFIFOPriority(t *testing.T) {"
+                    },
+                    {
+                        "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\bot-worker\\internal\\scenario\\executor_test.go",
+                        "LineNumber":  164,
+                        "Line":  "func TestMultiLevelPriceSweep(t *testing.T) {"
+                    },
+                    {
+                        "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\consumer\\recovery_test.go",
+                        "LineNumber":  12,
+                        "Line":  "func TestAbandonedMessageRecovery(t *testing.T) {"
+                    }
+                ],
+    "Security Headers":  [
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  13,
+                                 "Line":  "    const schemaSyncSpy = vi.spyOn(classValidator, \u0027validateSync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  21,
+                                 "Line":  "    expect(schemaSyncSpy).not.toHaveBeenCalled();"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  39,
+                                 "Line":  "    const validateSyncSpy = vi.spyOn(classValidator, \u0027validateSync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  46,
+                                 "Line":  "    expect(validateSyncSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  66,
+                                 "Line":  "    const validateSyncSpy = vi.spyOn(classValidator, \u0027validateSync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\class-validator.ts",
+                                 "LineNumber":  73,
+                                 "Line":  "    expect(validateSyncSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  8,
+                                 "Line":  "    const validateAsyncSpy = vi.spyOn(schema, \u0027validateAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  17,
+                                 "Line":  "    expect(validateAsyncSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  22,
+                                 "Line":  "    const validateAsyncSpy = vi.spyOn(schema, \u0027validateAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  29,
+                                 "Line":  "    expect(validateAsyncSpy).not.toHaveBeenCalled();"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  44,
+                                 "Line":  "    const validateAsyncSpy = vi.spyOn(schema, \u0027validateAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  51,
+                                 "Line":  "    expect(validateAsyncSpy).not.toHaveBeenCalled();"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  82,
+                                 "Line":  "    const validateAsyncSpy = vi.spyOn(schema, \u0027validateAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  91,
+                                 "Line":  "    expect(validateAsyncSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\joi\\src\\__tests__\\joi.ts",
+                                 "LineNumber":  92,
+                                 "Line":  "    expect(validateAsyncSpy).toHaveBeenCalledWith(validData, {"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\valibot\\src\\__tests__\\valibot.ts",
+                                 "LineNumber":  24,
+                                 "Line":  "    const funcSpy = vi.spyOn(valibot, \u0027safeParseAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\valibot\\src\\__tests__\\valibot.ts",
+                                 "LineNumber":  30,
+                                 "Line":  "    expect(funcSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\valibot\\src\\__tests__\\valibot.ts",
+                                 "LineNumber":  43,
+                                 "Line":  "    const funcSpy = vi.spyOn(valibot, \u0027safeParseAsync\u0027);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\valibot\\src\\__tests__\\valibot.ts",
+                                 "LineNumber":  49,
+                                 "Line":  "    expect(funcSpy).toHaveBeenCalledTimes(1);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\yup\\src\\__tests__\\yup.ts",
+                                 "LineNumber":  17,
+                                 "Line":  "    const schemaSyncSpy = vi.spyOn(schema, \u0027validateSync\u0027);"
+                             }
+                         ],
+    "Missing Foreign Keys":  [
+                                 {
+                                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\migrations\\005_enforce_benchmark_integrity.sql",
+                                     "LineNumber":  16,
+                                     "Line":  "FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE;"
+                                 },
+                                 {
+                                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\migrations\\005_enforce_benchmark_integrity.sql",
+                                     "LineNumber":  20,
+                                     "Line":  "FOREIGN KEY (deployment_id) REFERENCES deployments(id) ON DELETE CASCADE;"
+                                 }
+                             ],
+    "Hardcoded IP":  [
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  32,
+                             "Line":  "     *   \u00274.4.4.4\u0027,"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  34,
+                             "Line":  "     *   \u00274.4.4.4:1053\u0027,"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  101,
+                             "Line":  "     * dnsPromises.lookupService(\u0027127.0.0.1\u0027, 22).then((result) =\u003e {"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  152,
+                             "Line":  "     * addresses (e.g. `[\u002774.125.79.104\u0027, \u002774.125.79.105\u0027, \u002774.125.79.106\u0027]`)."
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  180,
+                             "Line":  "     * [ { type: \u0027A\u0027, address: \u0027127.0.0.1\u0027, ttl: 299 },"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  323,
+                             "Line":  "     * of the text records available for `hostname` (e.g.`[ [\u0027v=spf1 ip4:0.0.0.0 \u0027, \u0027~all\u0027 ] ]`). Each sub-array contains TXT chunks of"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  354,
+                             "Line":  "     *   \u00274.4.4.4\u0027,"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  356,
+                             "Line":  "     *   \u00274.4.4.4:1053\u0027,"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  425,
+                             "Line":  "     * resolver.setServers([\u00274.4.4.4\u0027]);"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  427,
+                             "Line":  "     * // This request will use the server at 4.4.4.4, independent of global settings."
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dns\\promises.d.ts",
+                             "LineNumber":  494,
+                             "Line":  "         * @param [ipv4=\u00270.0.0.0\u0027] A string representation of an IPv4 address."
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\child_process.d.ts",
+                             "LineNumber":  428,
+                             "Line":  "         *   if (socket.remoteAddress === \u002774.125.127.100\u0027) {"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                             "LineNumber":  602,
+                             "Line":  "         * * `\u0027x25519\u0027` (OID 1.3.101.110)"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                             "LineNumber":  603,
+                             "Line":  "         * * `\u0027x448\u0027` (OID 1.3.101.111)"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                             "LineNumber":  604,
+                             "Line":  "         * * `\u0027ed25519\u0027` (OID 1.3.101.112)"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                             "LineNumber":  605,
+                             "Line":  "         * * `\u0027ed448\u0027` (OID 1.3.101.113)"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dgram.d.ts",
+                             "LineNumber":  24,
+                             "Line":  " * // Prints: server listening 0.0.0.0:41234"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dgram.d.ts",
+                             "LineNumber":  120,
+                             "Line":  "         *     s.addMembership(\u0027224.0.0.114\u0027);"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dgram.d.ts",
+                             "LineNumber":  174,
+                             "Line":  "         * // Prints: server listening 0.0.0.0:41234"
+                         },
+                         {
+                             "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\dgram.d.ts",
+                             "LineNumber":  196,
+                             "Line":  "         * provided, `\u0027127.0.0.1\u0027` (for `udp4` sockets) or `\u0027::1\u0027` (for `udp6` sockets)"
+                         }
+                     ],
+    "Distributed Tracing":  [
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\trace-mapping\\src\\trace-mapping.ts",
+                                    "LineNumber":  324,
+                                    "Line":  "  const tracer = new TraceMap(clone(map, []), mapUrl);"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\trace-mapping\\src\\trace-mapping.ts",
+                                    "LineNumber":  325,
+                                    "Line":  "  cast(tracer)._decoded = map.mappings;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\trace-mapping\\src\\trace-mapping.ts",
+                                    "LineNumber":  326,
+                                    "Line":  "  return tracer;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.generated.d.ts",
+                                    "LineNumber":  1070,
+                                    "Line":  "        interface GetStackTraceReturnType {"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.generated.d.ts",
+                                    "LineNumber":  2162,
+                                    "Line":  "        post(method: \"Debugger.getStackTrace\", params?: Debugger.GetStackTraceParameterType, callback?: (err: Error | null, params: Debugger.GetStackTraceReturnType) =\u003e void): void;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.generated.d.ts",
+                                    "LineNumber":  2163,
+                                    "Line":  "        post(method: \"Debugger.getStackTrace\", callback?: (err: Error | null, params: Debugger.GetStackTraceReturnType) =\u003e void): void;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.generated.d.ts",
+                                    "LineNumber":  3226,
+                                    "Line":  "        post(method: \"Debugger.getStackTrace\", params?: Debugger.GetStackTraceParameterType): Promise\u003cDebugger.GetStackTraceReturnType\u003e;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\stream.d.ts",
+                                    "LineNumber":  831,
+                                    "Line":  "             * not draining may lead to a remotely exploitable vulnerability."
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\ts5.0\\global.d.ts",
+                                    "LineNumber":  77,
+                                    "Line":  "interface HTMLSlotElement extends HTMLElement {}"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\ts5.0\\index.d.ts",
+                                    "LineNumber":  4085,
+                                    "Line":  "        slot: DetailedHTMLFactory\u003cSlotHTMLAttributes\u003cHTMLSlotElement\u003e, HTMLSlotElement\u003e;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\ts5.0\\index.d.ts",
+                                    "LineNumber":  4464,
+                                    "Line":  "            slot: React.DetailedHTMLProps\u003cReact.SlotHTMLAttributes\u003cHTMLSlotElement\u003e, HTMLSlotElement\u003e;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\global.d.ts",
+                                    "LineNumber":  77,
+                                    "Line":  "interface HTMLSlotElement extends HTMLElement {}"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\index.d.ts",
+                                    "LineNumber":  4085,
+                                    "Line":  "        slot: DetailedHTMLFactory\u003cSlotHTMLAttributes\u003cHTMLSlotElement\u003e, HTMLSlotElement\u003e;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\react\\index.d.ts",
+                                    "LineNumber":  4477,
+                                    "Line":  "            slot: React.DetailedHTMLProps\u003cReact.SlotHTMLAttributes\u003cHTMLSlotElement\u003e, HTMLSlotElement\u003e;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\framer-motion\\dist\\client.d.ts",
+                                    "LineNumber":  2225,
+                                    "Line":  "    slot: HTMLSlotElement;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\framer-motion\\dist\\index.d.ts",
+                                    "LineNumber":  3206,
+                                    "Line":  "    slot: HTMLSlotElement;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\framer-motion\\dist\\m.d.ts",
+                                    "LineNumber":  2225,
+                                    "Line":  "    slot: HTMLSlotElement;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\globals\\index.d.ts",
+                                    "LineNumber":  598,
+                                    "Line":  "\treadonly \u0027HTMLSlotElement\u0027: false;"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\lucide-react\\dist\\lucide-react.d.ts",
+                                    "LineNumber":  9777,
+                                    "Line":  " * @component @name Hotel"
+                                },
+                                {
+                                    "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\lucide-react\\dist\\lucide-react.d.ts",
+                                    "LineNumber":  9780,
+                                    "Line":  " * @preview ![img](data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTAgMjJ2LTYuNTciIC8+CiAgPHBhdGggZD0iTTEyIDExaC4wMSIgLz4KICA8cGF0aCBkPSJNMTIgN2guMDEiIC8+CiAgPHBhdGggZD0iTTE0IDE1LjQzVjIyIiAvPgogIDxwYXRoIGQ9Ik0xNSAxNmE1IDUgMCAwIDAtNiAwIiAvPgogIDxwYXRoIGQ9Ik0xNiAxMWguMDEiIC8+CiAgPHBhdGggZD0iTTE2IDdoLjAxIiAvPgogIDxwYXRoIGQ9Ik04IDExaC4wMSIgLz4KICA8cGF0aCBkPSJNOCA3aC4wMSIgLz4KICA8cmVjdCB4PSI0IiB5PSIyIiB3aWR0aD0iMTYiIGhlaWdodD0iMjAiIHJ4PSIyIiAvPgo8L3N2Zz4K) - https://lucide.dev/icons/hotel"
+                                }
+                            ],
+    "Mock Data Frontend":  [
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\parser\\typings\\babel-parser.d.ts",
+                                   "LineNumber":  13,
+                                   "Line":  "type SyntaxPlugin = \"flow\" | \"typescript\" | \"jsx\" | \"pipelineOperator\" | \"placeholders\";"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\parser\\typings\\babel-parser.d.ts",
+                                   "LineNumber":  66,
+                                   "Line":  "  | \"placeholders\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  45,
+                                   "Line":  "export type Node = Accessor | AnyTypeAnnotation | ArgumentPlaceholder | ArrayExpression | ArrayPattern | ArrayTypeAnnotation | ArrowFunctionExpression | AssignmentExpression | AssignmentPattern | AwaitExpression | BigIntLiteral | Binary | BinaryExpression | BindExpression | Block | BlockParent | BlockStatement | BooleanLiteral | BooleanLiteralTypeAnnotation | BooleanTypeAnnotation | BreakStatement | CallExpression | CatchClause | Class | ClassAccessorProperty | ClassBody | ClassDeclaration | ClassExpression | ClassImplements | ClassMethod | ClassPrivateMethod | ClassPrivateProperty | ClassProperty | CompletionStatement | Conditional | ConditionalExpression | ContinueStatement | DebuggerStatement | DecimalLiteral | Declaration | DeclareClass | DeclareExportAllDeclaration | DeclareExportDeclaration | DeclareFunction | DeclareInterface | DeclareModule | DeclareModuleExports | DeclareOpaqueType | DeclareTypeAlias | DeclareVariable | DeclaredPredicate | Decorator | Directive | DirectiveLiteral | DoExpression | DoWhileStatement | EmptyStatement | EmptyTypeAnnotation | EnumBody | EnumBooleanBody | EnumBooleanMember | EnumDeclaration | EnumDefaultedMember | EnumMember | EnumNumberBody | EnumNumberMember | EnumStringBody | EnumStringMember | EnumSymbolBody | ExistsTypeAnnotation | ExportAllDeclaration | ExportDeclaration | ExportDefaultDeclaration | ExportDefaultSpecifier | ExportNamedDeclaration | ExportNamespaceSpecifier | ExportSpecifier | Expression | ExpressionStatement | ExpressionWrapper | File | Flow | FlowBaseAnnotation | FlowDeclaration | FlowPredicate | FlowType | For | ForInStatement | ForOfStatement | ForStatement | ForXStatement | Function | FunctionDeclaration | FunctionExpression | FunctionParameter | FunctionParent | FunctionTypeAnnotation | FunctionTypeParam | GenericTypeAnnotation | Identifier | IfStatement | Immutable | Import | ImportAttribute | ImportDeclaration | ImportDefaultSpecifier | ImportExpression | ImportNamespaceSpecifier | ImportOrExportDeclaration | ImportSpecifier | IndexedAccessType | InferredPredicate | InterfaceDeclaration | InterfaceExtends | InterfaceTypeAnnotation | InterpreterDirective | IntersectionTypeAnnotation | JSX | JSXAttribute | JSXClosingElement | JSXClosingFragment | JSXElement | JSXEmptyExpression | JSXExpressionContainer | JSXFragment | JSXIdentifier | JSXMemberExpression | JSXNamespacedName | JSXOpeningElement | JSXOpeningFragment | JSXSpreadAttribute | JSXSpreadChild | JSXText | LVal | LabeledStatement | Literal | LogicalExpression | Loop | MemberExpression | MetaProperty | Method | Miscellaneous | MixedTypeAnnotation | ModuleDeclaration | ModuleExpression | ModuleSpecifier | NewExpression | Noop | NullLiteral | NullLiteralTypeAnnotation | NullableTypeAnnotation | NumberLiteral | NumberLiteralTypeAnnotation | NumberTypeAnnotation | NumericLiteral | ObjectExpression | ObjectMember | ObjectMethod | ObjectPattern | ObjectProperty | ObjectTypeAnnotation | ObjectTypeCallProperty | ObjectTypeIndexer | ObjectTypeInternalSlot | ObjectTypeProperty | ObjectTypeSpreadProperty | OpaqueType | OptionalCallExpression | OptionalIndexedAccessType | OptionalMemberExpression | ParenthesizedExpression | Pattern | PatternLike | PipelineBareFunction | PipelinePrimaryTopicReference | PipelineTopicExpression | Placeholder | Private | PrivateName | Program | Property | Pureish | QualifiedTypeIdentifier | RecordExpression | RegExpLiteral | RegexLiteral | RestElement | RestProperty | ReturnStatement | Scopable | SequenceExpression | SpreadElement | SpreadProperty | Standardized | Statement | StaticBlock | StringLiteral | StringLiteralTypeAnnotation | StringTypeAnnotation | Super | SwitchCase | SwitchStatement | SymbolTypeAnnotation | TSAnyKeyword | TSArrayType | TSAsExpression | TSBaseType | TSBigIntKeyword | TSBooleanKeyword | TSCallSignatureDeclaration | TSConditionalType | TSConstructSignatureDeclaration | TSConstructorType | TSDeclareFunction | TSDeclareMethod | TSEntityName | TSEnumBody | TSEnumDeclaration | TSEnumMember | TSExportAssignment | TSExpressionWithTypeArguments | TSExternalModuleReference | TSFunctionType | TSImportEqualsDeclaration | TSImportType | TSIndexSignature | TSIndexedAccessType | TSInferType | TSInstantiationExpression | TSInterfaceBody | TSInterfaceDeclaration | TSIntersectionType | TSIntrinsicKeyword | TSLiteralType | TSMappedType | TSMethodSignature | TSModuleBlock | TSModuleDeclaration | TSNamedTupleMember | TSNamespaceExportDeclaration | TSNeverKeyword | TSNonNullExpression | TSNullKeyword | TSNumberKeyword | TSObjectKeyword | TSOptionalType | TSParameterProperty | TSParenthesizedType | TSPropertySignature | TSQualifiedName | TSRestType | TSSatisfiesExpression | TSStringKeyword | TSSymbolKeyword | TSTemplateLiteralType | TSThisType | TSTupleType | TSType | TSTypeAliasDeclaration | TSTypeAnnotation | TSTypeAssertion | TSTypeElement | TSTypeLiteral | TSTypeOperator | TSTypeParameter | TSTypeParameterDeclaration | TSTypeParameterInstantiation | TSTypePredicate | TSTypeQuery | TSTypeReference | TSUndefinedKeyword | TSUnionType | TSUnknownKeyword | TSVoidKeyword | TaggedTemplateExpression | TemplateElement | TemplateLiteral | Terminatorless | ThisExpression | ThisTypeAnnotation | ThrowStatement | TopicReference | TryStatement | TupleExpression | TupleTypeAnnotation | TypeAlias | TypeAnnotation | TypeCastExpression | TypeParameter | TypeParameterDeclaration | TypeParameterInstantiation | TypeScript | TypeofTypeAnnotation | UnaryExpression | UnaryLike | UnionTypeAnnotation | UpdateExpression | UserWhitespacable | V8IntrinsicIdentifier | VariableDeclaration | VariableDeclarator | Variance | VoidPattern | VoidTypeAnnotation | While | WhileStatement | WithStatement | YieldExpression;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  95,
+                                   "Line":  "  arguments: (Expression | SpreadElement | ArgumentPlaceholder)[];"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  249,
+                                   "Line":  "  arguments: (Expression | SpreadElement | ArgumentPlaceholder)[];"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  614,
+                                   "Line":  "  arguments: (Expression | SpreadElement | ArgumentPlaceholder)[];"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1188,
+                                   "Line":  "export interface Placeholder extends BaseNode {"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1189,
+                                   "Line":  "  type: \"Placeholder\";"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1202,
+                                   "Line":  "export interface ArgumentPlaceholder extends BaseNode {"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1203,
+                                   "Line":  "  type: \"ArgumentPlaceholder\";"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1753,
+                                   "Line":  "export type Miscellaneous = Noop | Placeholder | V8IntrinsicIdentifier;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1822,
+                                   "Line":  "export function callExpression(callee: Expression | Super | V8IntrinsicIdentifier, _arguments: (Expression | SpreadElement | ArgumentPlaceholder)[]): CallExpression;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1845,
+                                   "Line":  "export function newExpression(callee: Expression | Super | V8IntrinsicIdentifier, _arguments: (Expression | SpreadElement | ArgumentPlaceholder)[]): NewExpression;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1897,
+                                   "Line":  "export function optionalCallExpression(callee: Expression, _arguments: (Expression | SpreadElement | ArgumentPlaceholder)[], optional: boolean): OptionalCallExpression;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1986,
+                                   "Line":  "export function placeholder(expectedNode: \"Identifier\" | \"StringLiteral\" | \"Expression\" | \"Statement\" | \"Declaration\" | \"BlockStatement\" | \"ClassBody\" | \"Pattern\", name: Identifier): Placeholder;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  1988,
+                                   "Line":  "export function argumentPlaceholder(): ArgumentPlaceholder;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  2073,
+                                   "Line":  "export function isArgumentPlaceholder(node: object | null | undefined, opts?: object | null): node is ArgumentPlaceholder;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  2074,
+                                   "Line":  "export function assertArgumentPlaceholder(node: object | null | undefined, opts?: object | null): void;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  2423,
+                                   "Line":  "export function isPlaceholder(node: object | null | undefined, opts?: object | null): node is Placeholder;"
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\types\\lib\\index-legacy.d.ts",
+                                   "LineNumber":  2424,
+                                   "Line":  "export function assertPlaceholder(node: object | null | undefined, opts?: object | null): void;"
+                               }
+                           ],
+    "TODOs":  [
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\parser\\typings\\babel-parser.d.ts",
+                      "LineNumber":  96,
+                      "Line":  "    ? \"minimal\" | \"fsharp\" | \"hack\" | \"smart\""
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\parser\\typings\\babel-parser.d.ts",
+                      "LineNumber":  97,
+                      "Line":  "    : \"fsharp\" | \"hack\";"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@babel\\parser\\typings\\babel-parser.d.ts",
+                      "LineNumber":  258,
+                      "Line":  "  // todo(flow-\u003ets) real token type"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\fluentvalidation-ts\\src\\fluentvalidation-ts.ts",
+                      "LineNumber":  38,
+                      "Line":  "    // TODO: check this but i think its always one validation error"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\gen-mapping\\src\\gen-mapping.ts",
+                      "LineNumber":  308,
+                      "Line":  "  // TODO: implement originalScopes/generatedRanges"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\remapping\\src\\build-source-map-tree.ts",
+                      "LineNumber":  70,
+                      "Line":  "    // TODO: We should eventually support async loading of sourcemap files."
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@jridgewell\\remapping\\src\\source-map-tree.ts",
+                      "LineNumber":  102,
+                      "Line":  "  // TODO: Eventually support sourceRoot, which has to be removed because the sources are already"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\dist\\router.d.ts",
+                      "LineNumber":  178,
+                      "Line":  "     * TODO: Replace this with granular route update APIs (addRoute, updateRoute, deleteRoute)"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\history.ts",
+                      "LineNumber":  52,
+                      "Line":  "// TODO: (v7) Change the Location generic default from `any` to `unknown` and"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\history.ts",
+                      "LineNumber":  545,
+                      "Line":  "    // TODO: This could be cleaned up.  push/replace should probably just take"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\router.ts",
+                      "LineNumber":  264,
+                      "Line":  "   * TODO: Replace this with granular route update APIs (addRoute, updateRoute, deleteRoute)"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\router.ts",
+                      "LineNumber":  1090,
+                      "Line":  "      // FIXME: This feels gross.  How can we cleanup the lines between"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\router.ts",
+                      "LineNumber":  2098,
+                      "Line":  "      // TODO: v7 - change `RouteData` to use `unknown` instead of `any`"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\router.ts",
+                      "LineNumber":  3431,
+                      "Line":  "    // TODO: Remove setRoutes, it\u0027s temporary to avoid dealing with"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\utils.ts",
+                      "LineNumber":  145,
+                      "Line":  "// TODO: (v7) Change the defaults from any to unknown in and remove Remix wrappers:"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@remix-run\\router\\utils.ts",
+                      "LineNumber":  848,
+                      "Line":  "      // TODO: Can this as be avoided?"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@tanstack\\query-core\\build\\legacy\\_tsup-dts-rollup.d.ts",
+                      "LineNumber":  1590,
+                      "Line":  "     * import { fetchTodos, type Todo } from \u0027./api\u0027"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@tanstack\\query-core\\build\\legacy\\_tsup-dts-rollup.d.ts",
+                      "LineNumber":  1592,
+                      "Line":  "     * function TodoList({ query }: { query: UseQueryResult\u003cTodo[], Error\u003e }) {"
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@tanstack\\query-core\\build\\legacy\\_tsup-dts-rollup.d.ts",
+                      "LineNumber":  1597,
+                      "Line":  "     *       {data.map(todo =\u003e ("
+                  },
+                  {
+                      "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@tanstack\\query-core\\build\\legacy\\_tsup-dts-rollup.d.ts",
+                      "LineNumber":  1598,
+                      "Line":  "     *         \u003cli key={todo.id}\u003e{todo.title}\u003c/li\u003e"
+                  }
+              ],
+    "WebSockets":  [
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\web-globals\\fetch.d.ts",
+                           "LineNumber":  15,
+                           "Line":  "type _WebSocket = typeof globalThis extends { onmessage: any } ? {} : undici.WebSocket;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\web-globals\\fetch.d.ts",
+                           "LineNumber":  16,
+                           "Line":  "type _WebSocketInit = typeof globalThis extends { onmessage: any } ? {} : undici.WebSocketInit;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\web-globals\\fetch.d.ts",
+                           "LineNumber":  51,
+                           "Line":  "    interface WebSocket extends _WebSocket {}"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\web-globals\\fetch.d.ts",
+                           "LineNumber":  52,
+                           "Line":  "    var WebSocket: typeof globalThis extends { onmessage: any; WebSocket: infer T } ? T : typeof undici.WebSocket;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\web-globals\\fetch.d.ts",
+                           "LineNumber":  54,
+                           "Line":  "    interface WebSocketInit extends _WebSocketInit {}"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  103,
+                           "Line":  "        \"sec-websocket-accept\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  104,
+                           "Line":  "        \"sec-websocket-extensions\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  105,
+                           "Line":  "        \"sec-websocket-key\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  106,
+                           "Line":  "        \"sec-websocket-protocol\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  107,
+                           "Line":  "        \"sec-websocket-version\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  181,
+                           "Line":  "        \"sec-websocket-accept\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  182,
+                           "Line":  "        \"sec-websocket-extensions\"?: string | string[] | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  183,
+                           "Line":  "        \"sec-websocket-key\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  184,
+                           "Line":  "        \"sec-websocket-protocol\"?: string | string[] | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  185,
+                           "Line":  "        \"sec-websocket-version\"?: string | undefined;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  2074,
+                           "Line":  "     * A browser-compatible implementation of `WebSocket`."
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\http.d.ts",
+                           "LineNumber":  2077,
+                           "Line":  "    const WebSocket: typeof import(\"undici-types\").WebSocket;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.d.ts",
+                           "LineNumber":  59,
+                           "Line":  "     * Debugger listening on ws://127.0.0.1:9229/166e272e-7a30-4d09-97ce-f1c012b43c34"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.d.ts",
+                           "LineNumber":  61,
+                           "Line":  "     * ws://127.0.0.1:9229/166e272e-7a30-4d09-97ce-f1c012b43c34"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\inspector.d.ts",
+                           "LineNumber":  64,
+                           "Line":  "     * Debugger listening on ws://localhost:3000/51cf8d0e-3c36-4c59-8efd-54519839e56a"
+                       }
+                   ],
+    "Hardcoded Ports":  [
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\deployments\\prometheus\\prometheus.yml",
+                                "LineNumber":  10,
+                                "Line":  "          - \"mock-exchange:9000\""
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\deployments\\prometheus\\prometheus.yml",
+                                "LineNumber":  16,
+                                "Line":  "          - \"cadvisor:8080\""
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\async_hooks.d.ts",
+                                "LineNumber":  357,
+                                "Line":  "     * http.get(\u0027http://localhost:8080\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\async_hooks.d.ts",
+                                "LineNumber":  358,
+                                "Line":  "     * http.get(\u0027http://localhost:8080\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\vite\\dist\\node\\index.d.ts",
+                                "LineNumber":  1659,
+                                "Line":  "     * @example `http://127.0.0.1:8080`"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\zod\\src\\v4\\classic\\tests\\string.test.ts",
+                                "LineNumber":  331,
+                                "Line":  "  httpUrl.parse(\"https://example.com:8080\");"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\zod\\src\\v4\\classic\\tests\\string.test.ts",
+                                "LineNumber":  332,
+                                "Line":  "  httpUrl.parse(\"http://example.com:8080\");"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\components\\dashboard\\DashboardLiveCommandCenter.tsx",
+                                "LineNumber":  20,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\components\\dashboard\\ExecutiveKPIStrip.tsx",
+                                "LineNumber":  65,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\components\\dashboard\\LiveActivityFeed.tsx",
+                                "LineNumber":  16,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\components\\LiveLogs.tsx",
+                                "LineNumber":  38,
+                                "Line":  "    const wsUrl = `${protocol}//${window.location.hostname}:8080/api/v1/submissions/${submissionId}/logs`;"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\hooks\\useWebsocket.ts",
+                                "LineNumber":  7,
+                                "Line":  "    ? `${window.location.protocol === \u0027https:\u0027 ? \u0027wss\u0027 : \u0027ws\u0027}://${window.location.hostname}:8081/ws`"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\hooks\\useWebsocket.ts",
+                                "LineNumber":  8,
+                                "Line":  "    : \u0027ws://localhost:8081/ws\u0027"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\pages\\admin\\dashboard\\GlobalKPICards.tsx",
+                                "LineNumber":  48,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027)"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\pages\\admin\\dashboard\\PlatformHealthCenter.tsx",
+                                "LineNumber":  15,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027)"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\pages\\DashboardHomePage.tsx",
+                                "LineNumber":  26,
+                                "Line":  "    const ws = getSharedWebsocketClient(import.meta.env.VITE_WS_URL || \u0027ws://localhost:8081/ws\u0027);"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\pages\\SubmissionPage.tsx",
+                                "LineNumber":  72,
+                                "Line":  "    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? \u0027http://localhost:8080\u0027"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\services\\api\\apiClient.ts",
+                                "LineNumber":  5,
+                                "Line":  "const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? \u0027http://localhost:8080\u0027"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\src\\services\\websocket\\websocketClient.ts",
+                                "LineNumber":  292,
+                                "Line":  "      const apiBase = import.meta.env.VITE_API_BASE_URL ?? \u0027http://localhost:8080\u0027"
+                            },
+                            {
+                                "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\sample-engines\\go-engine\\main.go",
+                                "LineNumber":  52,
+                                "Line":  "\tlog.Println(\"Go Mock Engine listening on :8080\")"
+                            }
+                        ],
+    "RBAC":  [
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@eslint\\eslintrc\\lib\\types\\index.d.ts",
+                     "LineNumber":  10,
+                     "Line":  " * Permission is hereby granted, free of charge, to any person obtaining a copy"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@eslint\\eslintrc\\lib\\types\\index.d.ts",
+                     "LineNumber":  16,
+                     "Line":  " * The above copyright notice and this permission notice shall be included in all"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\ajv\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  44,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\ajv\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  47,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\ajv\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  58,
+                     "Line":  "  expect(screen.queryAllByRole(\u0027alert\u0027)).toHaveLength(0);"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\arktype\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  31,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\arktype\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  34,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\arktype\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  45,
+                     "Line":  "  expect(screen.queryAllByRole(\u0027alert\u0027)).toHaveLength(0);"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  32,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  35,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\class-validator\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  46,
+                     "Line":  "  expect(screen.queryAllByRole(\u0027alert\u0027)).toHaveLength(0);"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\computed-types\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  34,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\computed-types\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  37,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\computed-types\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  41,
+                     "Line":  "        \u003cspan role=\"alert\"\u003e{errors.address.zipCode.message}\u003c/span\u003e"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\computed-types\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  53,
+                     "Line":  "  expect(screen.queryAllByRole(\u0027alert\u0027)).toHaveLength(0);"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\effect-ts\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  38,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\effect-ts\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  41,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\effect-ts\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  52,
+                     "Line":  "  expect(screen.queryAllByRole(\u0027alert\u0027)).toHaveLength(0);"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\fluentvalidation-ts\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  42,
+                     "Line":  "      {errors.username \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.username.message}\u003c/span\u003e}"
+                 },
+                 {
+                     "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\fluentvalidation-ts\\src\\__tests__\\Form.tsx",
+                     "LineNumber":  45,
+                     "Line":  "      {errors.password \u0026\u0026 \u003cspan role=\"alert\"\u003e{errors.password.message}\u003c/span\u003e}"
+                 }
+             ],
+    "Database Indexes":  [
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  47,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  48,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(normalized_team_name);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  49,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\migrations\\001_create_benchmarks_table.sql",
+                                 "LineNumber":  23,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_benchmarks_created_at ON benchmarks(created_at DESC);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\migrations\\002_add_deployment_id_to_benchmarks.sql",
+                                 "LineNumber":  5,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_benchmarks_deployment_id ON benchmarks(deployment_id);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\deployment-service\\migrations\\001_create_deployments_table.sql",
+                                 "LineNumber":  19,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_deployments_submission_id ON deployments(submission_id);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\deployment-service\\migrations\\001_create_deployments_table.sql",
+                                 "LineNumber":  20,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_deployments_status ON deployments(deployment_status);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  54,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  55,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(normalized_team_name);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\internal\\repository\\leaderboard.go",
+                                 "LineNumber":  56,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\migrations\\001_create_leaderboard_entries_table.sql",
+                                 "LineNumber":  23,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\migrations\\001_create_leaderboard_entries_table.sql",
+                                 "LineNumber":  24,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(team_name);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\migrations\\001_create_leaderboard_entries_table.sql",
+                                 "LineNumber":  25,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\migrations\\001_create_submissions_table.sql",
+                                 "LineNumber":  19,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_submissions_created_at ON submissions(created_at DESC);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\migrations\\001_create_submissions_table.sql",
+                                 "LineNumber":  20,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_submissions_team_name ON submissions(team_name);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\migrations\\002_add_build_fields.sql",
+                                 "LineNumber":  7,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_submissions_container_image ON submissions(container_image);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\migrations\\005_create_submission_logs_table.sql",
+                                 "LineNumber":  9,
+                                 "Line":  "CREATE INDEX idx_submission_logs_submission_id ON submission_logs(submission_id);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\migrations\\006_create_validation_results_table.sql",
+                                 "LineNumber":  9,
+                                 "Line":  "CREATE INDEX idx_validation_results_submission_id ON validation_results(submission_id);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\migrations\\002_add_worker_id_to_telemetry_metrics.sql",
+                                 "LineNumber":  6,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_telemetry_metrics_worker_id_created_at ON public.telemetry_metrics (worker_id, created_at);"
+                             },
+                             {
+                                 "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\migrations\\003_add_benchmark_id.sql",
+                                 "LineNumber":  6,
+                                 "Line":  "CREATE INDEX IF NOT EXISTS idx_telemetry_metrics_benchmark_id_created_at ON public.telemetry_metrics (benchmark_id, created_at);"
+                             }
+                         ],
+    "JWT Secret":  [
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@hookform\\resolvers\\effect-ts\\src\\__tests__\\__fixtures__\\data.ts",
+                           "LineNumber":  75,
+                           "Line":  "  password: \u0027Super#Secret123\u0027,"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  9,
+                           "Line":  " * const secret = \u0027abcdefg\u0027;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  10,
+                           "Line":  " * const hash = createHmac(\u0027sha256\u0027, secret)"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  243,
+                           "Line":  "     * a `KeyObject`, its type must be `secret`. If it is a string, please consider `caveats when using strings as inputs to cryptographic APIs`. If it was"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  260,
+                           "Line":  "     * const hmac = createHmac(\u0027sha256\u0027, \u0027a secret\u0027);"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  427,
+                           "Line":  "     * const hmac = createHmac(\u0027sha256\u0027, \u0027a secret\u0027);"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  453,
+                           "Line":  "     * const hmac = createHmac(\u0027sha256\u0027, \u0027a secret\u0027);"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  466,
+                           "Line":  "     * const hmac = createHmac(\u0027sha256\u0027, \u0027a secret\u0027);"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  503,
+                           "Line":  "    type KeyObjectType = \"secret\" | \"public\" | \"private\";"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  561,
+                           "Line":  "     * and each kind of key exposes different functions. The {@link createSecretKey}, {@link createPublicKey} and {@link createPrivateKey} methods are used to create `KeyObject`instances. `KeyObject`"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  661,
+                           "Line":  "         * For secret keys, this property represents the size of the key in bytes. This"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  680,
+                           "Line":  "         * Depending on the type of this `KeyObject`, this property is either`\u0027secret\u0027` for secret (symmetric) keys, `\u0027public\u0027` for public (asymmetric) keys"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  721,
+                           "Line":  "     * a `KeyObject` of type `secret`. If the cipher does not need"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  727,
+                           "Line":  "     * cryptographically random. They do not have to be secret: IVs are typically just"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  729,
+                           "Line":  "     * something has to be unpredictable and unique, but does not have to be secret;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  982,
+                           "Line":  "     * a `KeyObject` of type `secret`. If the cipher does not need"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  988,
+                           "Line":  "     * cryptographically random. They do not have to be secret: IVs are typically just"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  990,
+                           "Line":  "     * something has to be unpredictable and unique, but does not have to be secret;"
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  1228,
+                           "Line":  "     * Asynchronously generates a new random secret key of the given `length`. The `type` will determine which validations will be performed on the `length`."
+                       },
+                       {
+                           "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\@types\\node\\crypto.d.ts",
+                           "LineNumber":  1244,
+                           "Line":  "     * @param type The intended use of the generated secret key. Currently accepted values are `\u0027hmac\u0027` and `\u0027aes\u0027`."
+                       }
+                   ],
+    "Rate Limit":  {
+                       "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\frontend\\iicpc-frontend\\node_modules\\globals\\index.d.ts",
+                       "LineNumber":  1661,
+                       "Line":  "\treadonly \u0027DDPRateLimiter\u0027: false;"
+                   },
+    "Hardcoded Postgres":  [
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\api-gateway\\internal\\database\\database.go",
+                                   "LineNumber":  12,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\benchmark-service\\cmd\\server\\main.go",
+                                   "LineNumber":  28,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\container-runner\\cmd\\server\\main.go",
+                                   "LineNumber":  17,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\deployment-service\\cmd\\server\\main.go",
+                                   "LineNumber":  18,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\leaderboard-service\\cmd\\server\\main.go",
+                                   "LineNumber":  22,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\submission-service\\cmd\\server\\main.go",
+                                   "LineNumber":  18,
+                                   "Line":  "\t\tdsn = \"postgres://postgres:password@postgres:5432/iicpc?sslmode=disable\""
+                               },
+                               {
+                                   "Path":  "E:\\AIML_Projects\\iicpc_benchforge\\services\\telemetry-service\\internal\\database\\postgres.go",
+                                   "LineNumber":  13,
+                                   "Line":  "\t\t\"postgres://postgres:password@postgres:5432/iicpc\""
+                               }
+                           ]
+}

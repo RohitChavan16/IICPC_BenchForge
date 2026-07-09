@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/aggregator"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/logger"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/metrics"
@@ -42,6 +43,7 @@ type TracerStats struct {
 }
 
 func StartConsumer(
+	cfg *config.Config,
 	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
@@ -68,10 +70,10 @@ func StartConsumer(
 	go startBroadcaster(ctx, rdb, agg, hub, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, stopBroadcasterCh)
 
 	// Process pending messages first (0-0)
-	processPendingMessages(ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, consumerID, stopBroadcasterCh)
+	processPendingMessages(cfg, ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, consumerID, stopBroadcasterCh)
 
 	// START BACKGROUND RECOVERY LOOP
-	go startRecoveryLoop(ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, consumerID, stopBroadcasterCh)
+	go startRecoveryLoop(cfg, ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, &recentRequests, consumerID, stopBroadcasterCh)
 
 	backoff := 1 * time.Second
 	maxBackoff := 30 * time.Second
@@ -134,6 +136,7 @@ func StartConsumer(
 			for _, message := range stream.Messages {
 
 				processMessage(
+					cfg,
 					ctx,
 					rdb,
 					db,
@@ -153,6 +156,7 @@ func StartConsumer(
 }
 
 func processPendingMessages(
+	cfg *config.Config,
 	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
@@ -186,12 +190,13 @@ func processPendingMessages(
 		}
 
 		for _, message := range streams[0].Messages {
-			processMessage(ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, recentRequests, message, stopBroadcasterCh)
+				processMessage(cfg, ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, recentRequests, message, stopBroadcasterCh)
 		}
 	}
 }
 
 func startRecoveryLoop(
+	cfg *config.Config,
 	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
@@ -274,7 +279,7 @@ func startRecoveryLoop(
 					"idle_duration", p.Idle.String(),
 				)
 
-				processMessage(ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, recentRequests, message, stopBroadcasterCh)
+				processMessage(cfg, ctx, rdb, db, agg, workerAggs, workerLastSeen, workerMu, personaAggs, tracerStats, recentRequests, message, stopBroadcasterCh)
 				metrics.ReclaimedMessages.Inc()
 			}
 		}
@@ -282,6 +287,7 @@ func startRecoveryLoop(
 }
 
 func processMessage(
+	cfg *config.Config,
 	ctx context.Context,
 	rdb *redis.Client,
 	db *pgxpool.Pool,
@@ -328,7 +334,7 @@ func processMessage(
 		)
 	}
 
-	workerSecret := os.Getenv("WORKER_SECRET")
+	workerSecret := cfg.WorkerSecret
 	if workerSecret != "" {
 		token, err := jwt.Parse(metric.Token, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -6,10 +6,12 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/handlers"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/middleware"
 )
 
 func NewServer(db *sql.DB) *mux.Router {
 	r := mux.NewRouter()
+	r.Use(middleware.Recovery)
 	leaderboardHandler := handlers.NewLeaderboardHandler(db)
 
 	r.HandleFunc("/leaderboard", leaderboardHandler.ListLeaderboard).Methods("GET")

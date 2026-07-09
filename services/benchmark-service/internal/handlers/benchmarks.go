@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -17,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/dto"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/repository"
 )
@@ -24,10 +24,11 @@ import (
 type BenchmarkHandler struct {
 	db  *sql.DB
 	rdb *redis.Client
+	cfg *config.Config
 }
 
-func NewBenchmarkHandler(db *sql.DB, rdb *redis.Client) *BenchmarkHandler {
-	return &BenchmarkHandler{db: db, rdb: rdb}
+func NewBenchmarkHandler(db *sql.DB, rdb *redis.Client, cfg *config.Config) *BenchmarkHandler {
+	return &BenchmarkHandler{db: db, rdb: rdb, cfg: cfg}
 }
 
 type LogMessage struct {
@@ -254,7 +255,7 @@ func (h *BenchmarkHandler) ProcessQueue() {
 	})
 
 	client := &http.Client{Timeout: 30 * time.Second}
-	scenarioResp, err := client.Post("http://bot-worker:8085/run-scenario", "application/json", bytes.NewBuffer(scenarioReqBody))
+	scenarioResp, err := client.Post(h.cfg.BotWorkerURL+"/run-scenario", "application/json", bytes.NewBuffer(scenarioReqBody))
 	if err == nil && scenarioResp.StatusCode == http.StatusOK {
 		var results []map[string]interface{}
 		json.NewDecoder(scenarioResp.Body).Decode(&results)
@@ -335,7 +336,7 @@ func (h *BenchmarkHandler) ProcessQueue() {
 	}
 
 	// Generate worker JWT
-	workerSecret := os.Getenv("WORKER_SECRET")
+	workerSecret := h.cfg.WorkerSecret
 	var tokenString string
 	if workerSecret != "" {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -347,11 +348,15 @@ func (h *BenchmarkHandler) ProcessQueue() {
 	}
 
 	var traceID string
+	var seed int64
 	if len(b.Metadata) > 0 {
 		var metaMap map[string]interface{}
 		if err := json.Unmarshal(b.Metadata, &metaMap); err == nil {
 			if t, ok := metaMap["trace_id"].(string); ok {
 				traceID = t
+			}
+			if s, ok := metaMap["seed"].(float64); ok {
+				seed = int64(s)
 			}
 		}
 	}
@@ -373,9 +378,10 @@ func (h *BenchmarkHandler) ProcessQueue() {
 		"token": tokenString,
 		"traceId": traceID,
 		"traceContext": traceCtx,
+		"seed": seed,
 	})
 	
-	resp, err := client.Post("http://bot-worker:8085/run", "application/json", bytes.NewBuffer(workerReqBody))
+	resp, err := client.Post(h.cfg.BotWorkerURL+"/run", "application/json", bytes.NewBuffer(workerReqBody))
 	if err != nil || resp.StatusCode >= 400 {
 		log.Printf("failed to trigger bot-worker: %v", err)
 		repository.UpdateBenchmarkStatus(h.db, b.ID, "FAILED", 0, 0, 0, 0, 0, 0, 0, 0, "Failed to start bot-worker")
@@ -594,7 +600,7 @@ func (h *BenchmarkHandler) StopBenchmark(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	resp, err := http.Post("http://bot-worker:8085/stop", "application/json", nil)
+	resp, err := http.Post(h.cfg.BotWorkerURL+"/stop", "application/json", nil)
 	if err != nil || resp.StatusCode >= 400 {
 		log.Printf("failed to stop bot-worker: %v", err)
 		http.Error(w, "failed to stop benchmark worker", http.StatusInternalServerError)

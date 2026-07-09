@@ -55,9 +55,12 @@ export interface ExecutiveKPIStripProps {
   bestScore?: number | null;
   globalRank?: number | null;
   correctness?: number | null;
+  avgTps?: number | null;
+  bestTps?: number | null;
+  bestP99?: number | null;
 }
 
-export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: ExecutiveKPIStripProps) {
+export function ExecutiveKPIStrip({ bestScore, globalRank, correctness, avgTps, bestTps, bestP99 }: ExecutiveKPIStripProps) {
   const [snapshot, setSnapshot] = useState<MetricSnapshot | null>(null);
   const [benchmarksRun, setBenchmarksRun] = useState<number | '-'>('-');
 
@@ -98,13 +101,13 @@ export function ExecutiveKPIStrip({ bestScore, globalRank, correctness }: Execut
       value: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-', description: 'Percentage of requests processed without errors'
     },
     averageTPS: {
-      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', description: 'Average transactions processed per second'
+      value: avgTps != null ? Math.floor(avgTps).toString() : '-', description: 'Average transactions processed per second across submissions'
     },
     bestTPS: {
-      value: snapshot ? Math.floor(snapshot.tps).toString() : '-', description: 'Peak transactions per second recorded today'
+      value: bestTps != null ? Math.floor(bestTps).toString() : '-', description: 'Peak transactions per second recorded in your submissions'
     },
     bestP99: {
-      value: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-', description: 'Lowest P99 latency achieved today'
+      value: bestP99 != null ? `${Math.floor(bestP99)}ms` : '-', description: 'Lowest P99 latency achieved in your submissions'
     },
     correctness: {
       value: correctness != null ? `${correctness.toFixed(1)}%` : '-', description: 'Overall business logic correctness score'

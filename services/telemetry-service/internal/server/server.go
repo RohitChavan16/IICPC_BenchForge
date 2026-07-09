@@ -15,8 +15,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/aggregator"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/dlq"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/middleware"
 	ws "github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/websocket"
 )
 
@@ -85,6 +87,7 @@ func getWorkersHandler(
 }
 
 func StartServer(
+	cfg *config.Config,
 	hub *ws.Hub,
 	workerAggs map[string]*aggregator.Aggregator,
 	workerLastSeen map[string]time.Time,
@@ -676,7 +679,7 @@ func StartServer(
 
 	http.Handle("/metrics", promhttp.Handler())
 
-	log.Println("Telemetry Service Running :8081")
+	log.Println("Telemetry Service Running :" + cfg.Port)
 
-	http.ListenAndServe(":8081", nil)
+	http.ListenAndServe(":"+cfg.Port, middleware.Recovery(http.DefaultServeMux))
 }

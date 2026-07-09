@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/database"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/config"
 )
 
 type BenchmarkServiceResponse struct {
@@ -22,7 +23,7 @@ type BenchmarkServiceResponse struct {
 	CreatedAt     string `json:"createdAt"`
 }
 
-func GenerateReplay(db *pgxpool.Pool, benchmarkID string, defaultFailReason *string) {
+func GenerateReplay(db *pgxpool.Pool, benchmarkID string, defaultFailReason *string, cfg *config.Config) {
 	log.Printf("Starting replay generation for %s", benchmarkID)
 
 	err := database.InsertReplayStatus(db, benchmarkID, "PROCESSING")
@@ -33,7 +34,7 @@ func GenerateReplay(db *pgxpool.Pool, benchmarkID string, defaultFailReason *str
 
 	// 1. Fetch benchmark metadata from Benchmark Service
 	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(fmt.Sprintf("http://benchmark-service:8082/benchmarks/%s", benchmarkID))
+	resp, err := client.Get(fmt.Sprintf("%s/benchmarks/%s", cfg.BenchmarkServiceURL, benchmarkID))
 	
 	if err != nil || resp.StatusCode != http.StatusOK {
 		status := 0

@@ -22,7 +22,7 @@ var (
 	GlobalPersonaIdx int64
 )
 
-func GenerateDeterministicPersonaMix(total int) {
+func GenerateDeterministicPersonaMix(total int, seed int64) {
 	retailCount := int(float64(total) * 0.60)
 	mmCount := int(float64(total) * 0.20)
 	scalperCount := int(float64(total) * 0.10)
@@ -40,9 +40,12 @@ func GenerateDeterministicPersonaMix(total int) {
 	for i := 0; i < hftCount; i++ { mix = append(mix, "hft_stressor") }
 
 	// Shuffle
-	rand.Shuffle(len(mix), func(i, j int) {
-		mix[i], mix[j] = mix[j], mix[i]
-	})
+	if seed != 0 {
+		r := rand.New(rand.NewSource(seed))
+		r.Shuffle(len(mix), func(i, j int) { mix[i], mix[j] = mix[j], mix[i] })
+	} else {
+		rand.Shuffle(len(mix), func(i, j int) { mix[i], mix[j] = mix[j], mix[i] })
+	}
 
 	GlobalPersonaMix = mix
 	GlobalPersonaIdx = 0
@@ -60,7 +63,14 @@ func Worker(
 	token string,
 	traceID string,
 	traceContext map[string]string,
+	seed int64,
+	client *http.Client,
 ) {
+	var localRng *rand.Rand
+	if seed != 0 {
+		localRng = rand.New(rand.NewSource(seed + int64(id)))
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -71,7 +81,13 @@ func Worker(
 			}
 			
 			// 5% chance to run a Tracer Scenario
-			isTracer := rand.Float32() < 0.05
+			var isTracer bool
+			if localRng != nil {
+				isTracer = localRng.Float32() < 0.05
+			} else {
+				isTracer = rand.Float32() < 0.05
+			}
+			
 			var metric metrics.RequestMetric
 			
 			if isTracer {
@@ -95,6 +111,11 @@ func Worker(
 					rdb.Publish(context.Background(), "pipeline_logs:"+submissionID, data)
 				}
 
+				numSteps := len(s.Steps)
+				if numSteps == 0 {
+					numSteps = 1
+				}
+
 				metric = metrics.RequestMetric{
 					RequestID:    uuid.NewString(),
 					TraceID:      traceID,
@@ -102,7 +123,7 @@ func Worker(
 					BotType:      "tracer",
 					WorkerID:     fmt.Sprintf("worker-%02d", id),
 					BenchmarkID:  benchmarkID,
-					Latency:      latency,
+					Latency:      latency / time.Duration(numSteps), // Normalize by number of steps
 					Success:      res.Status == "PASSED",
 					Timestamp:    time.Now(),
 					StatusCode:   200,
@@ -121,20 +142,20 @@ func Worker(
 				var order bots.Order
 				switch botType {
 				case "market_maker":
-					order = bots.MarketMaker()
+					order = bots.MarketMaker(localRng)
 				case "scalper":
-					order = bots.Scalper()
+					order = bots.Scalper(localRng)
 				case "whale":
-					order = bots.Whale()
+					order = bots.Whale(localRng)
 				case "hft_stressor":
-					order = bots.HFTStressor()
+					order = bots.HFTStressor(localRng)
 				default:
-					order = bots.RetailTrader()
+					order = bots.RetailTrader(localRng)
 					botType = "retail" // ensure fallback is explicitly labeled
 				}
 
 				start := time.Now()
-				resp, err := bots.SendOrder(ctx, exchangeURL, order)
+				resp, err := bots.SendOrder(ctx, client, exchangeURL, order)
 				latency := time.Since(start)
 
 				metric = metrics.RequestMetric{

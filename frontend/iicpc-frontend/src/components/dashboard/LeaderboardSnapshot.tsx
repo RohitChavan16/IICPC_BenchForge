@@ -69,72 +69,44 @@ export function LeaderboardSnapshot() {
       actions={actions}
       className="mb-8"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Contextual User Status */}
-        <div className="lg:col-span-1 flex flex-col justify-between p-5 rounded-2xl border border-border bg-gradient-to-b from-amber-50/50 to-transparent dark:from-amber-950/20 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Trophy size={64} />
+      <div className="w-full">
+        {userEntry ? (
+          <div className="flex flex-col md:flex-row justify-between items-center p-6 rounded-2xl border border-border bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/20 shadow-sm relative overflow-hidden">
+            <div className="absolute top-1/2 -translate-y-1/2 right-8 opacity-10">
+              <Trophy size={120} />
+            </div>
+            
+            <div className="mb-4 md:mb-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Rank</span>
+              </div>
+              <div className="text-5xl font-black text-amber-600 dark:text-amber-500">
+                #{data.currentUser.rank}
+              </div>
+            </div>
+            
+            <div className="space-y-4 min-w-[250px] z-10 bg-background/50 backdrop-blur-sm p-4 rounded-xl border border-border/50">
+              <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                <span className="text-muted-foreground">Gap to Next Rank</span>
+                <span className="font-bold text-foreground">{data.currentUser.gapToNext} pts</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Gap to Top 10</span>
+                <span className="font-bold text-foreground">{data.currentUser.gapToTop10} pts</span>
+              </div>
+            </div>
           </div>
-          
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Rank</span>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-10 rounded-2xl border border-dashed border-border bg-muted/20 text-center">
+            <div className="p-4 rounded-full bg-muted/50 mb-4 text-muted-foreground">
+              <Medal size={32} />
             </div>
-            <div className="text-4xl font-black text-amber-600 dark:text-amber-500 mb-6">
-              #{data.currentUser.rank}
-            </div>
+            <h3 className="text-lg font-bold mb-2">No Rankings Available</h3>
+            <p className="text-sm text-muted-foreground max-w-md">
+              You haven't placed on the leaderboard yet. Execute a successful benchmark run to secure your ranking!
+            </p>
           </div>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-              <span className="text-muted-foreground">Gap to Next Rank</span>
-              <span className="font-bold text-foreground">{data.currentUser.gapToNext} pts</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Gap to Top 10</span>
-              <span className="font-bold text-foreground">{data.currentUser.gapToTop10} pts</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Top 5 Snapshot */}
-        <div className="lg:col-span-2 rounded-2xl border border-border bg-card overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Rank</th>
-                <th className="px-4 py-3 font-semibold">Team</th>
-                <th className="px-4 py-3 font-semibold text-right">Score</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {data.topTeams.map((team, index) => {
-                let rankStyle = "text-muted-foreground";
-                if (team.rank === 1) rankStyle = "text-yellow-500 bg-yellow-500/10 border border-yellow-500/20";
-                if (team.rank === 2) rankStyle = "text-slate-400 bg-slate-400/10 border border-slate-400/20";
-                if (team.rank === 3) rankStyle = "text-orange-600 dark:text-orange-400 bg-orange-600/10 border border-orange-600/20";
-
-                return (
-                  <tr key={index} className="hover:bg-muted/30 transition-colors group">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${rankStyle}`}>
-                        {team.rank}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground group-hover:text-amber-600 transition-colors">
-                      {team.team}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-right text-foreground">
-                      {team.score}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        
+        )}
       </div>
     </SectionWrapper>
   );

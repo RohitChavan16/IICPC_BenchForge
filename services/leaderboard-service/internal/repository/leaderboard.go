@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"math"
+	"sort"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/model"
 )
@@ -54,6 +55,7 @@ ALTER TABLE leaderboard_entries ADD COLUMN IF NOT EXISTS submission_id UUID;
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank ON leaderboard_entries(rank);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_team_name ON leaderboard_entries(normalized_team_name);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_final_score ON leaderboard_entries(final_score DESC);
+CREATE INDEX IF NOT EXISTS idx_leaderboard_entries_rank_score ON leaderboard_entries(rank ASC NULLS LAST, final_score DESC);
 `
 	_, err := db.Exec(query)
 	return err
@@ -82,6 +84,7 @@ func ListLeaderboardEntries(db *sql.DB, limit, offset int) ([]model.LeaderboardE
 		if subID.Valid {
 			entry.SubmissionID = subID.String
 		}
+		populateScoreBreakdown(&entry)
 		items = append(items, entry)
 	}
 	return items, total, rows.Err()
@@ -104,6 +107,7 @@ func ListTopLeaderboardEntries(db *sql.DB, limit int) ([]model.LeaderboardEntry,
 		if subID.Valid {
 			entry.SubmissionID = subID.String
 		}
+		populateScoreBreakdown(&entry)
 		items = append(items, entry)
 	}
 	return items, rows.Err()
@@ -146,6 +150,7 @@ func GetLeaderboardContext(db *sql.DB, teamName string) ([]model.LeaderboardEntr
 		if subID.Valid {
 			entry.SubmissionID = subID.String
 		}
+		populateScoreBreakdown(&entry)
 		items = append(items, entry)
 	}
 	return items, rows.Err()
@@ -196,6 +201,7 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 		
 		entry.FinalScore = effectiveTps * latencyFactor * correctnessMultiplier * concurrencyMultiplier
 
+		populateScoreBreakdown(&entry)
 		items = append(items, entry)
 	}
 	
@@ -220,6 +226,11 @@ func ListLeaderboardEntriesByTeam(db *sql.DB, team string) ([]model.LeaderboardE
 		entry.ID = entry.BenchmarkID // Provide synthetic ID
 		entry.UpdatedAt = entry.CreatedAt
 	}
+	
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].Rank < items[j].Rank
+	})
+	
 	return items, nil
 }
 
@@ -235,6 +246,7 @@ func GetLeaderboardEntryForBenchmark(db *sql.DB, benchmarkID string) (*model.Lea
 			entry.SubmissionID = subID.String
 		}
 		// If found in leaderboard_entries, it is the team's best, and rank is accurate!
+		populateScoreBreakdown(&entry)
 		return &entry, nil
 	}
 	if err != sql.ErrNoRows {
@@ -297,6 +309,7 @@ func GetLeaderboardEntryForBenchmark(db *sql.DB, benchmarkID string) (*model.Lea
 	entry.ID = benchmarkID // Provide a synthetic ID
 	entry.UpdatedAt = entry.CreatedAt
 
+	populateScoreBreakdown(&entry)
 	return &entry, nil
 }
 
@@ -414,6 +427,38 @@ func SafeDuration(duration *int) int {
 	return *duration
 }
 
+func populateScoreBreakdown(entry *model.LeaderboardEntry) {
+	effectiveTps := entry.TPS * (entry.SuccessRate / 100.0)
+	latencyFactor := 250.0 / (250.0 + entry.P99)
+	correctnessMultiplier := math.Pow(entry.CorrectnessScore/100.0, 2)
+	
+	tracerScore := entry.ConcurrencyScore
+	ratio := entry.P99 / math.Max(entry.P50, 1.0)
+	degradationScore := 100.0 / (1.0 + math.Pow(ratio/20.0, 2))
+	
+	combinedConcurrencyScore := (0.85 * tracerScore) + (0.15 * degradationScore)
+	concurrencyMultiplier := math.Pow(combinedConcurrencyScore/100.0, 2)
+
+	finalGrade := "C"
+	if entry.FinalScore >= 90 {
+		finalGrade = "A+"
+	} else if entry.FinalScore >= 80 {
+		finalGrade = "A"
+	} else if entry.FinalScore >= 70 {
+		finalGrade = "B+"
+	} else if entry.FinalScore >= 60 {
+		finalGrade = "B"
+	}
+
+	entry.ScoreBreakdown = &model.ScoreBreakdown{
+		EffectiveTps:          math.Round(effectiveTps*100) / 100,
+		LatencyFactor:         math.Round(latencyFactor*1000) / 1000,
+		CorrectnessMultiplier: math.Round(correctnessMultiplier*1000) / 1000,
+		ConcurrencyMultiplier: math.Round(concurrencyMultiplier*1000) / 1000,
+		FinalGrade:            finalGrade,
+	}
+}
+
 func BuildLeaderboardEntryFromBenchmark(db *sql.DB, benchmarkID string) (*model.LeaderboardEntry, error) {
 	query := `
 SELECT
@@ -480,7 +525,7 @@ WHERE b.id = $1
 
 	finalScore := ComputeFinalScore(computedTps, successRate, p50.Float64, p99.Float64, actualCorrectness, concurrencyScore)
 
-	return &model.LeaderboardEntry{
+	entry := &model.LeaderboardEntry{
 		BenchmarkID:      benchmarkID,
 		TeamName:         teamName,
 		SubmissionID:     submissionID.String,
@@ -496,7 +541,9 @@ WHERE b.id = $1
 		CorrectnessScore: actualCorrectness,
 		ConcurrencyScore: concurrencyScore,
 		FinalScore:       math.Round(finalScore*100) / 100,
-	}, nil
+	}
+	populateScoreBreakdown(entry)
+	return entry, nil
 }
 
 func UpsertLeaderboardEntryFromBenchmark(db *sql.DB, benchmarkID string) error {

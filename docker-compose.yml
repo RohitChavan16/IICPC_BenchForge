@@ -1,4 +1,4 @@
-version: "3.9"
+
 
 services:
 
@@ -13,7 +13,7 @@ services:
       - redis
       - postgres
     env_file:
-      - ./services/api-gateway/.env
+      - .env
 
   mock-exchange:
     build:
@@ -34,7 +34,7 @@ services:
       - redis
       - postgres
     env_file:
-    - ./services/telemetry-service/.env
+      - .env
 
   bot-worker:
     build:
@@ -47,7 +47,7 @@ services:
       - mock-exchange
       - redis
     env_file:
-    - ./services/bot-worker/.env
+      - .env
 
   benchmark-service:
     build:
@@ -59,7 +59,7 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./services/benchmark-service/.env
+      - .env
 
   submission-service:
     build:
@@ -71,7 +71,7 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./services/submission-service/.env
+      - .env
     volumes:
       - submission_uploads:/data/submissions
 
@@ -85,7 +85,7 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./services/leaderboard-service/.env
+      - .env
 
   container-runner:
     build:
@@ -95,9 +95,8 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./services/container-runner/.env
-    environment:
-      - DEPLOYMENT_SERVICE_URL=http://deployment-service:8091
+      - .env
+
     volumes:
       - submission_uploads:/data/submissions
       - /var/run/docker.sock:/var/run/docker.sock # optional: allows docker build (host dind)
@@ -112,9 +111,8 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ./services/deployment-service/.env
-    environment:
-      - BENCHMARK_SERVICE_URL=http://benchmark-service:8082
+      - .env
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 

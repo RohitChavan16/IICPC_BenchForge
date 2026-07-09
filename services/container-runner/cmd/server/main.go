@@ -3,26 +3,18 @@ package main
 import (
 	"database/sql"
 	"log"
-	"os"
 	"time"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/container-runner/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/container-runner/internal/runner"
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:password@postgres:5432/iicpc?sslmode=disable"
-	}
+	cfg := config.LoadConfig()
 
-	uploadDir := os.Getenv("SUBMISSION_UPLOAD_DIR")
-	if uploadDir == "" {
-		uploadDir = "/data/submissions"
-	}
-
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to open db: %v", err)
 	}
@@ -32,15 +24,11 @@ func main() {
 		log.Fatalf("failed to connect db: %v", err)
 	}
 
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		redisURL = "redis:6379"
-	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr: redisURL,
+		Addr: cfg.RedisURL,
 	})
 
-	r := runner.NewRunner(db, rdb, uploadDir)
+	r := runner.NewRunner(cfg, db, rdb, cfg.SubmissionUploadDir)
 
 	log.Println("container-runner started: polling for submissions")
 	// Run loop (blocking)

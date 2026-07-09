@@ -102,7 +102,7 @@ export function DashboardLiveCommandCenter() {
     tps: snapshot ? Math.floor(snapshot.tps).toLocaleString() : '-',
     p99: snapshot ? `${Math.floor(snapshot.p99)}ms` : '-',
     success: snapshot ? `${((1 - snapshot.failureRate) * 100).toFixed(1)}%` : '-',
-    workerUtilization: activeWorkerCount > 0 ? `${activeWorkerCount} Active` : '-',
+    workerUtilization: workerUtilization,
     queueDepth: snapshot && typeof snapshot.queueDepth === 'number' ? snapshot.queueDepth.toLocaleString() : '-',
     personaMix: formatPersonaMix(personas),
     tracerStats: `${tracerStats.passed} Passed / ${tracerStats.executed} Executed`
@@ -110,16 +110,16 @@ export function DashboardLiveCommandCenter() {
 
   const actions = (
     <div className="flex gap-2">
-      <Link to="/submissions" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="View Submission">
+      <Link to="/benchmarks" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="View Submission">
         <FileText size={16} />
       </Link>
-      <Link to="/telemetry" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Open Telemetry">
+      <Link to="/benchmarks" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Open Telemetry">
         <Activity size={16} />
       </Link>
-      <Link to="/leaderboard" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Leaderboard">
+      <Link to="/benchmarks" className="p-2 bg-background border border-border rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Leaderboard">
         <Trophy size={16} />
       </Link>
-      <Link to="/replays" className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-medium">
+      <Link to="/submissions" className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-medium">
         <Play size={16} />
         View Replay
       </Link>

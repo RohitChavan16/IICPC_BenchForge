@@ -18,7 +18,7 @@ type AuthMiddleware struct {
 
 func NewAuthMiddleware(db *sql.DB, jwtSecret string) *AuthMiddleware {
 	if jwtSecret == "" {
-		jwtSecret = "benchforge-secret"
+		panic("AuthMiddleware requires a non-empty jwtSecret")
 	}
 	return &AuthMiddleware{db: db, jwtSecret: jwtSecret}
 }

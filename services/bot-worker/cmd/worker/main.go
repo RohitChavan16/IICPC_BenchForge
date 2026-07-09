@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/benchmarkclient"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/metrics"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/middleware"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/scenario"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/tracing"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/workers"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/bots"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -27,11 +30,13 @@ type RunRequest struct {
 	Token         string `json:"token"`
 	TraceID       string `json:"traceId"`
 	TraceContext  map[string]string `json:"traceContext"`
+	Seed          int64  `json:"seed,omitempty"`
 }
 
 var (
 	rdb              *redis.Client
 	benchmarkClient  *benchmarkclient.Client
+	cfg              *config.Config
 	activeMu         sync.Mutex
 	activeCancel     context.CancelFunc
 	activeBenchmarkID string
@@ -42,22 +47,21 @@ func main() {
 	if err == nil {
 		defer tp.Shutdown(context.Background())
 	}
+	
+	cfg = config.LoadConfig()
+
 	rdb = redis.NewClient(&redis.Options{
-		Addr: "redis:6379",
+		Addr: cfg.RedisURL,
 	})
 
-	benchmarkServiceURL := os.Getenv("BENCHMARK_SERVICE_URL")
-	if benchmarkServiceURL == "" {
-		benchmarkServiceURL = "http://benchmark-service:8082"
-	}
-	benchmarkClient = benchmarkclient.NewClient(benchmarkServiceURL, 5*time.Second)
+	benchmarkClient = benchmarkclient.NewClient(cfg.BenchmarkServiceURL, 5*time.Second)
 
 	http.HandleFunc("/run", handleRun)
 	http.HandleFunc("/run-scenario", handleRunScenario)
 	http.HandleFunc("/stop", handleStop)
 
 	log.Println("Bot worker listening on :8085")
-	if err := http.ListenAndServe(":8085", nil); err != nil {
+	if err := http.ListenAndServe(":8085", middleware.Recovery(http.DefaultServeMux)); err != nil {
 		log.Fatalf("failed to start bot-worker: %v", err)
 	}
 }
@@ -155,17 +159,20 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 
 	log.Printf("Starting benchmark pool for %s", req.BenchmarkID)
 	
-	workers.GenerateDeterministicPersonaMix(req.TotalRequests)
+	workers.GenerateDeterministicPersonaMix(req.TotalRequests, req.Seed)
 
 	jobs := make(chan int, req.TotalRequests)
 	results := make(chan metrics.RequestMetric, req.TotalRequests)
+
+	// Create scoped HTTP Client tuned for concurrency
+	httpClient := bots.CreateHTTPClient(req.WorkerCount)
 
 	var wg sync.WaitGroup
 	for w := 1; w <= req.WorkerCount; w++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID, req.SubmissionID, req.Token, req.TraceID, req.TraceContext)
+			workers.Worker(ctx, id, jobs, results, req.TargetURL, rdb, req.BenchmarkID, req.SubmissionID, req.Token, req.TraceID, req.TraceContext, req.Seed, httpClient)
 		}(w)
 	}
 
@@ -173,6 +180,31 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		wg.Wait()
 		close(results)
 	}()
+
+	// Warmup Period
+	log.Printf("Starting 5-second warmup period for %s", req.BenchmarkID)
+	var warmupWg sync.WaitGroup
+	warmupCtx, cancelWarmup := context.WithTimeout(ctx, 5*time.Second)
+	
+	for w := 0; w < 10; w++ { // 10 concurrent warmup workers
+		warmupWg.Add(1)
+		go func(wID int) {
+			defer warmupWg.Done()
+			rng := rand.New(rand.NewSource(req.Seed + int64(wID) + 1000))
+			for {
+				select {
+				case <-warmupCtx.Done():
+					return
+				default:
+					order := bots.RetailTrader(rng)
+					bots.SendOrder(warmupCtx, httpClient, req.TargetURL, order)
+				}
+			}
+		}(w)
+	}
+	warmupWg.Wait()
+	cancelWarmup()
+	log.Printf("Warmup complete for %s", req.BenchmarkID)
 
 	start := time.Now()
 	
@@ -191,7 +223,7 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	go func() {
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
-		benchmarkURL := "http://benchmark-service:8082/benchmarks/" + req.BenchmarkID + "/heartbeat"
+		benchmarkURL := cfg.BenchmarkServiceURL + "/benchmarks/" + req.BenchmarkID + "/heartbeat"
 		for {
 			select {
 			case <-ctx.Done():

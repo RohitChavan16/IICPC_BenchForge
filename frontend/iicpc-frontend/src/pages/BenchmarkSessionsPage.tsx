@@ -129,10 +129,23 @@ export function BenchmarkSessionsPage() {
     )
   }
 
-  if (isError) {
+  if (isError || (sessions.length === 0 && !isLoading)) {
     return (
-      <div className="mx-auto max-w-4xl py-20 text-center text-foreground">
-        <p className="text-xl">Unable to load benchmark sessions.</p>
+      <div className="mx-auto max-w-4xl py-32 text-center flex flex-col items-center justify-center">
+        <div className="p-6 rounded-full bg-muted/50 mb-6 text-muted-foreground">
+          <Zap size={64} className="opacity-50" />
+        </div>
+        <h2 className="text-3xl font-bold mb-4 text-foreground">No benchmarks yet</h2>
+        <p className="text-muted-foreground text-lg mb-8 max-w-md">
+          You haven't run any benchmark sessions. Submit your code to the engine to start generating performance metrics!
+        </p>
+        <Link 
+          to="/submit" 
+          className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-2"
+        >
+          <Activity size={20} />
+          Submit Code Engine
+        </Link>
       </div>
     )
   }

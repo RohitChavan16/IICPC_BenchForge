@@ -5,18 +5,21 @@ import { Link } from 'react-router-dom';
 import { fetchBenchmarkSessions, fetchBenchmarkReplay } from '@/services/api/benchmarkService';
 import type { ReplayData } from '@/types/api';
 
-export function ReplayHighlightsSnapshot() {
+export interface ReplayHighlightsSnapshotProps {
+  benchmarkId?: string | null;
+}
+
+export function ReplayHighlightsSnapshot({ benchmarkId }: ReplayHighlightsSnapshotProps) {
   const [replay, setReplay] = useState<ReplayData | null>(null);
 
   useEffect(() => {
+    if (!benchmarkId) {
+      setReplay(null);
+      return;
+    }
+
     const fetchReplay = () => {
-      fetchBenchmarkSessions()
-        .then(res => {
-          if (res.items.length > 0) {
-            return fetchBenchmarkReplay(res.items[0].id);
-          }
-          return null;
-        })
+      fetchBenchmarkReplay(benchmarkId)
         .then(data => {
           if (data) setReplay(data);
         })
@@ -26,7 +29,7 @@ export function ReplayHighlightsSnapshot() {
     fetchReplay();
     const interval = setInterval(fetchReplay, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [benchmarkId]);
 
   const getInsights = () => {
     if (!replay) return { recoveryEvents: '-', anomaliesDetected: '-', worstPersona: '-', bestPersona: '-', availability: '-', status: 'Idle', timeline: [] };
@@ -66,7 +69,7 @@ export function ReplayHighlightsSnapshot() {
   const data = getInsights();
 
   const actions = (
-    <Link to="/replays/latest" className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500 hover:text-white transition-colors text-sm font-medium">
+    <Link to="/submissions" className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-lg hover:bg-purple-500 hover:text-white transition-colors text-sm font-medium">
       <Play size={16} />
       Watch Replay
     </Link>
@@ -75,7 +78,7 @@ export function ReplayHighlightsSnapshot() {
   return (
     <SectionWrapper 
       title="Replay Highlights" 
-      description="Insights from your most recent benchmark run."
+      description="Insights from your best submission."
       badgeLabel={data.status}
       badgeVariant="info"
       actions={actions}
@@ -129,7 +132,7 @@ export function ReplayHighlightsSnapshot() {
               );
             })}
           </div>
-          <Link to="/replays/latest" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-purple-500 hover:text-purple-600">
+          <Link to="/submissions" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-purple-500 hover:text-purple-600">
             View full timeline <ArrowRight size={14}/>
           </Link>
         </div>

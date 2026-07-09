@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/auth"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/middleware"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/routes"
 )
@@ -22,8 +23,10 @@ func promHandler() gin.HandlerFunc {
 	}
 }
 
-func NewServer(port string, db *sql.DB, jwtSecret string) *gin.Engine {
-	router := gin.Default()
+func NewServer(cfg *config.Config, db *sql.DB, jwtSecret string) *gin.Engine {
+	router := gin.New()
+	router.Use(middleware.Recovery())
+	router.Use(gin.Logger())
 	router.Use(otelgin.Middleware("api-gateway"))
 	router.Use(middleware.CorrelationID())
 	router.Use(middleware.PrometheusMetrics())
@@ -44,9 +47,9 @@ func NewServer(port string, db *sql.DB, jwtSecret string) *gin.Engine {
 
 	authHandler := auth.NewAuthHandler(db, jwtSecret)
 	authMiddleware := middleware.NewAuthMiddleware(db, jwtSecret)
-	routes.SetupRoutes(router, authHandler, authMiddleware)
+	routes.SetupRoutes(router, authHandler, authMiddleware, cfg)
 
-	fmt.Println("API Gateway running on port:", port)
+	fmt.Println("API Gateway running on port:", cfg.Port)
 
 	return router
 }

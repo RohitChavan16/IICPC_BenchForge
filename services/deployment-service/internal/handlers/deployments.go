@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/deployment-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/deployment-service/internal/deployer"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/deployment-service/internal/repository"
 )
 
 type Handler struct {
+	cfg               *config.Config
 	db                *sql.DB
 	rdb               *redis.Client
 	deployer          *deployer.Deployer
@@ -28,20 +28,16 @@ type Handler struct {
 	deploymentNetwork string
 }
 
-func NewHandler(db *sql.DB, rdb *redis.Client) *Handler {
-	ps := 30000
-	pe := 31000
-	if v := os.Getenv("DEPLOY_PORT_START"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil { ps = n }
+func NewHandler(cfg *config.Config, db *sql.DB, rdb *redis.Client) *Handler {
+	return &Handler{
+		cfg:               cfg,
+		db:                db,
+		rdb:               rdb,
+		deployer:          deployer.NewDeployer(db),
+		portStart:         cfg.DeployPortStart,
+		portEnd:           cfg.DeployPortEnd,
+		deploymentNetwork: cfg.DeployNetwork,
 	}
-	if v := os.Getenv("DEPLOY_PORT_END"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil { pe = n }
-	}
-	network := os.Getenv("DEPLOY_NETWORK")
-	if network == "" {
-		network = "iicpc_benchforge_default"
-	}
-	return &Handler{db: db, rdb: rdb, deployer: deployer.NewDeployer(db), portStart: ps, portEnd: pe, deploymentNetwork: network}
 }
 
 func (h *Handler) ListDeployments(w http.ResponseWriter, r *http.Request) {
@@ -270,10 +266,7 @@ func (h *Handler) triggerBenchmark(subID, depID, userID, teamID string) {
 	h.setStage(subID, "BENCHMARK", "IN_PROGRESS", "")
 	h.publishLog(subID, "BENCHMARK", "log", "Triggering benchmark execution", "IN_PROGRESS")
 
-	benchmarkURL := os.Getenv("BENCHMARK_SERVICE_URL")
-	if benchmarkURL == "" {
-		benchmarkURL = "http://benchmark-service:8082"
-	}
+	benchmarkURL := h.cfg.BenchmarkServiceURL
 	
 	reqBody := fmt.Sprintf(`{
 		"name": "AutoBench-%s",

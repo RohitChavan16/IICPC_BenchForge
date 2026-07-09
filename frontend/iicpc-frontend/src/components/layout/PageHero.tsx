@@ -22,7 +22,7 @@ export interface QuickLink {
 }
 
 export interface PageHeroProps {
-  theme: 'dashboard' | 'submission' | 'leaderboard' | 'benchmark' | 'team';
+  theme: 'dashboard' | 'submission' | 'leaderboard' | 'benchmark' | 'team' | 'deploy';
   backLink?: { label: string; to: string };
   statusPills?: StatusPill[];
   icon: React.ReactNode;
@@ -42,6 +42,16 @@ const themeConfig = {
     lightBg: 'bg-fuchsia-50/50 dark:bg-card/80',
     activeTab: 'bg-fuchsia-500 text-white border-fuchsia-500 shadow-[0_0_15px_rgba(217,70,239,0.5)]',
     inactiveTab: 'bg-background/80 text-muted-foreground border-border hover:bg-background hover:border-fuchsia-500/50 hover:text-foreground'
+  },
+  deploy: {
+    gradient: 'bg-gradient-to-br from-red-600/20 via-orange-500/10 to-background dark:from-red-900/30 dark:via-orange-900/20 dark:to-background',
+    orb: 'bg-red-500/30',
+    border: 'border-red-500/30',
+    accentText: 'text-red-600 dark:text-red-400',
+    accentBg: 'bg-red-500/20',
+    lightBg: 'bg-red-50/50 dark:bg-card/80',
+    activeTab: 'bg-red-600 text-white border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]',
+    inactiveTab: 'bg-background/80 text-muted-foreground border-border hover:bg-background hover:border-red-500/50 hover:text-foreground'
   },
   submission: {
     gradient: 'from-blue-500/20 via-indigo-500/5 to-background',

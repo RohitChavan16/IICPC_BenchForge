@@ -16,17 +16,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/container-runner/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
 type Runner struct {
+	cfg       *config.Config
 	db        *sql.DB
 	rdb       *redis.Client
 	uploadDir string
 }
 
-func NewRunner(db *sql.DB, rdb *redis.Client, uploadDir string) *Runner {
-	return &Runner{db: db, rdb: rdb, uploadDir: uploadDir}
+func NewRunner(cfg *config.Config, db *sql.DB, rdb *redis.Client, uploadDir string) *Runner {
+	return &Runner{cfg: cfg, db: db, rdb: rdb, uploadDir: uploadDir}
 }
 
 // Run starts a polling loop checking for UPLOADED submissions.
@@ -198,10 +200,7 @@ func (r *Runner) processSubmission(id, filePath, language string) {
 
 	// Trigger deployment
 	go func() {
-		deploymentURL := os.Getenv("DEPLOYMENT_SERVICE_URL")
-		if deploymentURL == "" {
-			deploymentURL = "http://deployment-service:8091"
-		}
+		deploymentURL := r.cfg.DeploymentServiceURL
 		
 		r.publishLog(id, "DEPLOYMENT", "state_change", "Triggering deployment", "IN_PROGRESS")
 		reqBody := fmt.Sprintf(`{"submissionId": "%s"}`, id)

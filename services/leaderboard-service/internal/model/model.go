@@ -22,4 +22,13 @@ type LeaderboardEntry struct {
 	Rank           int       `json:"rank"`
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
+	ScoreBreakdown *ScoreBreakdown `json:"scoreBreakdown,omitempty" db:"-"`
+}
+
+type ScoreBreakdown struct {
+	EffectiveTps          float64 `json:"effectiveTps"`
+	LatencyFactor         float64 `json:"latencyFactor"`
+	CorrectnessMultiplier float64 `json:"correctnessMultiplier"`
+	ConcurrencyMultiplier float64 `json:"concurrencyMultiplier"`
+	FinalGrade            string  `json:"finalGrade"`
 }

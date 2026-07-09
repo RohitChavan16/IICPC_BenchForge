@@ -4,25 +4,18 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
+	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/repository"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/server"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8084"
-	}
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:password@postgres:5432/iicpc?sslmode=disable"
-	}
+	cfg := config.LoadConfig()
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to open db: %v", err)
 	}
@@ -36,12 +29,12 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + cfg.Port,
 		Handler:      server.NewServer(db),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Printf("Leaderboard service listening :%s", port)
+	log.Printf("Leaderboard service listening :%s", cfg.Port)
 	log.Fatal(srv.ListenAndServe())
 }

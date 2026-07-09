@@ -36,7 +36,7 @@ type AuthResponse struct {
 
 func NewAuthHandler(db *sql.DB, jwtSecret string) *AuthHandler {
 	if jwtSecret == "" {
-		jwtSecret = "benchforge-secret"
+		panic("AuthHandler requires a non-empty jwtSecret")
 	}
 	return &AuthHandler{db: db, jwtSecret: jwtSecret}
 }

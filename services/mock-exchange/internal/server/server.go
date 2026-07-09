@@ -33,6 +33,7 @@ func StartServer() {
 	// MIDDLEWARE CHAIN
 	handler := middleware.Chain(
 		mux,
+		middleware.Recovery,
 		middleware.RequestIDMiddleware,
 		middleware.LoggingMiddleware,
 	)

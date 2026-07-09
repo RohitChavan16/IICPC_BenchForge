@@ -6,7 +6,6 @@ import { DashboardLiveCommandCenter } from '@/components/dashboard/DashboardLive
 import { ReplayHighlightsSnapshot } from '@/components/dashboard/ReplayHighlightsSnapshot';
 import { LeaderboardSnapshot } from '@/components/dashboard/LeaderboardSnapshot';
 import { RecentSubmissionsTable } from '@/components/dashboard/RecentSubmissionsTable';
-import { BenchmarkSessionsTimeline } from '@/components/dashboard/BenchmarkSessionsTimeline';
 import { LayoutDashboard, Activity, Database, Server, Trophy } from 'lucide-react';
 import { getSharedWebsocketClient } from '@/services/websocket/websocketClient';
 import type { WebSocketStatus } from '@/services/websocket/websocketClient';
@@ -58,8 +57,21 @@ export function DashboardHomePage() {
 
   const bestRankNum = userLeaderboardEntries.length > 0 ? Math.min(...userLeaderboardEntries.map(l => l.rank)) : null;
   const bestScoreNum = userLeaderboardEntries.length > 0 ? Math.max(...userLeaderboardEntries.map(l => l.finalScore)) : null;
+
+  let bestBenchmarkId: string | null = null;
+  if (userLeaderboardEntries.length > 0) {
+    const bestEntry = userLeaderboardEntries.reduce((best, current) => current.finalScore > best.finalScore ? current : best, userLeaderboardEntries[0]);
+    bestBenchmarkId = bestEntry.benchmarkId;
+  }
   const correctnessScores = userLeaderboardEntries.filter(l => l.correctnessScore !== undefined).map(l => l.correctnessScore as number);
   const avgCorrectnessNum = correctnessScores.length > 0 ? correctnessScores.reduce((a, b) => a + b, 0) / correctnessScores.length : null;
+
+  const tpsScores = userLeaderboardEntries.map(l => l.tps).filter(tps => tps !== undefined && tps > 0);
+  const bestTpsNum = tpsScores.length > 0 ? Math.max(...tpsScores) : null;
+  const avgTpsNum = tpsScores.length > 0 ? tpsScores.reduce((a, b) => a + b, 0) / tpsScores.length : null;
+
+  const p99Scores = userLeaderboardEntries.map(l => l.p99).filter(p99 => p99 !== undefined && p99 > 0);
+  const bestP99Num = p99Scores.length > 0 ? Math.min(...p99Scores) : null;
 
   const statusPill = wsStatus === 'connected' 
     ? { label: 'System Online', variant: 'success' as const }
@@ -119,6 +131,9 @@ export function DashboardHomePage() {
           bestScore={bestScoreNum}
           globalRank={bestRankNum}
           correctness={avgCorrectnessNum}
+          avgTps={avgTpsNum}
+          bestTps={bestTpsNum}
+          bestP99={bestP99Num}
         />
       </motion.div>
 
@@ -128,7 +143,7 @@ export function DashboardHomePage() {
 
       <div className="flex flex-col gap-8">
         <motion.div variants={itemVariants} id="historical" className="scroll-mt-32">
-          <ReplayHighlightsSnapshot />
+          <ReplayHighlightsSnapshot benchmarkId={bestBenchmarkId} />
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -137,10 +152,6 @@ export function DashboardHomePage() {
 
         <motion.div variants={itemVariants}>
           <RecentSubmissionsTable />
-        </motion.div>
-        
-        <motion.div variants={itemVariants}>
-          <BenchmarkSessionsTimeline />
         </motion.div>
       </div>
       

@@ -1,0 +1,37 @@
+package config
+
+import (
+	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+)
+
+type Config struct {
+	DatabaseURL          string
+	RedisURL             string
+	SubmissionUploadDir  string
+	DeploymentServiceURL string
+}
+
+func getEnvOrFatal(key string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		log.Fatalf("Fatal: Missing required environment variable: %s", key)
+	}
+	return val
+}
+
+func LoadConfig() *Config {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Note: .env file not found, relying on environment variables.")
+	}
+
+	return &Config{
+		DatabaseURL:          getEnvOrFatal("DATABASE_URL"),
+		RedisURL:             getEnvOrFatal("REDIS_URL"),
+		SubmissionUploadDir:  getEnvOrFatal("SUBMISSION_UPLOAD_DIR"),
+		DeploymentServiceURL: getEnvOrFatal("DEPLOYMENT_SERVICE_URL"),
+	}
+}

@@ -118,12 +118,9 @@ export function SubmissionReportPage() {
   const marketPersonas = (personas || []).filter((p: any) => p.botType !== 'tracer')
 
   // Score Calculations
-  let tracerScore = 100.0
-  let degradationScore = 100.0
-  let combinedConcurrencyScore = 100.0
-  let effectiveTps = 0
-  let latencyFactor = 0
   let finalScore = 0
+  let effectiveTps = 0
+  let scoreBreakdown: any = null
 
   let correctnessResults: any[] = []
   if (submission && submission.correctnessDetails) {
@@ -137,17 +134,9 @@ export function SubmissionReportPage() {
   }
 
   if (leaderboardEntry) {
-    tracerScore = leaderboardEntry.concurrencyScore !== undefined ? leaderboardEntry.concurrencyScore : 100.0
-    effectiveTps = leaderboardEntry.tps * (leaderboardEntry.successRate / 100.0)
-    latencyFactor = 250.0 / (250.0 + (leaderboardEntry.p99 || 0))
-    
-    let p50 = leaderboardEntry.p50 || 0
-    let p99 = leaderboardEntry.p99 || 0
-    let ratio = p99 / Math.max(p50, 1.0)
-    degradationScore = 100.0 / (1.0 + Math.pow(ratio/20.0, 2))
-    combinedConcurrencyScore = (0.85 * tracerScore) + (0.15 * degradationScore)
-
-    finalScore = leaderboardEntry.finalScore
+    finalScore = leaderboardEntry.finalScore || 0
+    scoreBreakdown = leaderboardEntry.scoreBreakdown || {}
+    effectiveTps = scoreBreakdown.effectiveTps || 0
   }
 
   const formatHistoryData = (historyData: any[]) => {
@@ -205,29 +194,26 @@ export function SubmissionReportPage() {
   let weaknesses: string[] = []
   let overallAssessment = "Assessment pending completion."
 
-  if (benchmark && benchmark.status === 'COMPLETED' && leaderboardEntry) {
-    if (finalScore >= 90) {
-      verdictGrade = "A+"
+  if (benchmark && benchmark.status === 'COMPLETED' && leaderboardEntry && scoreBreakdown) {
+    verdictGrade = scoreBreakdown.finalGrade || "C"
+
+    if (verdictGrade === "A+") {
       verdictColor = "text-emerald-400"
       verdictBg = "bg-emerald-500/10"
       verdictBorder = "border-emerald-500/20"
-    } else if (finalScore >= 80) {
-      verdictGrade = "A"
+    } else if (verdictGrade === "A") {
       verdictColor = "text-blue-400"
       verdictBg = "bg-blue-500/10"
       verdictBorder = "border-blue-500/20"
-    } else if (finalScore >= 70) {
-      verdictGrade = "B+"
+    } else if (verdictGrade === "B+") {
       verdictColor = "text-amber-400"
       verdictBg = "bg-amber-500/10"
       verdictBorder = "border-amber-500/20"
-    } else if (finalScore >= 60) {
-      verdictGrade = "B"
+    } else if (verdictGrade === "B") {
       verdictColor = "text-amber-500"
       verdictBg = "bg-amber-600/10"
       verdictBorder = "border-amber-600/20"
     } else {
-      verdictGrade = "C"
       verdictColor = "text-rose-400"
       verdictBg = "bg-rose-500/10"
       verdictBorder = "border-rose-500/20"
@@ -559,11 +545,11 @@ export function SubmissionReportPage() {
             </div>
             <div className="p-3 bg-card rounded-lg border border-border">
               <p className="text-[10px] uppercase text-muted-foreground font-bold">Raw TPS</p>
-              <p className="text-lg font-mono text-foreground">{(benchmark.totalRequests / (benchmark.executionTimeSeconds || 1)).toFixed(2)}</p>
+              <p className="text-lg font-mono text-foreground">{(benchmark.tps || 0).toFixed(2)}</p>
             </div>
             <div className="p-3 bg-card rounded-lg border border-border border-primary/30 bg-primary/5">
               <p className="text-[10px] uppercase text-primary font-bold">Effective TPS</p>
-              <p className="text-lg font-mono text-primary font-bold">{(benchmark.successCount / (benchmark.executionTimeSeconds || 1)).toFixed(2)}</p>
+              <p className="text-lg font-mono text-primary font-bold">{(effectiveTps || 0).toFixed(2)}</p>
             </div>
           </div>
         </Card>
@@ -641,6 +627,16 @@ export function SubmissionReportPage() {
                 </p>
                 
                 <div className="space-y-3 mt-6">
+                  <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Zap className="w-4 h-4" /> Latency Penalty
+                  </span>
+                  <div>
+                    <span className="font-mono text-foreground">
+                      {scoreBreakdown ? (scoreBreakdown.latencyFactor * 100).toFixed(1) : "0"}%
+                    </span>
+                  </div>
+                </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Effective TPS</span>
                     <span className="font-mono text-foreground">{effectiveTps.toFixed(2)}</span>
@@ -648,19 +644,19 @@ export function SubmissionReportPage() {
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Latency Factor</span>
                     <span className="font-mono text-amber-400">
-                      × {latencyFactor.toFixed(4)}
+                      × {scoreBreakdown ? scoreBreakdown.latencyFactor.toFixed(4) : "0.0000"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Correctness Multiplier</span>
                     <span className="font-mono text-blue-400">
-                      × {Math.pow(leaderboardEntry.correctnessScore / 100.0, 2).toFixed(4)}
+                      × {scoreBreakdown ? scoreBreakdown.correctnessMultiplier.toFixed(4) : "0.0000"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-card rounded-lg border border-border">
                     <span className="text-sm text-muted-foreground">Concurrency Multiplier</span>
                     <span className="font-mono text-purple-400">
-                      × {Math.pow(combinedConcurrencyScore / 100.0, 2).toFixed(4)}
+                      × {scoreBreakdown ? scoreBreakdown.concurrencyMultiplier.toFixed(4) : "0.0000"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30 mt-4 shadow-sm">

@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/RohitChavan16/IICPC_BenchForge/services/telemetry-service/internal/config"
 )
 
 // StartReplayProcessorWorker runs in the background and polls for PENDING or PENDING_RETRY replays.
-func StartReplayProcessorWorker(ctx context.Context, db *pgxpool.Pool) {
+func StartReplayProcessorWorker(ctx context.Context, db *pgxpool.Pool, cfg *config.Config) {
 	log.Println("Starting ReplayProcessorWorker...")
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -20,12 +21,12 @@ func StartReplayProcessorWorker(ctx context.Context, db *pgxpool.Pool) {
 			log.Println("Stopping ReplayProcessorWorker")
 			return
 		case <-ticker.C:
-			processNextReplay(ctx, db)
+			processNextReplay(ctx, db, cfg)
 		}
 	}
 }
 
-func processNextReplay(ctx context.Context, db *pgxpool.Pool) {
+func processNextReplay(ctx context.Context, db *pgxpool.Pool, cfg *config.Config) {
 	// Find one PENDING or PENDING_RETRY record and lock it
 	query := `
 		SELECT benchmark_id 
@@ -49,5 +50,5 @@ func processNextReplay(ctx context.Context, db *pgxpool.Pool) {
 	
 	// We run it synchronously so we don't pick up the same job twice
 	// if it stays in PENDING state while processing (though GenerateReplay updates it to PROCESSING)
-	GenerateReplay(db, benchmarkID, failReason)
+	GenerateReplay(db, benchmarkID, failReason, cfg)
 }

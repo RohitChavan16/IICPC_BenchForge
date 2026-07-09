@@ -75,10 +75,25 @@ func ListBenchmarks(db *sql.DB, limit int, userID string) ([]model.Benchmark, er
 		if p90.Valid { b.P90 = p90.Float64 }
 		if p99.Valid { b.P99 = p99.Float64 }
 		if correctnessScore.Valid { b.CorrectnessScore = correctnessScore.Float64 }
+		
+		b.TPS = computeTPS(&b)
 
 		items = append(items, b)
 	}
 	return items, nil
+}
+
+func computeTPS(b *model.Benchmark) float64 {
+	d := 0
+	if b.ExecutionTimeSeconds != nil && *b.ExecutionTimeSeconds > 0 {
+		d = *b.ExecutionTimeSeconds
+	} else if b.Duration != nil && *b.Duration > 0 {
+		d = *b.Duration
+	}
+	if d > 0 {
+		return float64(b.TotalRequests) / float64(d)
+	}
+	return 0.0
 }
 
 func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
@@ -130,6 +145,9 @@ func GetBenchmarkByID(db *sql.DB, id string) (*model.Benchmark, error) {
 	if p90.Valid { b.P90 = p90.Float64 }
 	if p99.Valid { b.P99 = p99.Float64 }
 	if correctnessScore.Valid { b.CorrectnessScore = correctnessScore.Float64 }
+	
+	b.TPS = computeTPS(&b)
+	
 	return &b, nil
 }
 
@@ -197,6 +215,8 @@ func CreateBenchmark(db *sql.DB, name string, userID string, teamID string, team
 	if p99.Valid { b.P99 = p99.Float64 }
 	if correctnessScore.Valid { b.CorrectnessScore = correctnessScore.Float64 }
 	
+	b.TPS = computeTPS(&b)
+	
 	return &b, nil
 }
 
@@ -255,6 +275,8 @@ func UpdateBenchmarkStatus(db *sql.DB, id string, status string, totalRequests i
 	if rP90.Valid { b.P90 = rP90.Float64 }
 	if rP99.Valid { b.P99 = rP99.Float64 }
 	if correctnessScore.Valid { b.CorrectnessScore = correctnessScore.Float64 }
+
+	b.TPS = computeTPS(&b)
 	return &b, nil
 }
 

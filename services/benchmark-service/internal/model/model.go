@@ -23,6 +23,7 @@ type Benchmark struct {
 	TotalRequests int64           `json:"totalRequests"`
 	SuccessCount  int64           `json:"successCount"`
 	FailureCount  int64           `json:"failureCount"`
+	TPS           float64         `json:"tps"`
 	P50           float64         `json:"p50"`
 	P90              float64         `json:"p90"`
 	P99              float64         `json:"p99"`
