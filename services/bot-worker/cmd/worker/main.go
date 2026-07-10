@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/benchmarkclient"
@@ -60,31 +64,61 @@ func main() {
 	http.HandleFunc("/run-scenario", handleRunScenario)
 	http.HandleFunc("/stop", handleStop)
 
-	log.Println("Bot worker listening on :8085")
-	if err := http.ListenAndServe(":8085", middleware.Recovery(http.DefaultServeMux)); err != nil {
-		log.Fatalf("failed to start bot-worker: %v", err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	srv := &http.Server{
+		Addr:    ":8085",
+		Handler: middleware.Recovery(http.DefaultServeMux),
+	}
+
+	go func() {
+		log.Println("Bot worker listening on :8085")
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("failed to start bot-worker: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutting down bot-worker gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+	} else {
+		log.Println("bot-worker stopped")
 	}
 }
 
 func handleRun(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "method not allowed", "status": http.StatusMethodNotAllowed})
 		return
 	}
 	var req RunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid request", "status": http.StatusBadRequest})
 		return
 	}
 	if req.BenchmarkID == "" || req.TargetURL == "" || req.WorkerCount <= 0 || req.TotalRequests <= 0 {
-		http.Error(w, "invalid parameters", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid parameters", "status": http.StatusBadRequest})
 		return
 	}
 
 	activeMu.Lock()
 	if activeCancel != nil {
 		activeMu.Unlock()
-		http.Error(w, "a benchmark is already running", http.StatusConflict)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "a benchmark is already running", "status": http.StatusConflict})
 		return
 	}
 	
@@ -101,7 +135,9 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 
 func handleStop(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "method not allowed", "status": http.StatusMethodNotAllowed})
 		return
 	}
 	activeMu.Lock()
@@ -125,19 +161,23 @@ type ScenarioRequest struct {
 
 func handleRunScenario(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "method not allowed", "status": http.StatusMethodNotAllowed})
 		return
 	}
 	var req ScenarioRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid request", "status": http.StatusBadRequest})
 		return
 	}
 
 	results := make([]scenario.ScenarioResult, 0, len(req.Scenarios))
 	for _, s := range req.Scenarios {
 		// Run sequentially
-		res := scenario.RunScenario(r.Context(), req.TargetURL, s)
+		res := scenario.RunScenario(r.Context(), nil, req.TargetURL, s)
 		results = append(results, res)
 	}
 
@@ -241,7 +281,7 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		}
 	}()
 
-	var metricsList []metrics.RequestMetric
+	hist := NewLatencyHistogram(10000)
 	success := 0
 	failureCount := int64(0)
 	tracerTotal := int64(0)
@@ -249,7 +289,11 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 	completedJobs := 0
 
 	for result := range results {
-		metricsList = append(metricsList, result)
+		if !result.Success {
+			hist.Add(5000.0) // Heavily penalize failed requests to avoid survivorship bias
+		} else {
+			hist.Add(result.Latency.Seconds() * 1000)
+		}
 		completedJobs++
 		if result.BotType == "tracer" {
 			tracerTotal++
@@ -272,7 +316,9 @@ func runBenchmark(ctx context.Context, req RunRequest) {
 		tps = float64(completedJobs) / duration.Seconds()
 	}
 	
-	p50, p90, p99 := calculatePercentiles(metricsList)
+	p50 := hist.Percentile(50)
+	p90 := hist.Percentile(90)
+	p99 := hist.Percentile(99)
 
 	log.Printf("BenchmarkCompleted benchmarkID=%s completed=%d success=%d failure=%d duration=%s tps=%.2f p50=%.2f p90=%.2f p99=%.2f", 
 		req.BenchmarkID, completedJobs, success, failureCount, duration, tps, p50, p90, p99)

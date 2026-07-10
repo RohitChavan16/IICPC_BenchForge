@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -11,7 +13,7 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/mock-exchange/internal/middleware"
 )
 
-func StartServer() {
+func StartServer(ctx context.Context) {
 
 	// INITIALIZE PROMETHEUS METRICS
 	metrics.Init()
@@ -38,11 +40,27 @@ func StartServer() {
 		middleware.LoggingMiddleware,
 	)
 
-	log.Println("Mock Exchange Running On :9000")
+	srv := &http.Server{
+		Addr:    ":9000",
+		Handler: handler,
+	}
 
-	err := http.ListenAndServe(":9000", handler)
+	go func() {
+		log.Println("Mock Exchange Running On :9000")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server crashed: %v", err)
+		}
+	}()
 
-	if err != nil {
-		log.Fatal(err)
+	<-ctx.Done()
+	log.Println("Shutting down Mock Exchange gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+	} else {
+		log.Println("Mock Exchange stopped")
 	}
 }

@@ -2,47 +2,46 @@ package main
 
 import (
 	"math"
-	"sort"
-
-	"github.com/RohitChavan16/IICPC_BenchForge/services/bot-worker/internal/metrics"
 )
 
-func calculatePercentiles(metricsList []metrics.RequestMetric) (float64, float64, float64) {
-	if len(metricsList) == 0 {
-		return 0, 0, 0
-	}
-
-	latenciesMs := make([]float64, 0, len(metricsList))
-	for _, metric := range metricsList {
-		if !metric.Success {
-			latenciesMs = append(latenciesMs, 5000.0) // Heavily penalize failed requests to avoid survivorship bias
-		} else {
-			latenciesMs = append(latenciesMs, metric.Latency.Seconds()*1000)
-		}
-	}
-
-	sort.Float64s(latenciesMs)
-
-	return percentile(latenciesMs, 50), percentile(latenciesMs, 90), percentile(latenciesMs, 99)
+type LatencyHistogram struct {
+	buckets []int
+	total   int
 }
 
-func percentile(sortedValues []float64, percentileValue float64) float64 {
-	if len(sortedValues) == 0 {
+func NewLatencyHistogram(maxLatencyMs int) *LatencyHistogram {
+	return &LatencyHistogram{
+		buckets: make([]int, maxLatencyMs+1),
+	}
+}
+
+func (h *LatencyHistogram) Add(latencyMs float64) {
+	bucket := int(math.Round(latencyMs))
+	if bucket < 0 {
+		bucket = 0
+	}
+	if bucket >= len(h.buckets) {
+		bucket = len(h.buckets) - 1
+	}
+	h.buckets[bucket]++
+	h.total++
+}
+
+func (h *LatencyHistogram) Percentile(p float64) float64 {
+	if h.total == 0 {
 		return 0
 	}
-
-	if len(sortedValues) == 1 {
-		return sortedValues[0]
+	target := int(math.Ceil(float64(h.total) * (p / 100.0)))
+	if target == 0 {
+		target = 1
 	}
 
-	rank := percentileValue / 100 * float64(len(sortedValues)-1)
-	lowerIndex := int(math.Floor(rank))
-	upperIndex := int(math.Ceil(rank))
-
-	if lowerIndex == upperIndex {
-		return sortedValues[lowerIndex]
+	count := 0
+	for i, b := range h.buckets {
+		count += b
+		if count >= target {
+			return float64(i)
+		}
 	}
-
-	weight := rank - float64(lowerIndex)
-	return sortedValues[lowerIndex]*(1-weight) + sortedValues[upperIndex]*weight
+	return float64(len(h.buckets) - 1)
 }

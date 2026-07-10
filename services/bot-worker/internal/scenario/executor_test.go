@@ -211,7 +211,7 @@ func runEngineTest(t *testing.T, name string, s Scenario, engineLogic func(stepI
 		}))
 		defer ts.Close()
 
-		res := RunScenario(context.Background(), ts.URL, s)
+		res := RunScenario(context.Background(), nil, ts.URL, s)
 		if res.Passed != expectedPass {
 			t.Errorf("Expected Passed=%v, got %v. ErrorMessage: %s", expectedPass, res.Passed, res.ErrorMessage)
 		}

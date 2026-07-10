@@ -81,7 +81,7 @@ func main() {
 	go aggregator.StartReplayProcessorWorker(ctx, db, cfg)
 
 	// START HTTP SERVER
-	go server.StartServer(cfg, hub, workerAggs, workerLastSeen, &workerMu, db, rdb)
+	go server.StartServer(ctx, cfg, hub, workerAggs, workerLastSeen, &workerMu, db, rdb)
 
 	// SIGNAL CHANNEL
 	sigChan := make(chan os.Signal, 1)
@@ -104,9 +104,6 @@ func main() {
 
 	// CANCEL CONTEXT
 	cancel()
-
-	// ALLOW GOROUTINES TO FINISH
-	time.Sleep(2 * time.Second)
 
 	logger.Log.Info("Telemetry service stopped gracefully")
 }

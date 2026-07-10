@@ -45,7 +45,9 @@ func (h *Handler) ListDeployments(w http.ResponseWriter, r *http.Request) {
 	items, err := repository.ListDeployments(h.db, 100, userID)
 	if err != nil {
 		log.Printf("list deployments error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -61,7 +63,9 @@ func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("get deployment error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -121,11 +125,15 @@ func (h *Handler) setStage(subID, stage, status, reason string) {
 func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 	var req createReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid body", "status": http.StatusBadRequest})
 		return
 	}
 	if req.SubmissionID == "" {
-		http.Error(w, "submissionId required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "submissionId required", "status": http.StatusBadRequest})
 		return
 	}
 
@@ -142,7 +150,9 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 	err := h.db.QueryRow(`SELECT container_image FROM submissions WHERE id=$1`, req.SubmissionID).Scan(&containerImage)
 	if err != nil || containerImage == "" {
 		h.failStage(req.SubmissionID, "DEPLOYMENT", "Submission not built or missing image")
-		http.Error(w, "submission not built", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "submission not built", "status": http.StatusBadRequest})
 		return
 	}
 
@@ -152,7 +162,9 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 	dep, err := repository.CreateDeployment(h.db, req.SubmissionID, userID, teamID, cp)
 	if err != nil {
 		h.failStage(req.SubmissionID, "DEPLOYMENT", fmt.Sprintf("Failed to create deployment record: %v", err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -160,7 +172,9 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		repository.UpdateDeployment(h.db, dep.ID, "", "", 0, "FAILED")
 		h.failStage(req.SubmissionID, "DEPLOYMENT", "No available host ports for deployment")
-		http.Error(w, "no available host ports", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "no available host ports", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -175,7 +189,9 @@ func (h *Handler) CreateDeployment(w http.ResponseWriter, r *http.Request) {
 		_ = repository.AppendDeploymentLog(h.db, dep.ID, fmt.Sprintf("docker run error: %v\n\n%s", err, runOutput))
 		repository.UpdateDeployment(h.db, dep.ID, "", "", hostPort, "FAILED")
 		h.failStage(req.SubmissionID, "DEPLOYMENT", fmt.Sprintf("Docker run failed: %v", err))
-		http.Error(w, "failed to start container", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "failed to start container", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -315,18 +331,24 @@ func (h *Handler) StopDeployment(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	if d.ContainerID == "" {
-		http.Error(w, "no container to stop", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "no container to stop", "status": http.StatusBadRequest})
 		return
 	}
 	stopOutput, err := h.deployer.StopContainer(d.ContainerID)
 	if err != nil {
 		_ = repository.AppendDeploymentLog(h.db, id, fmt.Sprintf("docker stop/rm error: %v\n%s", err, stopOutput))
 		repository.StopDeployment(h.db, id, "FAILED")
-		http.Error(w, "failed to stop container", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "failed to stop container", "status": http.StatusInternalServerError})
 		return
 	}
 	_ = repository.AppendDeploymentLog(h.db, id, fmt.Sprintf("docker stop/rm output:\n%s", stopOutput))

@@ -87,6 +87,7 @@ func getWorkersHandler(
 }
 
 func StartServer(
+	ctx context.Context,
 	cfg *config.Config,
 	hub *ws.Hub,
 	workerAggs map[string]*aggregator.Aggregator,
@@ -113,14 +114,18 @@ func StartServer(
 
 		benchmarkID := r.URL.Query().Get("benchmarkId")
 		if benchmarkID == "" {
-			http.Error(w, "missing benchmarkId", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "missing benchmarkId", "status": http.StatusBadRequest})
 			return
 		}
 
 		// Verify user has access to benchmark
 		userID := r.Header.Get("X-User-Id")
 		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "unauthorized", "status": http.StatusUnauthorized})
 			return
 		}
 
@@ -128,7 +133,9 @@ func StartServer(
 		if benchmarkID != "GLOBAL" {
 			err := db.QueryRow(context.Background(), "SELECT user_id FROM benchmarks WHERE id = $1", benchmarkID).Scan(&ownerID)
 			if err != nil {
-				http.Error(w, "benchmark not found", http.StatusNotFound)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]interface{}{"error": "benchmark not found", "status": http.StatusNotFound})
 				return
 			}
 		}
@@ -137,10 +144,14 @@ func StartServer(
 		// For now, check if user is owner or if they have an admin role (mocked).
 		userRole := r.Header.Get("X-User-Role")
 		if benchmarkID == "GLOBAL" && userRole != "admin" {
-			http.Error(w, "forbidden", http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "forbidden", "status": http.StatusForbidden})
 			return
 		} else if benchmarkID != "GLOBAL" && ownerID != userID && userRole != "admin" {
-			http.Error(w, "forbidden", http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "forbidden", "status": http.StatusForbidden})
 			return
 		}
 
@@ -155,7 +166,9 @@ func StartServer(
 
 		err := rdb.Set(context.Background(), ticketKey, ticketData, 60*time.Second).Err()
 		if err != nil {
-			http.Error(w, "failed to generate ticket", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "failed to generate ticket", "status": http.StatusInternalServerError})
 			return
 		}
 
@@ -170,14 +183,18 @@ func StartServer(
 		ticketID := r.URL.Query().Get("ticket")
 
 		if benchmarkID == "" || ticketID == "" {
-			http.Error(w, "missing benchmarkId or ticket", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "missing benchmarkId or ticket", "status": http.StatusBadRequest})
 			return
 		}
 
 		ticketKey := "ws_ticket:" + ticketID
 		val, err := rdb.Get(context.Background(), ticketKey).Result()
 		if err != nil {
-			http.Error(w, "invalid or expired ticket", http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid or expired ticket", "status": http.StatusForbidden})
 			return
 		}
 
@@ -188,7 +205,9 @@ func StartServer(
 		json.Unmarshal([]byte(val), &ticketData)
 
 		if ticketData["benchmark_id"] != benchmarkID {
-			http.Error(w, "ticket does not match benchmark", http.StatusForbidden)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "ticket does not match benchmark", "status": http.StatusForbidden})
 			return
 		}
 
@@ -481,7 +500,9 @@ func StartServer(
 
 			replay, err := database.GetReplay(db, benchmarkID)
 			if err != nil {
-				http.Error(w, "Replay not found", http.StatusNotFound)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]interface{}{"error": "Replay not found", "status": http.StatusNotFound})
 				return
 			}
 
@@ -532,7 +553,9 @@ func StartServer(
 			}
 			info, err := rdb.Info(context.Background()).Result()
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]interface{}{"error": err.Error(), "status": http.StatusInternalServerError})
 				return
 			}
 			
@@ -681,5 +704,20 @@ func StartServer(
 
 	log.Println("Telemetry Service Running :" + cfg.Port)
 
-	http.ListenAndServe(":"+cfg.Port, middleware.Recovery(http.DefaultServeMux))
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: middleware.Recovery(http.DefaultServeMux),
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("server crashed: %v\n", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutting down telemetry server gracefully...")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	srv.Shutdown(shutdownCtx)
 }

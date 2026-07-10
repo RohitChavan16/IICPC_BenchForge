@@ -16,7 +16,9 @@ func HandleGetReplay(db *pgxpool.Pool) http.HandlerFunc {
 
 		replay, err := database.GetReplay(db, benchmarkID)
 		if err != nil {
-			http.Error(w, "Replay not found", http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Replay not found", "status": http.StatusNotFound})
 			return
 		}
 

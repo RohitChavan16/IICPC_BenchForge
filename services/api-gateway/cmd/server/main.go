@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/config"
 	"github.com/RohitChavan16/IICPC_BenchForge/services/api-gateway/internal/database"
@@ -34,8 +39,31 @@ func main() {
 
 	app := server.NewServer(cfg, db, cfg.JWTSecret)
 
-	if err := app.Run(":" + cfg.Port); err != nil {
-		logger.Log.Error("server crashed", "error", err)
-		os.Exit(1)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: app,
+	}
+
+	go func() {
+		logger.Log.Info("API Gateway listening :" + cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Error("server crashed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Log.Info("Shutting down API Gateway gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error("graceful shutdown failed", "error", err)
+	} else {
+		logger.Log.Info("API Gateway stopped")
 	}
 }

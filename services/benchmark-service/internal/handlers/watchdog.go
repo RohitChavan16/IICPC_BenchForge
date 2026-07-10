@@ -10,8 +10,14 @@ import (
 func (h *BenchmarkHandler) StartWatchdog() {
 	ticker := time.NewTicker(30 * time.Second)
 	go func() {
-		for range ticker.C {
-			h.checkAbandonedBenchmarks()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-h.ctx.Done():
+				return
+			case <-ticker.C:
+				h.checkAbandonedBenchmarks()
+			}
 		}
 	}()
 }

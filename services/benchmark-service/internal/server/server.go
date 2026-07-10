@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/gorilla/mux"
@@ -13,7 +14,7 @@ import (
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/middleware"
 )
 
-func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *mux.Router {
+func NewServer(ctx context.Context, cfg *config.Config, db *sql.DB, rdb *redis.Client) *mux.Router {
 	r := mux.NewRouter()
 	
 	r.Use(middleware.Recovery)
@@ -23,7 +24,7 @@ func NewServer(cfg *config.Config, db *sql.DB, rdb *redis.Client) *mux.Router {
 
 	r.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
-	benchmarkHandler := handlers.NewBenchmarkHandler(db, rdb, cfg)
+	benchmarkHandler := handlers.NewBenchmarkHandler(ctx, db, rdb, cfg)
 
 	// Resume any queued benchmarks that were interrupted by a restart
 	go benchmarkHandler.ProcessQueue()

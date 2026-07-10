@@ -48,8 +48,10 @@ type ScenarioResult struct {
 	Status       string `json:"status"` // "PASSED", "FAILED", "CONTRACT_NOT_SUPPORTED"
 }
 
-func RunScenario(ctx context.Context, targetURL string, s Scenario) ScenarioResult {
-	client := &http.Client{Timeout: 5 * time.Second}
+func RunScenario(ctx context.Context, client *http.Client, targetURL string, s Scenario) ScenarioResult {
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
 	orderIDs := make([]string, len(s.Steps))
 
 	for i, step := range s.Steps {

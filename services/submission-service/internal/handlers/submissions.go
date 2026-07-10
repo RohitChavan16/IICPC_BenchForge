@@ -54,7 +54,9 @@ func (h *SubmissionHandler) ListSubmissions(w http.ResponseWriter, r *http.Reque
 	items, err := repository.ListSubmissions(h.db, 100, userID)
 	if err != nil {
 		log.Printf("list submissions error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -65,7 +67,9 @@ func (h *SubmissionHandler) ListSubmissions(w http.ResponseWriter, r *http.Reque
 func (h *SubmissionHandler) CreateSubmission(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		http.Error(w, "invalid multipart form or file too large", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid multipart form or file too large", "status": http.StatusBadRequest})
 		return
 	}
 
@@ -74,30 +78,40 @@ func (h *SubmissionHandler) CreateSubmission(w http.ResponseWriter, r *http.Requ
 	language := strings.ToLower(strings.TrimSpace(r.FormValue("language")))
 
 	if teamName == "" || submissionName == "" || language == "" {
-		http.Error(w, "teamName, submissionName, and language are required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(submissionName, and language are required", http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "teamName, "status": submissionName, and language are required", http.StatusBadRequest})
 		return
 	}
 	if !allowedLanguages[language] {
-		http.Error(w, "language must be one of: go, cpp, rust", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(cpp, rust", http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "language must be one of: go, "status": cpp, rust", http.StatusBadRequest})
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "file is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "file is required", "status": http.StatusBadRequest})
 		return
 	}
 	defer file.Close()
 
 	if strings.ToLower(filepath.Ext(header.Filename)) != ".zip" {
-		http.Error(w, "file must be a .zip archive", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "file must be a .zip archive", "status": http.StatusBadRequest})
 		return
 	}
 
 	storedPath, err := h.storeUpload(file, teamName, submissionName, header.Filename)
 	if err != nil {
 		log.Printf("store submission error: %v", err)
-		http.Error(w, "failed to store submission", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "failed to store submission", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -108,7 +122,9 @@ func (h *SubmissionHandler) CreateSubmission(w http.ResponseWriter, r *http.Requ
 	submission, err := repository.CreateSubmission(h.db, teamName, submissionName, language, storedPath, fileSizeBytes, userID, teamID)
 	if err != nil {
 		log.Printf("create submission error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -131,7 +147,9 @@ func (h *SubmissionHandler) GetSubmissionByID(w http.ResponseWriter, r *http.Req
 			return
 		}
 		log.Printf("get submission error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 

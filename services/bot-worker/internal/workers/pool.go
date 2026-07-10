@@ -94,7 +94,7 @@ func Worker(
 				start := time.Now()
 				tracerSymbol := fmt.Sprintf("TRC-%s", uuid.NewString()[:8])
 				s := generateTracerScenario(tracerSymbol)
-				res := scenario.RunScenario(ctx, exchangeURL, s)
+				res := scenario.RunScenario(ctx, client, exchangeURL, s)
 				latency := time.Since(start)
 
 				if res.Status == "FAILED" && submissionID != "" {

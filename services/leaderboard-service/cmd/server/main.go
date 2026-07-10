@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/leaderboard-service/internal/config"
@@ -28,6 +33,9 @@ func main() {
 		log.Fatalf("failed to backfill leaderboard entries: %v", err)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      server.NewServer(db),
@@ -35,6 +43,23 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	log.Printf("Leaderboard service listening :%s", cfg.Port)
-	log.Fatal(srv.ListenAndServe())
+	go func() {
+		log.Printf("Leaderboard service listening :%s", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server crashed: %v", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutting down Leaderboard service gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+	} else {
+		log.Println("Leaderboard service stopped")
+	}
 }

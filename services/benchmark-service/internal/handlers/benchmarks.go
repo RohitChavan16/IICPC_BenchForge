@@ -25,10 +25,11 @@ type BenchmarkHandler struct {
 	db  *sql.DB
 	rdb *redis.Client
 	cfg *config.Config
+	ctx context.Context
 }
 
-func NewBenchmarkHandler(db *sql.DB, rdb *redis.Client, cfg *config.Config) *BenchmarkHandler {
-	return &BenchmarkHandler{db: db, rdb: rdb, cfg: cfg}
+func NewBenchmarkHandler(ctx context.Context, db *sql.DB, rdb *redis.Client, cfg *config.Config) *BenchmarkHandler {
+	return &BenchmarkHandler{ctx: ctx, db: db, rdb: rdb, cfg: cfg}
 }
 
 type LogMessage struct {
@@ -86,7 +87,9 @@ func (h *BenchmarkHandler) ListBenchmarks(w http.ResponseWriter, r *http.Request
 	userID := r.Header.Get("X-User-Id")
 	items, err := repository.ListBenchmarks(h.db, 100, userID)
 	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	resp := map[string]interface{}{"items": items}
@@ -401,11 +404,15 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 	}
 	var req dto.CreateBenchmarkRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid request body", "status": http.StatusBadRequest})
 		return
 	}
 	if req.Name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "name is required", "status": http.StatusBadRequest})
 		return
 	}
 	if req.TargetType != "mock" && req.TargetType != "deployment" {
@@ -414,7 +421,9 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 	
 	if req.TargetType == "deployment" {
 		if req.SubmissionID == "" || req.DeploymentID == "" {
-			http.Error(w, "submissionId and deploymentId are required for deployment target", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "submissionId and deploymentId are required for deployment target", "status": http.StatusBadRequest})
 			return
 		}
 	}
@@ -443,7 +452,9 @@ func (h *BenchmarkHandler) CreateBenchmark(w http.ResponseWriter, r *http.Reques
 			h.publishLog(submissionID, "BENCHMARK", "log", fmt.Sprintf("Failed to create benchmark record: %v", err), "FAILED")
 			h.setStage(submissionID, "BENCHMARK", "FAILED", "Database error creating benchmark")
 		}
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	
@@ -472,7 +483,9 @@ func (h *BenchmarkHandler) HeartbeatBenchmark(w http.ResponseWriter, r *http.Req
 	_, err := h.db.Exec(`UPDATE benchmarks SET last_heartbeat = now() WHERE id = $1 AND status = 'RUNNING'`, id)
 	if err != nil {
 		log.Printf("heartbeat error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -489,7 +502,9 @@ func (h *BenchmarkHandler) GetBenchmarkByID(w http.ResponseWriter, r *http.Reque
 			return
 		}
 		log.Printf("get benchmark error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -505,16 +520,22 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 	id := vars["id"]
 	var req dto.UpdateStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid request body", "status": http.StatusBadRequest})
 		return
 	}
 	if req.Status == "" {
-		http.Error(w, "status is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "status is required", "status": http.StatusBadRequest})
 		return
 	}
 	validStatuses := map[string]bool{"CREATED": true, "QUEUED": true, "RUNNING": true, "COMPLETED": true, "FAILED": true, "CANCELLED": true}
 	if !validStatuses[req.Status] {
-		http.Error(w, "invalid status", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "invalid status", "status": http.StatusBadRequest})
 		return
 	}
 	
@@ -525,7 +546,9 @@ func (h *BenchmarkHandler) UpdateBenchmarkStatus(w http.ResponseWriter, r *http.
 			return
 		}
 		log.Printf("update status error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -591,19 +614,25 @@ func (h *BenchmarkHandler) StopBenchmark(w http.ResponseWriter, r *http.Request)
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
 	if b.Status != "RUNNING" {
-		http.Error(w, "benchmark is not running", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "benchmark is not running", "status": http.StatusBadRequest})
 		return
 	}
 
 	resp, err := http.Post(h.cfg.BotWorkerURL+"/stop", "application/json", nil)
 	if err != nil || resp.StatusCode >= 400 {
 		log.Printf("failed to stop bot-worker: %v", err)
-		http.Error(w, "failed to stop benchmark worker", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "failed to stop benchmark worker", "status": http.StatusInternalServerError})
 		return
 	}
 

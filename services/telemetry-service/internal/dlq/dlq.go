@@ -23,7 +23,9 @@ func ListHandler(rdb *redis.Client) http.HandlerFunc {
 		}).Result()
 
 		if err != nil && err != redis.Nil {
-			http.Error(w, "Failed to read DLQ", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Failed to read DLQ", "status": http.StatusInternalServerError})
 			return
 		}
 
@@ -48,14 +50,18 @@ func ReplayHandler(rdb *redis.Client) http.HandlerFunc {
 		id := strings.TrimPrefix(r.URL.Path, "/api/dlq/")
 		id = strings.TrimSuffix(id, "/replay")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Missing ID", "status": http.StatusBadRequest})
 			return
 		}
 
 		// Get the message
 		streams, err := rdb.XRange(context.Background(), "telemetry_dlq", id, id).Result()
 		if err != nil || len(streams) == 0 {
-			http.Error(w, "Message not found", http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Message not found", "status": http.StatusNotFound})
 			return
 		}
 
@@ -65,7 +71,9 @@ func ReplayHandler(rdb *redis.Client) http.HandlerFunc {
 		
 		originalEvent, ok := payloadData["original_event"].(string)
 		if !ok {
-			http.Error(w, "Invalid payload format", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Invalid payload format", "status": http.StatusInternalServerError})
 			return
 		}
 
@@ -76,7 +84,9 @@ func ReplayHandler(rdb *redis.Client) http.HandlerFunc {
 		}).Err()
 
 		if err != nil {
-			http.Error(w, "Failed to replay message", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Failed to replay message", "status": http.StatusInternalServerError})
 			return
 		}
 
@@ -92,7 +102,9 @@ func DiscardHandler(rdb *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimPrefix(r.URL.Path, "/api/dlq/")
 		if id == "" {
-			http.Error(w, "Missing ID", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"error": "Missing ID", "status": http.StatusBadRequest})
 			return
 		}
 

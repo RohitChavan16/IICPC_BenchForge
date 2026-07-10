@@ -1,9 +1,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/submission-service/internal/config"
@@ -29,6 +34,9 @@ func main() {
 		Addr: cfg.RedisURL,
 	})
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      server.NewServer(db, rdb, cfg.SubmissionUploadDir),
@@ -36,6 +44,23 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	log.Println("Submission service listening :" + cfg.Port)
-	log.Fatal(srv.ListenAndServe())
+	go func() {
+		log.Println("Submission service listening :" + cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server crashed: %v\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutting down Submission service gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown failed: %v\n", err)
+	} else {
+		log.Println("Submission service stopped")
+	}
 }

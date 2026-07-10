@@ -24,7 +24,9 @@ func (h *LeaderboardHandler) ListLeaderboard(w http.ResponseWriter, r *http.Requ
 	entries, total, err := repository.ListLeaderboardEntries(h.db, limit, 0)
 	if err != nil {
 		log.Printf("list leaderboard error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -37,7 +39,9 @@ func (h *LeaderboardHandler) ListTopLeaderboard(w http.ResponseWriter, r *http.R
 	entries, err := repository.ListTopLeaderboardEntries(h.db, 10)
 	if err != nil {
 		log.Printf("list top leaderboard error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -49,14 +53,18 @@ func (h *LeaderboardHandler) ListTopLeaderboard(w http.ResponseWriter, r *http.R
 func (h *LeaderboardHandler) ListLeaderboardByTeam(w http.ResponseWriter, r *http.Request) {
 	team := mux.Vars(r)["team"]
 	if team == "" {
-		http.Error(w, "team is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "team is required", "status": http.StatusBadRequest})
 		return
 	}
 
 	entries, err := repository.ListLeaderboardEntriesByTeam(h.db, team)
 	if err != nil {
 		log.Printf("list leaderboard by team error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -68,7 +76,9 @@ func (h *LeaderboardHandler) ListLeaderboardByTeam(w http.ResponseWriter, r *htt
 func (h *LeaderboardHandler) GetLeaderboardByBenchmark(w http.ResponseWriter, r *http.Request) {
 	benchmarkID := mux.Vars(r)["benchmarkId"]
 	if benchmarkID == "" {
-		http.Error(w, "benchmarkId is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "benchmarkId is required", "status": http.StatusBadRequest})
 		return
 	}
 
@@ -79,7 +89,9 @@ func (h *LeaderboardHandler) GetLeaderboardByBenchmark(w http.ResponseWriter, r 
 			return
 		}
 		log.Printf("get leaderboard by benchmark error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 
@@ -90,14 +102,18 @@ func (h *LeaderboardHandler) GetLeaderboardByBenchmark(w http.ResponseWriter, r 
 func (h *LeaderboardHandler) GetLeaderboardContext(w http.ResponseWriter, r *http.Request) {
 	team := r.URL.Query().Get("team")
 	if team == "" {
-		http.Error(w, "team query parameter is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "team query parameter is required", "status": http.StatusBadRequest})
 		return
 	}
 
 	entries, err := repository.GetLeaderboardContext(h.db, team)
 	if err != nil {
 		log.Printf("get leaderboard context error: %v", err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{"error": "internal server error", "status": http.StatusInternalServerError})
 		return
 	}
 

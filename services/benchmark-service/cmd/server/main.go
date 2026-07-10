@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/RohitChavan16/IICPC_BenchForge/services/benchmark-service/internal/config"
@@ -42,16 +45,33 @@ func main() {
 		Addr: cfg.RedisURL,
 	})
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      server.NewServer(cfg, db, rdb),
+		Handler:      server.NewServer(ctx, cfg, db, rdb),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Log.Info("Benchmark service listening :" + cfg.Port)
-	if err := srv.ListenAndServe(); err != nil {
-		logger.Log.Error("server crashed", "error", err)
-		os.Exit(1)
+	go func() {
+		logger.Log.Info("Benchmark service listening :" + cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Error("server crashed", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Log.Info("Shutting down benchmark service gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error("graceful shutdown failed", "error", err)
+	} else {
+		logger.Log.Info("Benchmark service stopped")
 	}
 }
