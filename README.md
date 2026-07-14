@@ -25,7 +25,7 @@ Unlike standard HTTP pingers like `wrk` or `jmeter`, BenchForge operates with tr
 
 ### Key Engineering Achievements (Solo Execution)
 Every component of this massive distributed system was designed and built by a single engineer (Rohit Chavan, 2nd-year ECE student).
-*   **7 Go Microservices**
+*   **9 Go Microservices**
 *   **Redis Streams Pipeline**
 *   **100 Goroutine Workers**
 *   **6 Trading Personas**
@@ -208,7 +208,7 @@ The Replay Engine transforms raw telemetry into a structured timeline serialized
 ## 10 | Observability & Distributed Tracing
 
 BenchForge treats observability as a first-class citizen to ensure pinpoint accuracy during post-mortems.
-*   **Distributed Tracing:** The platform implements strict `X-Request-ID` propagation across all 7 microservices. This allows logs to be correlated across the API Gateway, deployment instances, and telemetry queues.
+*   **Distributed Tracing:** The platform implements strict `X-Request-ID` propagation across all 9 microservices. This allows logs to be correlated across the API Gateway, deployment instances, and telemetry queues.
 *   **Engine Metrics (`/metrics`):** The internal Mock Exchange exposes custom Prometheus metrics that contestants are encouraged to implement: `http_requests_total`, `http_request_duration_seconds` (latency histograms), and `active_requests` (concurrent in-flight tracking).
 
 ---
