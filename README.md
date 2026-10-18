@@ -1,6 +1,6 @@
 # ⚡ BenchForge
 
-> A production-grade, distributed benchmarking and telemetry infrastructure platform designed for high-concurrency performance testing, real-time observability, and scalable systems experimentation.
+> A distributed benchmarking and telemetry platform designed to evaluate high-concurrency trading engines, containerized microservices, and system performance under simulated market load.
 
 **Team:** VakraNode  
 **Single Team Member:** Rohit Chavan  
@@ -9,34 +9,38 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8.svg)](https://golang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg)](https://www.docker.com/)
-[![State: Production-Ready](https://img.shields.io/badge/State-Production_Ready-4CAF50.svg)]()
+[![Status: Functional Prototype](https://img.shields.io/badge/Status-Functional_Prototype-2ea44f.svg)]()
 
 ---
 
 ## 01 | Executive Summary & Vision
 
-**BenchForge** is a cutting-edge distributed load generation and telemetry pipeline built to objectively benchmark trading engine architectures under realistic market conditions. It containerizes contestant submissions, generates high-concurrency load using stateful trading personas, streams telemetry through an event-driven pipeline, and ranks teams in real time — entirely automated, entirely quantitative.
+**BenchForge** is a distributed load generation and telemetry pipeline built to objectively benchmark trading engine architectures under simulated market conditions. It containerizes contestant submissions, generates concurrent load using stateful trading personas, streams telemetry through an event-driven Redis Streams pipeline, and ranks teams in real time with an automated, quantitative scoring system.
 
 ### Why It Was Built
-Hackathons typically grade demos, not systems. BenchForge exists to grade deployed microservices under 10,000+ TPS of realistic trading traffic — proving production readiness, not just presentation polish.
+Hackathons typically evaluate slide decks and static prototypes rather than system reliability. BenchForge was built to test deployed microservices under sustained concurrent trading traffic — measuring actual throughput, latency percentiles, and state correctness rather than presentation polish.
 
 ### What Makes It Different
-Unlike standard HTTP pingers like `wrk` or `jmeter`, BenchForge operates with true domain awareness. It features six stateful trading personas, an at-least-once Redis Streams telemetry pipeline, a 20-bucket Replay Engine with automatic anomaly detection, and a strict correctness-enforcing Tracer persona. 
+Unlike basic HTTP benchmark tools (`wrk`, `jmeter`) that blast static requests without state awareness, BenchForge includes:
+* **Six stateful trading personas** simulating realistic market order patterns.
+* **At-least-once Redis Streams telemetry pipeline** decoupling load generation from storage.
+* **20-bucket Replay Engine with anomaly flagging** to review latency spikes and failures over time.
+* **Tracer persona** to verify order matching correctness and prevent empty HTTP 200 spoofing.
 
-### Key Engineering Achievements (Solo Execution)
-Every component of this massive distributed system was designed and built by a single engineer (Rohit Chavan, 2nd-year ECE student).
-*   **9 Go Microservices**
-*   **Redis Streams Pipeline**
-*   **100 Goroutine Workers**
+### Architecture & Implementation Scope
+Designed and implemented as an end-to-end engineering project by Rohit Chavan (2nd-year ECE student at COEP Tech):
+*   **9 Go Microservices** (API Gateway, Submission, Container Runner, Deployment, Benchmark, Bot Worker, Telemetry, Leaderboard, Mock Exchange)
+*   **Redis Streams Telemetry Pipeline**
+*   **Goroutine Worker Pool** (configurable concurrency)
 *   **6 Trading Personas**
 *   **Tracer Correctness Validator**
 *   **20-Bucket Replay Engine**
-*   **Auto Anomaly Detection**
+*   **Automated Anomaly Flagging**
 *   **Live WebSocket Leaderboard**
-*   **Prometheus + Grafana Stack**
+*   **Prometheus + Grafana Monitoring**
 *   **Docker Container Isolation**
-*   **PostgreSQL Window Functions**
-*   **Graceful Shutdown (all services)**
+*   **PostgreSQL Window Functions for Percentiles**
+*   **Graceful Shutdown Handling**
 
 ---
 
@@ -80,23 +84,23 @@ Trading systems are the most demanding class of concurrent software in productio
 
 ---
 
-## 04 | Engineering Challenges & Solutions
+## 04 | Engineering Challenges & Practical Solutions
 
-Five core engineering problems required novel solutions. Each represents a deliberate architectural decision with measurable impact on platform reliability and throughput.
+Core architectural decisions made to handle concurrent benchmarking, data persistence, and validation:
 
 | Challenge | Problem | Solution | Result |
 |---|---|---|---|
-| **Load Generation Bottleneck** | 100 goroutines writing directly to Postgres saturate the connection pool and block load generation. | Redis Streams as fire-and-forget buffer: Workers call `XADD` and never wait. Telemetry Service consumes in batches asynchronously. | Peak TPS achieved with zero I/O backpressure. DB writes batched 100×. |
-| **Correctness Validation** | Teams could fake an HTTP `200 OK` without running a real matching engine, inflating TPS scores. | Tracer Persona (5% override): sequential BUY→assert resting, SELL→assert filled with exact receipt. Correctness% is squared in scoring formula. | Cheating is architecturally impossible. 90% correctness → 81% score multiplier. |
-| **Replay Without Raw Scan** | Iterating millions of raw telemetry rows in Go memory would cause OOM and multi-minute delays. | Postgres Window Functions (`PERCENTILE_CONT` + cumulative `COUNT(*) OVER`) aggregate directly in DB into 20 normalized buckets. Zero Go-side iteration. | Replay generation is near-instantaneous regardless of telemetry volume. |
-| **Real-Time Analytics at Scale** | Polling Postgres for live telemetry every second under concurrent load causes query storms. | In-memory aggregators (Global, Per-Worker, Per-Persona) updated as Redis messages arrive. 1Hz ticker snapshots and broadcasts via WebSocket. | 1Hz live updates to all clients with zero database reads on the hot path. |
-| **Leaderboard Consistency** | Concurrent benchmark completions could overwrite a team's best score via race condition. | Postgres `ON CONFLICT` upsert with conditional: `WHERE EXCLUDED.final_score > leaderboard_entries.final_score`. Atomic, lock-free preservation. | Leaderboard always reflects each team's global best. No race conditions. |
+| **Load Generation Bottleneck** | Goroutines writing directly to Postgres saturate connection pools and slow down load generation. | Redis Streams as a decoupled buffer: Workers emit metrics via `XADD` asynchronously. Telemetry Service processes in batches. | Load generation runs without I/O blocking from database writes. |
+| **Correctness Validation** | Target engines could return dummy HTTP `200 OK` responses without implementing real matching logic. | Tracer Persona (5% sample): executes sequential BUY (assert resting) and SELL (assert filled with matched receipt). | Prevents hollow 200 OK responses from falsely inflating scores. Correctness% is squared in the scoring formula. |
+| **Replay Without Raw Scan** | Iterating over millions of raw telemetry rows in application memory causes high memory overhead. | PostgreSQL Window Functions (`PERCENTILE_CONT` + cumulative counts) aggregate data into 20 normalized buckets directly in DB. | Reduces application memory usage and speeds up replay timeline generation. |
+| **Real-Time Analytics** | Repeatedly querying PostgreSQL for live telemetry under load causes query spikes. | In-memory aggregators (Global, Per-Worker, Per-Persona) updated from the Redis stream; a 1Hz ticker pushes WebSocket updates. | Sub-second dashboard updates without read contention on the database hot path. |
+| **Leaderboard Consistency** | Concurrent benchmark completions could overwrite higher historical scores via race condition. | PostgreSQL `ON CONFLICT` upsert with conditional check: `WHERE EXCLUDED.final_score > leaderboard_entries.final_score`. | Atomically preserves each team's highest valid score. |
 
 ---
 
 ## 05 | High-Level Architecture & Microservices
 
-BenchForge is organized into three operational planes. Strict plane separation ensures load generation, data persistence, and observability never contend for the same resources.
+BenchForge is organized into three operational planes to isolate load generation from metric processing and observability:
 
 *   **Control Plane:** API Gateway, Submission Service, Deployment Service, Benchmark Service, Container Runner.
 *   **Data Plane:** Bot Worker, Redis Streams, Telemetry Service, PostgreSQL, Leaderboard Service.
@@ -107,13 +111,13 @@ BenchForge is organized into three operational planes. Strict plane separation e
 | Service | Port | Responsibility | Communicates With | Scaling Strategy |
 |---|---|---|---|---|
 | **API Gateway** | 8080 | JWT auth, RBAC, reverse proxy | All services (HTTP) | Stateless; horizontal behind LB |
-| **Submission Service** | 8083 | ZIP ingestion, pipeline state, log streaming | Redis Pub/Sub, PostgreSQL | Stateless; shared volume mount |
-| **Container Runner** | — | `docker build`, image tagging, Dockerfile gen | Deployment Service, Docker socket | Single instance (Docker socket) |
-| **Deployment Service** | 8084 | `docker run`, port allocation, health validation| Benchmark Service, Docker socket | Single instance (port pool) |
-| **Benchmark Service**| 8082 | Session lifecycle, watchdog, final score | Bot Worker (HTTP), PostgreSQL | Stateless; queue in Go channel |
-| **Bot Worker** | 8085 | Goroutine pool, persona mix, `XADD` publish | Redis Streams, Contestant Container | Horizontal; fan-out via Kafka (roadmap)|
-| **Telemetry Service** | 8081 | `XReadGroup` consumer, aggregators, WS broadcast| Redis, PostgreSQL, WebSocket clients | Horizontal; Redis consumer groups |
-| **Leaderboard Service**| 8086 | Rankings, upsert, tie-breaking, rank calc | PostgreSQL | Read replicas (roadmap) |
+| **Submission Service** | 8083 | ZIP ingestion, pipeline state, build logs | Redis Pub/Sub, PostgreSQL | Stateless; shared volume mount |
+| **Container Runner** | — | `docker build`, image tagging | Deployment Service, Docker socket | Worker instance (Docker socket) |
+| **Deployment Service** | 8091 | `docker run`, port allocation, health checks | Benchmark Service, Docker socket | Single instance (port pool) |
+| **Benchmark Service**| 8082 | Session lifecycle, execution state, final score | Bot Worker (HTTP), PostgreSQL | Stateless |
+| **Bot Worker** | 8085 | Goroutine pool, persona execution, `XADD` publish | Redis Streams, Target Container | Horizontal worker instances |
+| **Telemetry Service** | 8081 | `XReadGroup` consumer, aggregators, WS push | Redis, PostgreSQL, WebSocket clients | Consumer group workers |
+| **Leaderboard Service**| 8084 | Rankings, WebSocket streaming | PostgreSQL | Read replicas |
 
 #### Critical Architectural Decisions
 *   **Trust Boundary at API Gateway:** The API Gateway validates HMAC-SHA256 JWTs and injects `X-User-Id` / `X-Team-Id` headers. Downstream services implicitly trust these headers, eliminating token re-validation on the hot path.
@@ -169,13 +173,13 @@ The Bot Worker generates deterministic, stateful trading traffic — not random 
 
 ## 08 | Algorithmic Scoring System
 
-BenchForge scores using a brutal, compound mathematical formula based directly on the actual SQL aggregation:
+BenchForge scores submissions using a multi-factor formula that evaluates throughput, tail latency, and verified correctness:
 **`Score = TPS × (SuccessRate / 100.0) × (250 / (250 + P99)) × (Correctness / 100)² × (Concurrency / 100)²`**
 
-1.  **Effective TPS:** `TPS × (SuccessRate%)`
-2.  **P99 Factor:** `250 / (250 + P99_ms)` — Exponential damping for tail latency.
-3.  **Correctness Penalty:** `(Correctness Score / 100)²` — Massive quadratic penalty. 90% correctness drops your multiplier to 0.81x.
-4.  **Concurrency Penalty:** `(Concurrency Score / 100)²` — Massive quadratic penalty for unstable threading.
+1.  **Effective TPS:** `TPS × (SuccessRate%)` — Throughput adjusted by request success.
+2.  **P99 Factor:** `250 / (250 + P99_ms)` — Tail latency penalty factor.
+3.  **Correctness Multiplier:** `(Correctness Score / 100)²` — Quadratic penalty for failed tracer orders. A 90% correctness rate reduces the multiplier to 0.81x.
+4.  **Concurrency Multiplier:** `(Concurrency Score / 100)²` — Penalizes race conditions and severe latency divergence under load.
 
 ### Tie-Breaking Cascade
 1. `final_score` (DESC)
@@ -248,16 +252,15 @@ The platform ships with a sleek, dark-mode, high-fidelity React/Next.js frontend
 
 ## 13 | Scalability & Future Roadmap
 
-**Current Single-Node Capacity:**
-*   10,000–20,000 TPS via 100 goroutines.
-*   ~15,000 metrics/sec ingestion via Redis Streams.
-*   Unlimited WebSocket clients (goroutine-per-connection).
+**Current Tested Single-Node Capacity:**
+*   Up to 10,000+ TPS against lightweight backends under local loopback.
+*   High-throughput asynchronous metric ingestion buffered through Redis Streams.
+*   Concurrent WebSocket dashboard connections handled via dedicated client goroutines.
 
-**Strategic Roadmap:**
-*   **1 Month:** Multi-language support (Python, Java, Rust, Node.js) via automatic Dockerfile generation. Enhanced Linux cgroup resource limits.
-*   **3 Months:** Multi-contest support, historical trend analytics, and side-by-side run comparisons in the Replay Engine.
-*   **6 Months:** Kubernetes Migration. Horizontal HPA scaling for Telemetry, Kafka-coordinated fan-out for Bot Workers (scaling to millions of TPS across regions).
-*   **1 Year:** AI-assisted bottleneck detection and root-cause analysis based on telemetry data.
+**Development Roadmap:**
+*   **Near-term:** Extended language support (Python, Java, Rust) and enhanced Linux cgroup container resource quotas.
+*   **Mid-term:** Multi-contest support, run-to-run comparison views in the Replay Engine.
+*   **Long-term:** Multi-node worker clustering for horizontal load fan-out.
 
 ---
 
@@ -387,64 +390,44 @@ Deep dive into the BenchForge internals:
 ---
 ## 🏛️ Architecture & Data Flow Diagram
 
-**[Visit benchforge_architecture.html to view the complete interactive diagram](./benchforge_architecture.html)**
+The complete architecture diagrams and data flows are documented in **[benchforge_architecture.html](./benchforge_architecture.html)**.
 
 <div align="center">
-  <div style="display: inline-block; width: 48%; margin: 1%;">
-    <a href="https://iicpc_tech.oneapp.dev/">
-      <img src="./demo/Screenshot 2026-06-14 161754.png" width="100%"/>
-      <br><em>visit this to get complete diagram</em>
-    </a>
-  </div>
-  <div style="display: inline-block; width: 48%; margin: 1%;">
-    <a href="https://iicpc_cycle.oneapp.dev/">
-      <img src="./demo/Screenshot 2026-06-14 161818.png" width="100%"/>
-      <br><em>visit this to get complete diagram</em>
-    </a>
-  </div>
-  <div style="display: inline-block; width: 48%; margin: 1%;">
-    <a href="https://iicpc_tele.oneapp.dev/">
-      <img src="./demo/Screenshot 2026-06-14 161838.png" width="100%"/>
-      <br><em>visit this to get complete diagram</em>
-    </a>
-  </div>
-  <div style="display: inline-block; width: 48%; margin: 1%;">
-    <a href="https://iicpc_er.oneapp.dev/">
-      <img src="./demo/Screenshot 2026-06-14 161920.png" width="100%"/>
-      <br><em>visit this to get complete diagram</em>
-    </a>
-  </div>
+  <img src="./demo/Screenshot 2026-06-14 161754.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-14 161818.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-14 161838.png" width="48%" style="margin: 1%;"/>
+  <img src="./demo/Screenshot 2026-06-14 161920.png" width="48%" style="margin: 1%;"/>
 </div>
 
 ---
 
 ## 17 | How to Test & Demo
 
-BenchForge is a complete, running distributed system. To test the platform:
+BenchForge is designed to run locally using Docker Compose:
 
-1.  **Landing Page:** Introduction to the platform.
-2.  **User Registration:** Create a contestant account.
-3.  **Contest Dashboard:** View the submission portal.
-4.  **Submit Trading Engine:** Upload the `sample-engines/go-engine.zip`.
-5.  **Build & Deployment:** Watch automatic extraction, containerization, and validation.
-6.  **Benchmark Report:** Run the blast. View TPS, latency metrics, and score.
-7.  **Replay Engine ⭐:** Replay the execution to visualize traffic, latency spikes, and anomalies over the 20-bucket timeline.
-8.  **Leaderboard:** Check your real-time ranking.
-9.  **Admin Login:** (`admin@benchforge.io`) Access the global control panel.
+1.  **Landing Page:** Overview of contest rules and platform status.
+2.  **User Registration:** Create a participant or contestant account.
+3.  **Contest Dashboard:** Access the engine submission interface.
+4.  **Submit Trading Engine:** Upload a sample engine (e.g. `sample-engines/go-engine.zip`).
+5.  **Build & Deployment:** Observe build logs, container initialization, and route validation.
+6.  **Run Benchmark:** Trigger load generation to record TPS, error rates, and latency distributions.
+7.  **Replay Engine:** Review the 20-bucket execution timeline and inspect flagged anomalies.
+8.  **Leaderboard:** View updated rankings and score breakdowns.
+9.  **Admin Panel:** (`admin@benchforge.io`) Manage active runs, nodes, and submissions.
 
 ---
 
-## 18 | 🤝 Open Source Contribution
+## 18 | 🤝 Contributing
 
-This platform operates at the bleeding edge of Golang performance. We welcome PRs from distributed systems architects, database tuners, and HFT engineers. 
-*   **Performance Standard:** PRs modifying the `bot-worker` or `telemetry-service` must include `pprof` flame graphs proving zero regressions in heap allocations or mutex contention.
-*   See [CONTRIBUTING.md](./CONTRIBUTING.md) for architectural guidelines.
+Contributions, issues, and performance discussions are welcome! If you're interested in concurrency tuning, telemetry pipelines, or testing methodologies:
+*   Check out [CONTRIBUTING.md](./CONTRIBUTING.md) for code structure, guidelines, and testing requirements.
+*   Run tests and linting (`go test ./...`) before opening a pull request.
 
 ---
 
 ## 19 | 📄 License & Acknowledgements
 
-Released under the **MIT License**.
-Engineered specifically to solve the immense technical hurdles of the IICPC Hackathon, BenchForge establishes a new benchmark for how we measure extreme-throughput systems.
+Released under the **MIT License**.  
+Developed as an engineering project for the IICPC Hackathon to explore automated, objective evaluation of concurrent backend microservices under simulated market workloads.
 
 ---

@@ -1,0 +1,112 @@
+graph TD
+    subgraph FRONTEND["Frontend (Vite/React + Tailwind, port 5173)"]
+        UI["User Browser"]
+    end
+
+    subgraph GATEWAY["API Gateway (Gin, port 8080)"]
+        GW_AUTH["JWT Auth Middleware<br/>(DB lookup every request)"]
+        GW_RATE["Rate Limiter<br/>(IP + User based)"]
+        GW_PROXY["Reverse Proxy<br/>(proxyTo() function)"]
+    end
+
+    subgraph CONTROL["Control Plane"]
+        BENCH["Benchmark Service<br/>(gorilla/mux, port 8082)"]
+        SUB["Submission Service<br/>(gorilla/mux, port 8083)<br/>⚠️ COMPILATION ERROR"]
+        DEP["Deployment Service<br/>(gorilla/mux, port 8091)"]
+        LB["Leaderboard Service<br/>(gorilla/mux, port 8084)"]
+    end
+
+    subgraph WORKERS["Worker Layer"]
+        BOT["Bot Worker<br/>(net/http, port 8085)"]
+        RUNNER["Container Runner<br/>(polling daemon, no HTTP)"]
+    end
+
+    subgraph TARGETS["Execution Targets"]
+        MOCK["Mock Exchange<br/>(net/http, port 9000)<br/>⚠️ COMPILATION ERROR"]
+        CONT["Contestant Container<br/>(docker run, port 30000-31000)"]
+    end
+
+    subgraph DATA["Data Layer"]
+        REDIS["Redis 8<br/>(port 6379)"]
+        PG["PostgreSQL 17<br/>(port 5432)<br/>Shared by all services"]
+    end
+
+    subgraph TELEMETRY["Telemetry Service (pgx, port 8081)"]
+        CONSUMER["XReadGroup Consumer<br/>(100 msg/batch, 2s block)"]
+        AGGREGATOR["In-Memory Aggregators<br/>(Global + Per-Worker + Per-Persona)"]
+        BROADCASTER["1Hz WS Broadcaster"]
+        REPLAY["Replay Engine<br/>(PERCENTILE_CONT)"]
+        WSHUB["WebSocket Hub<br/>(room-based)"]
+    end
+
+    subgraph OBS["Observability Stack"]
+        PROM["Prometheus (port 9090)"]
+        GRAFANA["Grafana (port 3000)"]
+        CADV["cAdvisor (port 8088)"]
+    end
+
+    %% Frontend → Gateway
+    UI -->|"HTTP + WS<br/>Bearer JWT"| GW_AUTH
+    GW_AUTH --> GW_RATE --> GW_PROXY
+
+    %% Gateway → Services
+    GW_PROXY -->|"HTTP /benchmarks/*"| BENCH
+    GW_PROXY -->|"HTTP /submissions/*"| SUB
+    GW_PROXY -->|"HTTP /deployments/*"| DEP
+    GW_PROXY -->|"HTTP /leaderboard/*"| LB
+    GW_PROXY -->|"HTTP /replay/* /ws"| TELEMETRY
+
+    %% Benchmark → Bot Worker
+    BENCH -->|"POST /run-scenario<br/>(correctness pre-check)"| BOT
+    BENCH -->|"POST /run<br/>(start load test)"| BOT
+
+    %% Bot Worker → Target
+    BOT -->|"POST /order<br/>(per-request HTTP)"| MOCK
+    BOT -.->|"POST /order<br/>(deployment target)"| CONT
+
+    %% Bot Worker → Redis
+    BOT -->|"XADD telemetry_stream<br/>(metric publish)"| REDIS
+    BOT -->|"PUBLISH pipeline_logs:{id}<br/>(log streaming)"| REDIS
+
+    %% Container Runner flow
+    RUNNER -->|"Poll submissions<br/>WHERE status=UPLOADED<br/>(⚠️ No FOR UPDATE)"| PG
+    RUNNER -->|"docker build<br/>(via Docker socket)"| CONT
+    RUNNER -->|"POST /deployments<br/>(trigger deploy)"| DEP
+
+    %% Deployment Service
+    DEP -->|"docker run<br/>(via Docker socket)"| CONT
+    DEP -->|"POST /benchmarks<br/>(auto-trigger)"| BENCH
+
+    %% Telemetry Consumer
+    REDIS -->|"XReadGroup<br/>(at-least-once)"| CONSUMER
+    CONSUMER -->|"INSERT telemetry_metrics<br/>(ON CONFLICT DO NOTHING)"| PG
+    CONSUMER --> AGGREGATOR
+    AGGREGATOR --> BROADCASTER
+    BROADCASTER --> WSHUB
+    WSHUB -->|"WS broadcast<br/>(1Hz)"| UI
+
+    %% Replay
+    BENCH -->|"GET /benchmarks/{id}"| REPLAY
+    PG -->|"PERCENTILE_CONT<br/>20-bucket window query"| REPLAY
+    REPLAY -->|"INSERT benchmark_replays"| PG
+
+    %% Scoring
+    BENCH -->|"ON CONFLICT upsert<br/>(best-score-wins)"| PG
+    LB -->|"SELECT leaderboard_entries"| PG
+
+    %% Observability
+    MOCK -->|"/metrics"| PROM
+    PROM --> GRAFANA
+    CADV -->|"container metrics"| PROM
+
+    %% All services → PostgreSQL
+    BENCH --> PG
+    SUB --> PG
+    DEP --> PG
+    LB --> PG
+
+    %% Styling
+    style MOCK fill:#ff6b6b,color:#fff
+    style SUB fill:#ff6b6b,color:#fff
+    style RUNNER fill:#ffd93d,color:#000
+    style CONT fill:#c8e6c9
